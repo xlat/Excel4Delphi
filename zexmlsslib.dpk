@@ -1,0 +1,54 @@
+﻿package zexmlsslib;
+
+{$R *.res}
+{$R 'zexmlss.dcr'}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST ON}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$DEFINE NOZCOLORSTRINGGRID}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'ZEXMLSS component'}
+{$IMPLICITBUILD ON}
+
+requires
+  vcl;
+
+contains
+  zexmlss in 'zexmlss.pas',
+  zsspxml in 'zsspxml.pas',
+  zeodfs in 'zeodfs.pas',
+  duansistr in 'duansistr.pas',
+  zesavecommon in 'zesavecommon.pas',
+  zeformula in 'zeformula.pas',
+  zexmlssutils in 'zexmlssutils.pas',
+  zearchhelper in 'zearchhelper.pas',
+  zexlsx in 'zexlsx.pas',
+  zeSave in 'zeSave.pas',
+  zeSaveEXML in 'zeSaveEXML.pas',
+  zeSaveODS in 'zeSaveODS.pas',
+  zeSaveXLSX in 'zeSaveXLSX.pas',
+  zeZippy in 'zeZippy.pas',
+  zeZippyXE2 in 'zeZippyXE2.pas',
+  zenumberformats in 'zenumberformats.pas';
+
+end.
