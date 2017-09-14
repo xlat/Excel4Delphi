@@ -88,7 +88,6 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="zexmlss.dcr"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="zexmlss.pas"/>
         <DCCReference Include="zsspxml.pas"/>
