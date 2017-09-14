@@ -1,12 +1,12 @@
-//****************************************************************
-// ZEXMLSS  (Z Excel XML SpreadSheet) - невизуальный компонент,
-// предназначенный для сохранения данных в формате excel xml.
-// Накалякано в Мозыре в 2009 году
-// Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
-// e-mail: avemey(мяу)tut(точка)by
+п»ї//****************************************************************
+// ZEXMLSS  (Z Excel XML SpreadSheet) - РЅРµРІРёР·СѓР°Р»СЊРЅС‹Р№ РєРѕРјРїРѕРЅРµРЅС‚,
+// РїСЂРµРґРЅР°Р·РЅР°С‡РµРЅРЅС‹Р№ РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РґР°РЅРЅС‹С… РІ С„РѕСЂРјР°С‚Рµ excel xml.
+// РќР°РєР°Р»СЏРєР°РЅРѕ РІ РњРѕР·С‹СЂРµ РІ 2009 РіРѕРґСѓ
+// РђРІС‚РѕСЂ:  РќРµР±РѕСЂР°Рє Р СѓСЃР»Р°РЅ Р’Р»Р°РґРёРјРёСЂРѕРІРёС‡ (Ruslan V. Neborak)
+// e-mail: avemey(РјСЏСѓ)tut(С‚РѕС‡РєР°)by
 // URL:    http://avemey.com
 // Ver:    0.0.8
-// Лицензия: zlib
+// Р›РёС†РµРЅР·РёСЏ: zlib
 // Last update: 2015.01.24
 //----------------------------------------------------------------
 // This software is provided "as-is", without any express or implied warranty.
@@ -24,8 +24,8 @@ unit zexmlss;
 
 interface
 
-// т.к. в Delphi 5 нету таких полезных функций как AnsiToUtf8 и Utf8ToAnsi
-// подключаем sysd7.
+// С‚.Рє. РІ Delphi 5 РЅРµС‚Сѓ С‚Р°РєРёС… РїРѕР»РµР·РЅС‹С… С„СѓРЅРєС†РёР№ РєР°Рє AnsiToUtf8 Рё Utf8ToAnsi
+// РїРѕРґРєР»СЋС‡Р°РµРј sysd7.
 // VER130 - Borland Delphi 5.0
 uses
   classes, Sysutils,
@@ -40,31 +40,31 @@ uses
   ;
 
 const
-   _PointToMM:    real = 0.3528;  // 1 типографский пункт = 0.3528 мм
+   _PointToMM:    real = 0.3528;  // 1 С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ = 0.3528 РјРј
 
 type
-  //тип данных ячейки
+  //С‚РёРї РґР°РЅРЅС‹С… СЏС‡РµР№РєРё
   TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral);
       const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
-  //Стиль начертания линий рамки ячейки
+  //РЎС‚РёР»СЊ РЅР°С‡РµСЂС‚Р°РЅРёСЏ Р»РёРЅРёР№ СЂР°РјРєРё СЏС‡РµР№РєРё
   TZBorderType = (ZENone, ZEContinuous, ZEHair, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot, ZESlantDashDot, ZEDouble);
 
-  //Горизонтальное выравнивание
+  //Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ
   TZHorizontalAlignment = (ZHAutomatic, ZHLeft, ZHCenter, ZHRight, ZHFill, ZHJustify, ZHCenterAcrossSelection, ZHDistributed, ZHJustifyDistributed);
 
-  //вертикальное выравнивание в ячейке
+  //РІРµСЂС‚РёРєР°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ РІ СЏС‡РµР№РєРµ
   TZVerticalAlignment = (ZVAutomatic, ZVTop, ZVBottom, ZVCenter, ZVJustify, ZVDistributed, ZVJustifyDistributed);
 
-  //Шаблон заливки ячейки
+  //РЁР°Р±Р»РѕРЅ Р·Р°Р»РёРІРєРё СЏС‡РµР№РєРё
   TZCellPattern = (ZPNone, ZPSolid, ZPGray75, ZPGray50, ZPGray25, ZPGray125, ZPGray0625, ZPHorzStripe, ZPVertStripe,
                   ZPReverseDiagStripe, ZPDiagStripe, ZPDiagCross, ZPThickDiagCross, ZPThinHorzStripe, ZPThinVertStripe,
                   ZPThinReverseDiagStripe, ZPThinDiagStripe, ZPThinHorzCross, ZPThinDiagCross);
 
-  //Закрепление строк/столбцов
+  //Р—Р°РєСЂРµРїР»РµРЅРёРµ СЃС‚СЂРѕРє/СЃС‚РѕР»Р±С†РѕРІ
   TZSplitMode = (ZSplitNone, ZSplitFrozen, ZSplitSplit);
 
-  //ячейка
+  //СЏС‡РµР№РєР°
   TZCell = class(TPersistent)
   private
     FFormula: string;
@@ -90,14 +90,14 @@ type
     procedure Assign(Source: TPersistent); override;
     procedure Clear();
     property AlwaysShowComment: boolean read FAlwaysShowComment write FAlwaysShowComment default false;
-    property Comment: string read FComment write FComment;      //примечание
-    property CommentAuthor: string read FCommentAuthor write FCommentAuthor;// автор примечания
+    property Comment: string read FComment write FComment;      //РїСЂРёРјРµС‡Р°РЅРёРµ
+    property CommentAuthor: string read FCommentAuthor write FCommentAuthor;// Р°РІС‚РѕСЂ РїСЂРёРјРµС‡Р°РЅРёСЏ
     property CellStyle: integer read FCellStyle write FCellStyle default -1;
-    property CellType: TZCellType read FCellType write FCellType default ZEString; //тип данных ячейки
-    property Data: string read FData write FData;              //отображаемое содержимое ячейки
-    property Formula: string read FFormula write FFormula;     //формула в стиле R1C1
-    property HRef: string read FHref write FHref;              //гиперссылка
-    property HRefScreenTip: string read FHRefScreenTip write FHRefScreenTip; //подпись гиперссылки
+    property CellType: TZCellType read FCellType write FCellType default ZEString; //С‚РёРї РґР°РЅРЅС‹С… СЏС‡РµР№РєРё
+    property Data: string read FData write FData;              //РѕС‚РѕР±СЂР°Р¶Р°РµРјРѕРµ СЃРѕРґРµСЂР¶РёРјРѕРµ СЏС‡РµР№РєРё
+    property Formula: string read FFormula write FFormula;     //С„РѕСЂРјСѓР»Р° РІ СЃС‚РёР»Рµ R1C1
+    property HRef: string read FHref write FHref;              //РіРёРїРµСЂСЃСЃС‹Р»РєР°
+    property HRefScreenTip: string read FHRefScreenTip write FHRefScreenTip; //РїРѕРґРїРёСЃСЊ РіРёРїРµСЂСЃСЃС‹Р»РєРё
     property ShowComment: boolean read FShowComment write FShowComment default false;
 
     property AsDouble: double read GetDataAsDouble write SetDataAsDouble;
@@ -106,7 +106,7 @@ type
     property AsString: string read FData write SetDataAsString;
   end;
 
-  //стиль линии границы
+  //СЃС‚РёР»СЊ Р»РёРЅРёРё РіСЂР°РЅРёС†С‹
   TZBorderStyle = class (TPersistent)
   private
     FLineStyle: TZBorderType;
@@ -125,13 +125,13 @@ type
     property Color: TColor read FColor write SetColor default ClBlack;
   end;
 
-  //Рамка ячейки
-  //   0 - left           левая граница
-  //   1 - Top            верхняя граница
-  //   2 - Right          правая граница
-  //   3 - Bottom         нижняя граница
-  //   4 - DiagonalLeft   диагоняль от верхнего левого угла до нижнего правого
-  //   5 - DiagonalRight  диагоняль от нижнего левого угла до правого верхнего
+  //Р Р°РјРєР° СЏС‡РµР№РєРё
+  //   0 - left           Р»РµРІР°СЏ РіСЂР°РЅРёС†Р°
+  //   1 - Top            РІРµСЂС…РЅСЏСЏ РіСЂР°РЅРёС†Р°
+  //   2 - Right          РїСЂР°РІР°СЏ РіСЂР°РЅРёС†Р°
+  //   3 - Bottom         РЅРёР¶РЅСЏСЏ РіСЂР°РЅРёС†Р°
+  //   4 - DiagonalLeft   РґРёР°РіРѕРЅСЏР»СЊ РѕС‚ РІРµСЂС…РЅРµРіРѕ Р»РµРІРѕРіРѕ СѓРіР»Р° РґРѕ РЅРёР¶РЅРµРіРѕ РїСЂР°РІРѕРіРѕ
+  //   5 - DiagonalRight  РґРёР°РіРѕРЅСЏР»СЊ РѕС‚ РЅРёР¶РЅРµРіРѕ Р»РµРІРѕРіРѕ СѓРіР»Р° РґРѕ РїСЂР°РІРѕРіРѕ РІРµСЂС…РЅРµРіРѕ
   TZBorder = class (TPersistent)
   private
     FBorder: array [0..5] of TZBorderStyle;
@@ -152,19 +152,19 @@ type
     property DiagonalRight: TZBorderStyle index 5 read GetBorder write SetBorder;
   end;
 
-  /// Угол поворота текста в ячейке. Целое со знаком.
-  ///    Базовый диапазон -90 .. +90, расширенный -180 .. +180 (градусов)
-  ///    Значения из расширенного диапазона НЕ МОГУТ работать в Microsoft Excel!
-  /// Определение по XML SS совпадает с базовым
-  /// Определение по OpenDocument 1.2 позволяет любое дробное число
-  ///    в разных еденицах измерения (градусы, грады, радианы).
-  ///    практически используется целое от 0 до 359
-  /// Определение по OfficeXML наиболее запутанное:
-  ///    254 и 255 - специальные значения,
-  ///        255 работает в Excel хотя в стандарте не описано
-  ///        254 принимается, но после открытия файла не работает
-  ///    от 0 до +90 соответствует обоим вышеописанным стандартам
-  ///    от +91 до +180 соответствует значениям -1 .. -90 [ = 90 - value]
+  /// РЈРіРѕР» РїРѕРІРѕСЂРѕС‚Р° С‚РµРєСЃС‚Р° РІ СЏС‡РµР№РєРµ. Р¦РµР»РѕРµ СЃРѕ Р·РЅР°РєРѕРј.
+  ///    Р‘Р°Р·РѕРІС‹Р№ РґРёР°РїР°Р·РѕРЅ -90 .. +90, СЂР°СЃС€РёСЂРµРЅРЅС‹Р№ -180 .. +180 (РіСЂР°РґСѓСЃРѕРІ)
+  ///    Р—РЅР°С‡РµРЅРёСЏ РёР· СЂР°СЃС€РёСЂРµРЅРЅРѕРіРѕ РґРёР°РїР°Р·РѕРЅР° РќР• РњРћР“РЈРў СЂР°Р±РѕС‚Р°С‚СЊ РІ Microsoft Excel!
+  /// РћРїСЂРµРґРµР»РµРЅРёРµ РїРѕ XML SS СЃРѕРІРїР°РґР°РµС‚ СЃ Р±Р°Р·РѕРІС‹Рј
+  /// РћРїСЂРµРґРµР»РµРЅРёРµ РїРѕ OpenDocument 1.2 РїРѕР·РІРѕР»СЏРµС‚ Р»СЋР±РѕРµ РґСЂРѕР±РЅРѕРµ С‡РёСЃР»Рѕ
+  ///    РІ СЂР°Р·РЅС‹С… РµРґРµРЅРёС†Р°С… РёР·РјРµСЂРµРЅРёСЏ (РіСЂР°РґСѓСЃС‹, РіСЂР°РґС‹, СЂР°РґРёР°РЅС‹).
+  ///    РїСЂР°РєС‚РёС‡РµСЃРєРё РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С†РµР»РѕРµ РѕС‚ 0 РґРѕ 359
+  /// РћРїСЂРµРґРµР»РµРЅРёРµ РїРѕ OfficeXML РЅР°РёР±РѕР»РµРµ Р·Р°РїСѓС‚Р°РЅРЅРѕРµ:
+  ///    254 Рё 255 - СЃРїРµС†РёР°Р»СЊРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ,
+  ///        255 СЂР°Р±РѕС‚Р°РµС‚ РІ Excel С…РѕС‚СЏ РІ СЃС‚Р°РЅРґР°СЂС‚Рµ РЅРµ РѕРїРёСЃР°РЅРѕ
+  ///        254 РїСЂРёРЅРёРјР°РµС‚СЃСЏ, РЅРѕ РїРѕСЃР»Рµ РѕС‚РєСЂС‹С‚РёСЏ С„Р°Р№Р»Р° РЅРµ СЂР°Р±РѕС‚Р°РµС‚
+  ///    РѕС‚ 0 РґРѕ +90 СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РѕР±РѕРёРј РІС‹С€РµРѕРїРёСЃР°РЅРЅС‹Рј СЃС‚Р°РЅРґР°СЂС‚Р°Рј
+  ///    РѕС‚ +91 РґРѕ +180 СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ Р·РЅР°С‡РµРЅРёСЏРј -1 .. -90 [ = 90 - value]
   ///
   /// 1. MSDN aa140066.aspx: XML Spreadsheet Reference => ss:Rotate
   /// 2. OASIS OpenDocument 1.2 (Sep.2011) Part 1 => 18.3 Other Datatypes => 18.3.1 angle
@@ -186,20 +186,20 @@ type
   ///
   TZCellTextRotate = -180 .. +359;
 
-  //выравнивание
-        //ReadingOrder - имхо, не нужно ^_^
+  //РІС‹СЂР°РІРЅРёРІР°РЅРёРµ
+        //ReadingOrder - РёРјС…Рѕ, РЅРµ РЅСѓР¶РЅРѕ ^_^
   TZAlignment = class (TPersistent)
   private
-    FHorizontal: TZHorizontalAlignment; //горизонтальное выравнивание
-    FIndent: integer;                   //отступ
-    FRotate: TZCellTextRotate;          //угол поворота
-    FShrinkToFit: boolean;              //true - уменьшает размер шрифта, чтобы текст
-                                        //   поместился в ячейку,
-                                        // false - текст не уменьшается
-    FVertical: TZVerticalAlignment;     //Вертикальное выравнивание
-    FVerticalText: boolean;             //true  - текст по одной букве в строке вертикально
-                                        //false - по дефолту
-    FWrapText: boolean;                 //перенос текста
+    FHorizontal: TZHorizontalAlignment; //РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ
+    FIndent: integer;                   //РѕС‚СЃС‚СѓРї
+    FRotate: TZCellTextRotate;          //СѓРіРѕР» РїРѕРІРѕСЂРѕС‚Р°
+    FShrinkToFit: boolean;              //true - СѓРјРµРЅСЊС€Р°РµС‚ СЂР°Р·РјРµСЂ С€СЂРёС„С‚Р°, С‡С‚РѕР±С‹ С‚РµРєСЃС‚
+                                        //   РїРѕРјРµСЃС‚РёР»СЃСЏ РІ СЏС‡РµР№РєСѓ,
+                                        // false - С‚РµРєСЃС‚ РЅРµ СѓРјРµРЅСЊС€Р°РµС‚СЃСЏ
+    FVertical: TZVerticalAlignment;     //Р’РµСЂС‚РёРєР°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ
+    FVerticalText: boolean;             //true  - С‚РµРєСЃС‚ РїРѕ РѕРґРЅРѕР№ Р±СѓРєРІРµ РІ СЃС‚СЂРѕРєРµ РІРµСЂС‚РёРєР°Р»СЊРЅРѕ
+                                        //false - РїРѕ РґРµС„РѕР»С‚Сѓ
+    FWrapText: boolean;                 //РїРµСЂРµРЅРѕСЃ С‚РµРєСЃС‚Р°
     procedure SetHorizontal(const Value: TZHorizontalAlignment);
     procedure SetIndent(const Value: integer);
     procedure SetRotate(const Value: TZCellTextRotate);
@@ -221,12 +221,12 @@ type
     property WrapText: boolean read FWrapText write SetWrapText default false;
   end;
 
-  //стиль ячейки
+  //СЃС‚РёР»СЊ СЏС‡РµР№РєРё
   TZStyle = class (TPersistent)
   private
     FBorder: TZBorder;
     FAlignment: TZAlignment;
-    FFont: TFont;   //шрифт ячейки
+    FFont: TFont;   //С€СЂРёС„С‚ СЏС‡РµР№РєРё
     FBGColor: TColor;
     FPatternColor: TColor;
     FCellPattern: TZCellPattern;
@@ -258,7 +258,7 @@ type
     property NumberFormat: string read FNumberFormat write SetNumberFormat;
   end;
 
-  //стили
+  //СЃС‚РёР»Рё
   TZStyles = class (TPersistent)
   private
     FDefaultStyle: TZStyle;
@@ -285,11 +285,11 @@ type
 
   TZSheet = class;
 
-  //Объединённые области
+  //РћР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ РѕР±Р»Р°СЃС‚Рё
   TZMergeCells = class
   private
     FSheet: TZSheet;
-    FCount: integer;            //кол-во объединённых областей
+    FCount: integer;            //РєРѕР»-РІРѕ РѕР±СЉРµРґРёРЅС‘РЅРЅС‹С… РѕР±Р»Р°СЃС‚РµР№
     FMergeArea: Array of TRect;
     function GetItem(Num: integer): TRect;
   public
@@ -309,7 +309,7 @@ type
 
   TZEXMLSS = class;
 
-  //общие настройки Row / Column
+  //РѕР±С‰РёРµ РЅР°СЃС‚СЂРѕР№РєРё Row / Column
   TZRowColOptions = class (TPersistent)
   private
     FSheet: TZSheet;
@@ -435,8 +435,8 @@ type
   //WorkSheetOptions
   TZSheetOptions = class (TPersistent)
   private
-    // достали дюймы! Будем измерять в ММ!
-    // кстати, может, вместо word использовать Cardinal?
+    // РґРѕСЃС‚Р°Р»Рё РґСЋР№РјС‹! Р‘СѓРґРµРј РёР·РјРµСЂСЏС‚СЊ РІ РњРњ!
+    // РєСЃС‚Р°С‚Рё, РјРѕР¶РµС‚, РІРјРµСЃС‚Рѕ word РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Cardinal?
     FActiveCol: word;
     FActiveRow: word;
     FMarginBottom: word;
@@ -468,11 +468,11 @@ type
     FPaperHeight: integer;
     FSplitVerticalMode: TZSplitMode;
     FSplitHorizontalMode: TZSplitMode;
-    FSplitVerticalValue: integer;       //Вроде можно вводить отрицательные
-    FSplitHorizontalValue: integer;     //Измеряться будут:
-                                        //    в пикселях, если SplitMode = ZSplitSplit
-                                        //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
-                                        // Если SplitMode = ZSplitNone, то фиксация столбцов/ячеек не работает
+    FSplitVerticalValue: integer;       //Р’СЂРѕРґРµ РјРѕР¶РЅРѕ РІРІРѕРґРёС‚СЊ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅС‹Рµ
+    FSplitHorizontalValue: integer;     //РР·РјРµСЂСЏС‚СЊСЃСЏ Р±СѓРґСѓС‚:
+                                        //    РІ РїРёРєСЃРµР»СЏС…, РµСЃР»Рё SplitMode = ZSplitSplit
+                                        //    РІ РєРѕР»-РІРµ СЃС‚СЂРѕРє/СЃС‚РѕР»Р±С†РѕРІ, РµСЃР»Рё SplitMode = ZSplitFrozen
+                                        // Р•СЃР»Рё SplitMode = ZSplitNone, С‚Рѕ С„РёРєСЃР°С†РёСЏ СЃС‚РѕР»Р±С†РѕРІ/СЏС‡РµРµРє РЅРµ СЂР°Р±РѕС‚Р°РµС‚
     function GetHeaderData(): string;
     procedure SetHeaderData(Value: string);
     function GetFooterData(): string;
@@ -525,7 +525,7 @@ type
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
-  //Условие
+  //РЈСЃР»РѕРІРёРµ
   TZCondition = (ZCFIsTrueFormula,
                  ZCFCellContentIsBetween,
                  ZCFCellContentIsNotBetween,
@@ -554,7 +554,7 @@ type
                  ZCFIsNoError
                 );
 
-  //Оператор для условного форматирования
+  //РћРїРµСЂР°С‚РѕСЂ РґР»СЏ СѓСЃР»РѕРІРЅРѕРіРѕ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёСЏ
   TZConditionalOperator = (ZCFOpGT,       //  > (Greater Than)
                            ZCFOpLT,       //  < (Less Than)
                            ZCFOpGTE,      //  >= (Greater or Equal)
@@ -563,20 +563,20 @@ type
                            ZCFOpNotEqual  //  <> (Not Equal)
                           );
 
-  //Условное форматирование: стиль на условие (conditional formatting)
+  //РЈСЃР»РѕРІРЅРѕРµ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ: СЃС‚РёР»СЊ РЅР° СѓСЃР»РѕРІРёРµ (conditional formatting)
   TZConditionalStyleItem = class (TPersistent)
   private
-    FCondition: TZCondition;                    //условие
-    FConditionOperator: TZConditionalOperator;  //Оператор
+    FCondition: TZCondition;                    //СѓСЃР»РѕРІРёРµ
+    FConditionOperator: TZConditionalOperator;  //РћРїРµСЂР°С‚РѕСЂ
     FValue1: String;
     FValue2: String;
-    FApplyStyleID: integer;                     //номер применяемого стиля
+    FApplyStyleID: integer;                     //РЅРѕРјРµСЂ РїСЂРёРјРµРЅСЏРµРјРѕРіРѕ СЃС‚РёР»СЏ
 
-                                                //Базовая ячейка (только для формул):
-    FBaseCellPageIndex: integer;                //  Номер страницы для адреса базовой ячейки
-                                                //    -1 - текущая страница
-    FBaseCellRowIndex: integer;                 //  Номер строки
-    FBaseCellColumnIndex: integer;              //  Номер столбца
+                                                //Р‘Р°Р·РѕРІР°СЏ СЏС‡РµР№РєР° (С‚РѕР»СЊРєРѕ РґР»СЏ С„РѕСЂРјСѓР»):
+    FBaseCellPageIndex: integer;                //  РќРѕРјРµСЂ СЃС‚СЂР°РЅРёС†С‹ РґР»СЏ Р°РґСЂРµСЃР° Р±Р°Р·РѕРІРѕР№ СЏС‡РµР№РєРё
+                                                //    -1 - С‚РµРєСѓС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р°
+    FBaseCellRowIndex: integer;                 //  РќРѕРјРµСЂ СЃС‚СЂРѕРєРё
+    FBaseCellColumnIndex: integer;              //  РќРѕРјРµСЂ СЃС‚РѕР»Р±С†Р°
   protected
   public
     constructor Create(); virtual;
@@ -593,7 +593,7 @@ type
     property Value2: String read FValue2 write FValue2;
   end;
 
-  //Область для применения условного форматирования
+  //РћР±Р»Р°СЃС‚СЊ РґР»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ СѓСЃР»РѕРІРЅРѕРіРѕ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёСЏ
   TZConditionalAreaItem = class (TPersistent)
   private
     FRow: integer;
@@ -616,7 +616,7 @@ type
     property Height: integer read FHeight write SetHeight;
   end;
 
-  //Области для применения условного форматирования
+  //РћР±Р»Р°СЃС‚Рё РґР»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ СѓСЃР»РѕРІРЅРѕРіРѕ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёСЏ
   TZConditionalAreas = class (TPersistent)
   private
     FCount: integer;
@@ -638,10 +638,10 @@ type
     property Items[num: integer]: TZConditionalAreaItem read GetItem write SetItem; default;
   end;
 
-  //Условное форматирование: список условий
+  //РЈСЃР»РѕРІРЅРѕРµ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ: СЃРїРёСЃРѕРє СѓСЃР»РѕРІРёР№
   TZConditionalStyle = class (TPersistent)
   private
-    FCount: integer;                    //кол-во условий
+    FCount: integer;                    //РєРѕР»-РІРѕ СѓСЃР»РѕРІРёР№
     FMaxCount: integer;
     FAreas: TZConditionalAreas;
     FConditions: array of TZConditionalStyleItem;
@@ -1045,7 +1045,7 @@ type
 
   {$ENDIF} //ZUSE_CHARTS
 
-  //лист документа
+  //Р»РёСЃС‚ РґРѕРєСѓРјРµРЅС‚Р°
   TZSheet = class (TPersistent)
   private
     FStore: TZEXMLSS;
@@ -1053,10 +1053,10 @@ type
     FRows: array of TZRowOptions;
     FColumns: array of TZColOptions;
     FAutoFilter: string;
-    FTitle: string;                     //заголовок листа
+    FTitle: string;                     //Р·Р°РіРѕР»РѕРІРѕРє Р»РёСЃС‚Р°
     FRowCount: integer;
     FColCount: integer;
-    FTabColor: TColor;                  //цвет закладки
+    FTabColor: TColor;                  //С†РІРµС‚ Р·Р°РєР»Р°РґРєРё
     FDefaultRowHeight: real;
     FDefaultColWidth: real;
     FMergeCells: TZMergeCells;
@@ -1113,7 +1113,7 @@ type
     property DefaultRowHeight: real read FDefaultRowHeight write SetDefaultRowHeight;// default 12.75;
     property Cell[ACol, ARow: integer]: TZCell read GetCell write SetCell; default;
     property AutoFilter: string read FAutoFilter write FAutoFilter;
-    property Protect: boolean read FProtect write FProtect default false; //защищён ли лист от изменения
+    property Protect: boolean read FProtect write FProtect default false; //Р·Р°С‰РёС‰С‘РЅ Р»Рё Р»РёСЃС‚ РѕС‚ РёР·РјРµРЅРµРЅРёСЏ
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
     property Title: string read FTitle write FTitle;
     property RowCount: integer read GetRowCount write SetRowCount;
@@ -1135,7 +1135,7 @@ type
     {$ENDIF}
   end;
 
-  //Страницы
+  //РЎС‚СЂР°РЅРёС†С‹
   TZSheets = class (TPersistent)
   private
     FStore: TZEXMLSS;
@@ -1153,7 +1153,7 @@ type
     property Sheet[num: integer]: TZSheet read GetSheet write SetSheet; default;
   end;
 
-  //Свойства документа
+  //РЎРІРѕР№СЃС‚РІР° РґРѕРєСѓРјРµРЅС‚Р°
   TZEXMLDocumentProperties = class(TPersistent)
   private
     FAuthor      : string;
@@ -1204,8 +1204,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy();override;
     procedure Assign(Source: TPersistent); override;
-    procedure GetPixelSize(hdc: HWND);  // получает HorPixelSize и VertPixelSize
-    //ИМХО, лучще сделать функции сохранения/загрузки в другом модуле
+    procedure GetPixelSize(hdc: HWND);  // РїРѕР»СѓС‡Р°РµС‚ HorPixelSize Рё VertPixelSize
+    //РРњРҐРћ, Р»СѓС‡С‰Рµ СЃРґРµР»Р°С‚СЊ С„СѓРЅРєС†РёРё СЃРѕС…СЂР°РЅРµРЅРёСЏ/Р·Р°РіСЂСѓР·РєРё РІ РґСЂСѓРіРѕРј РјРѕРґСѓР»Рµ
     //function SaveToFile(const FileName: ansistring; const SheetsNumbers: array of integer; const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer; overload; virtual;
     //function SaveToStream(Stream: TStream; const SheetsNumbers: array of integer; const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer; overload; virtual;
     //function SaveToFile(const FileName: ansistring; const SheetsNumbers: array of integer; CodePage: byte = 0): integer; overload; virtual;
@@ -1217,31 +1217,31 @@ type
     property Styles: TZStyles read FStyles write FStyles;
     property DefaultSheetOptions: TZSheetOptions read GetDefaultSheetOptions write SetDefaultSheetOptions;
     property DocumentProperties: TZEXMLDocumentProperties read FDocumentProperties write FDocumentProperties;
-    property HorPixelSize: real read FHorPixelSize write SetHorPixelSize;  //размер пикселя по горизонтали
-    property VertPixelSize: real read FVertPixelSize write SetVertPixelSize;  //размер пикселя по вертикали
+    property HorPixelSize: real read FHorPixelSize write SetHorPixelSize;  //СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ РїРѕ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё
+    property VertPixelSize: real read FVertPixelSize write SetVertPixelSize;  //СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ РїРѕ РІРµСЂС‚РёРєР°Р»Рё
   end;
 
 procedure Register();
 
-//Проверяет строку на правильность, если что-то не правильно - правит
+//РџСЂРѕРІРµСЂСЏРµС‚ СЃС‚СЂРѕРєСѓ РЅР° РїСЂР°РІРёР»СЊРЅРѕСЃС‚СЊ, РµСЃР»Рё С‡С‚Рѕ-С‚Рѕ РЅРµ РїСЂР°РІРёР»СЊРЅРѕ - РїСЂР°РІРёС‚
 procedure CorrectStrForXML(const St: string; var Corrected: string; var UseXMLNS: boolean);
 
-//переводит TColor в Hex RGB
+//РїРµСЂРµРІРѕРґРёС‚ TColor РІ Hex RGB
 function ColorToHTMLHex(Color: TColor): string;
 
-//переводит Hex RGB (string) в TColor
+//РїРµСЂРµРІРѕРґРёС‚ Hex RGB (string) РІ TColor
 function HTMLHexToColor(value: string): TColor;
 
-//Перевести пиксели в типографский пункт (point)
+//РџРµСЂРµРІРµСЃС‚Рё РїРёРєСЃРµР»Рё РІ С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point)
 function PixelToPoint(inPixel: integer; PixelSizeMM: real = 0.265): real;
 
-//Перевести типографский пункт (point) в пиксели
+//РџРµСЂРµРІРµСЃС‚Рё С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point) РІ РїРёРєСЃРµР»Рё
 function PointToPixel(inPoint: real; PixelSizeMM: real = 0.265): integer;
 
-//Перевести типографский пункт (point) в мм
+//РџРµСЂРµРІРµСЃС‚Рё С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point) РІ РјРј
 function PointToMM(inPoint: real): real;
 
-//Перевести мм в типографский пункт (point)
+//РџРµСЂРµРІРµСЃС‚Рё РјРј РІ С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point)
 function MMToPoint(inMM: real): real;
 
 //HorizontalAligment to Str
@@ -1270,7 +1270,7 @@ function StrToZCellType(Value: string): TZCellType;
 
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 
-//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+//РџРµСЂРµРІРѕРґРёС‚ РґР°С‚Сѓ РІ СЃС‚СЂРѕРєСѓ РґР»СЏ XML (YYYY-MM-DDTHH:MM:SS[.mmm])
 function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 
 function ZEDateToStr(ADate: TDateTime): string;
@@ -1284,11 +1284,11 @@ function IntToStrN(value: integer; NullCount: integer): string;
 
 implementation
 
-//Переводит число в строку минимальной длины NullCount
-//TODO: надо глянуть что с функциями в FlyLogReader-е
+//РџРµСЂРµРІРѕРґРёС‚ С‡РёСЃР»Рѕ РІ СЃС‚СЂРѕРєСѓ РјРёРЅРёРјР°Р»СЊРЅРѕР№ РґР»РёРЅС‹ NullCount
+//TODO: РЅР°РґРѕ РіР»СЏРЅСѓС‚СЊ С‡С‚Рѕ СЃ С„СѓРЅРєС†РёСЏРјРё РІ FlyLogReader-Рµ
 //INPUT
-//      value: integer     - число
-//      NullCount: integer - кол-во знаков в строке
+//      value: integer     - С‡РёСЃР»Рѕ
+//      NullCount: integer - РєРѕР»-РІРѕ Р·РЅР°РєРѕРІ РІ СЃС‚СЂРѕРєРµ
 //RETURN
 //      string
 function IntToStrN(value: integer; NullCount: integer): string;
@@ -1311,9 +1311,9 @@ begin
     result := '0' + result;
 end; //IntToStrN
 
-//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+//РџРµСЂРµРІРѕРґРёС‚ РґР°С‚Сѓ РІ СЃС‚СЂРѕРєСѓ РґР»СЏ XML (YYYY-MM-DDTHH:MM:SS[.mmm])
 //INPUT
-//      ATime: TDateTime - нужная дата/время
+//      ATime: TDateTime - РЅСѓР¶РЅР°СЏ РґР°С‚Р°/РІСЂРµРјСЏ
 //      Addmms: boolean  - need add ms to result
 function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 var
@@ -1630,12 +1630,12 @@ begin
   end;
 end; //ZEIsFontsEquals
 
-//Проверяет строку на правильность, если что-то не правильно - правит
+//РџСЂРѕРІРµСЂСЏРµС‚ СЃС‚СЂРѕРєСѓ РЅР° РїСЂР°РІРёР»СЊРЅРѕСЃС‚СЊ, РµСЃР»Рё С‡С‚Рѕ-С‚Рѕ РЅРµ РїСЂР°РІРёР»СЊРЅРѕ - РїСЂР°РІРёС‚
 //Input
-//      St: string - исходная строка
-//      var Corrected: string - исправленная строка
-//      var UseXMLNS: boolean - есть ли в строке правильные парные тэги
-//                              true - есть
+//      St: string - РёСЃС…РѕРґРЅР°СЏ СЃС‚СЂРѕРєР°
+//      var Corrected: string - РёСЃРїСЂР°РІР»РµРЅРЅР°СЏ СЃС‚СЂРѕРєР°
+//      var UseXMLNS: boolean - РµСЃС‚СЊ Р»Рё РІ СЃС‚СЂРѕРєРµ РїСЂР°РІРёР»СЊРЅС‹Рµ РїР°СЂРЅС‹Рµ С‚СЌРіРё
+//                              true - РµСЃС‚СЊ
 procedure CorrectStrForXML(const St: string; var Corrected: string; var UseXMLNS: boolean);
 type
   StackData = record
@@ -1651,7 +1651,7 @@ var
   s: string;
   Stack: array of StackData;
 
-  //проверка тэга
+  //РїСЂРѕРІРµСЂРєР° С‚СЌРіР°
   procedure _CheckTag(var _num: integer; const _s: string; var D: StackData);
   var
     i, l, f, t: integer;
@@ -1673,7 +1673,7 @@ var
       f := i;
       break;
     end;
-    //убитый тэг
+    //СѓР±РёС‚С‹Р№ С‚СЌРі
     if f = 0 then
     begin
       D.isBad := true;
@@ -1801,7 +1801,7 @@ var
           else
             s := s + _s[i];
         end;
-        // если тэг запорчен
+        // РµСЃР»Рё С‚СЌРі Р·Р°РїРѕСЂС‡РµРЅ
         if D.isBad then
         begin
           D.RawTag :=copy(_s, _num,  f - _num + 1);
@@ -1915,7 +1915,7 @@ begin
   Stack := nil;
 end;
 
-//переводит TColor в Hex RGB
+//РїРµСЂРµРІРѕРґРёС‚ TColor РІ Hex RGB
 function ColorToHTMLHex(Color: TColor): string;
 var
   _RGB: integer;
@@ -1926,7 +1926,7 @@ begin
   result := IntToHex(byte(_RGB), 2) + IntToHex(byte(_RGB shr 8), 2) + IntToHex(byte(_RGB shr 16), 2);
 end;
 
-//переводит Hex RGB (string) в TColor
+//РїРµСЂРµРІРѕРґРёС‚ Hex RGB (string) РІ TColor
 function HTMLHexToColor(value: string): TColor;
 var
   a: array [0..2] of integer;
@@ -1942,7 +1942,7 @@ begin
     {$HINTS ON}
     n := 0;
     if value[1] = '#' then delete(value, 1, 1);
-    //А что, если будут цвета типа "black"?  {tut}
+    //Рђ С‡С‚Рѕ, РµСЃР»Рё Р±СѓРґСѓС‚ С†РІРµС‚Р° С‚РёРїР° "black"?  {tut}
     for i := 1 to length(value) do
     begin
       if n > 2 then break;
@@ -1960,37 +1960,37 @@ begin
   end;
 end;
 
-//Перевести пиксели в типографский пункт (point)
+//РџРµСЂРµРІРµСЃС‚Рё РїРёРєСЃРµР»Рё РІ С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point)
 //Input
-//      inPixel: integer          - размер в пикселях
-//      PixelSizeMM: real = 0.265 - размер пикселя
+//      inPixel: integer          - СЂР°Р·РјРµСЂ РІ РїРёРєСЃРµР»СЏС…
+//      PixelSizeMM: real = 0.265 - СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ
 function PixelToPoint(inPixel: integer; PixelSizeMM: real = 0.265): real;
 begin
   result := inPixel * PixelSizeMM / _PointToMM;
-  //и оставим 2 знака после запятой ^_^
+  //Рё РѕСЃС‚Р°РІРёРј 2 Р·РЅР°РєР° РїРѕСЃР»Рµ Р·Р°РїСЏС‚РѕР№ ^_^
   result := round(result * 100) / 100;
 end;
 
-//Перевести типографский пункт (point) в пиксели
+//РџРµСЂРµРІРµСЃС‚Рё С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point) РІ РїРёРєСЃРµР»Рё
 //Input
-//      inPoint: integer          - размер в пикселях
-//      PixelSizeMM: real = 0.265 - размер пикселя
+//      inPoint: integer          - СЂР°Р·РјРµСЂ РІ РїРёРєСЃРµР»СЏС…
+//      PixelSizeMM: real = 0.265 - СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ
 function PointToPixel(inPoint: real; PixelSizeMM: real = 0.265): integer;
 begin
   result := round(inPoint * _PointToMM / PixelSizeMM);
 end;
 
-//Перевести типографский пункт (point) в мм
+//РџРµСЂРµРІРµСЃС‚Рё С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point) РІ РјРј
 //Input
-//      inPoint: integer - размер в пунктах
+//      inPoint: integer - СЂР°Р·РјРµСЂ РІ РїСѓРЅРєС‚Р°С…
 function PointToMM(inPoint: real): real;
 begin
   result := round(inPoint * _PointToMM * 100) / 100;
 end;
 
-//Перевести мм в типографский пункт (point)
+//РџРµСЂРµРІРµСЃС‚Рё РјРј РІ С‚РёРїРѕРіСЂР°С„СЃРєРёР№ РїСѓРЅРєС‚ (point)
 //Input
-//      inMM: integer - размер в пунктах
+//      inMM: integer - СЂР°Р·РјРµСЂ РІ РїСѓРЅРєС‚Р°С…
 function MMToPoint(inMM: real): real;
 begin
   result := round(inMM / _PointToMM * 100) / 100;
@@ -2313,14 +2313,14 @@ begin
   Result := True;
 end;
 
-//установить стиль границы
+//СѓСЃС‚Р°РЅРѕРІРёС‚СЊ СЃС‚РёР»СЊ РіСЂР°РЅРёС†С‹
 procedure TZBorder.SetBorder(Num: integer; Const Value: TZBorderStyle);
 begin
   if (Num>=0) and (Num <=3) then
     Border[num].Assign(Value);
 end;
 
-//прочитать стиль границы
+//РїСЂРѕС‡РёС‚Р°С‚СЊ СЃС‚РёР»СЊ РіСЂР°РЅРёС†С‹
 function TZBorder.GetBorder(Num: integer): TZBorderStyle;
 begin
   if (Num>=0) and (Num <=5) then
@@ -2582,11 +2582,11 @@ begin
   inherited Destroy();
 end;
 
-//Ищет стиль Style
-//Возвращает:
-//     -2          - стиль не найден
-//     -1          - совпадает со стилем по умолчанию
-//      0..Count-1 - номер стиля
+//РС‰РµС‚ СЃС‚РёР»СЊ Style
+//Р’РѕР·РІСЂР°С‰Р°РµС‚:
+//     -2          - СЃС‚РёР»СЊ РЅРµ РЅР°Р№РґРµРЅ
+//     -1          - СЃРѕРІРїР°РґР°РµС‚ СЃРѕ СЃС‚РёР»РµРј РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+//      0..Count-1 - РЅРѕРјРµСЂ СЃС‚РёР»СЏ
 function TZStyles.Find(const Style: TZStyle): integer;
 var
   i: integer;
@@ -2606,11 +2606,11 @@ begin
   end;
 end;
 
-//Добавляет стиль
-//      Style      - стиль
-//      CheckMatch - проверять ли вхождение данного стиля
-//Возвращает
-//      Номер добавленного (или введённого ранее) стиля
+//Р”РѕР±Р°РІР»СЏРµС‚ СЃС‚РёР»СЊ
+//      Style      - СЃС‚РёР»СЊ
+//      CheckMatch - РїСЂРѕРІРµСЂСЏС‚СЊ Р»Рё РІС…РѕР¶РґРµРЅРёРµ РґР°РЅРЅРѕРіРѕ СЃС‚РёР»СЏ
+//Р’РѕР·РІСЂР°С‰Р°РµС‚
+//      РќРѕРјРµСЂ РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ (РёР»Рё РІРІРµРґС‘РЅРЅРѕРіРѕ СЂР°РЅРµРµ) СЃС‚РёР»СЏ
 function TZStyles.Add(const Style: TZStyle; CheckMatch: boolean = false): integer;
 begin
   result := -2;
@@ -2686,11 +2686,11 @@ begin
     DefaultStyle.Assign(Value);
 end;
 
-//Удаляет стиль num, стили с большим номером сдвигаются
-// num - номер стиля
-//Возвращает:
-//       0  - удалился успешно
-//      -1  - стиль не удалился
+//РЈРґР°Р»СЏРµС‚ СЃС‚РёР»СЊ num, СЃС‚РёР»Рё СЃ Р±РѕР»СЊС€РёРј РЅРѕРјРµСЂРѕРј СЃРґРІРёРіР°СЋС‚СЃСЏ
+// num - РЅРѕРјРµСЂ СЃС‚РёР»СЏ
+//Р’РѕР·РІСЂР°С‰Р°РµС‚:
+//       0  - СѓРґР°Р»РёР»СЃСЏ СѓСЃРїРµС€РЅРѕ
+//      -1  - СЃС‚РёР»СЊ РЅРµ СѓРґР°Р»РёР»СЃСЏ
 function TZStyles.DeleteStyle(num: integer):integer;
 begin
   if (num >= 0) and (num < Count) then
@@ -2700,7 +2700,7 @@ begin
     FStyles[Count - 1] := nil;
     dec(FCount);
     setlength(FStyles, FCount);
-    // при удалении глянуть на ячейки - изменить num на 0, остальные сдвинуть.
+    // РїСЂРё СѓРґР°Р»РµРЅРёРё РіР»СЏРЅСѓС‚СЊ РЅР° СЏС‡РµР№РєРё - РёР·РјРµРЅРёС‚СЊ num РЅР° 0, РѕСЃС‚Р°Р»СЊРЅС‹Рµ СЃРґРІРёРЅСѓС‚СЊ.
     result := 0;
   end else
     result := -1;
@@ -2711,7 +2711,7 @@ var
   i: integer;
 
 begin
-  //очистка стилей
+  //РѕС‡РёСЃС‚РєР° СЃС‚РёР»РµР№
   for i:= 0 to FCount - 1 do
     FreeAndNil(FStyles[i]);
   SetLength(FStyles,0);
@@ -2729,7 +2729,7 @@ begin
   FCommentAuthor := '';
   FHRefScreenTip := '';
   FCellType := ZEString;
-  FCellStyle := -1; //по дефолту
+  FCellStyle := -1; //РїРѕ РґРµС„РѕР»С‚Сѓ
   FAlwaysShowComment := false;
   FShowComment := false;
 end;
@@ -2846,7 +2846,7 @@ begin
     inherited Assign(Source);
 end;
 
-//Очистка ячейки
+//РћС‡РёСЃС‚РєР° СЏС‡РµР№РєРё
 procedure TZCell.Clear();
 begin
   FFormula := '';
@@ -2894,13 +2894,13 @@ begin
   end;
 end;
 
-//Объединить ячейки входящие в прямоуголтник
-//принимает прямоугольник (Rct: TRect)
-//возвращает:
-//      0 - всё нормально, ячейки объединены
-//      1 - указанный прямоугольник выходит за границы, ячейки не объединены
-//      2 - указанный прямоуголник пересекается(входит) введённые ранее, ячейки не объединены
-//      3 - прямоугольник из одной ячейки не добавляет
+//РћР±СЉРµРґРёРЅРёС‚СЊ СЏС‡РµР№РєРё РІС…РѕРґСЏС‰РёРµ РІ РїСЂСЏРјРѕСѓРіРѕР»С‚РЅРёРє
+//РїСЂРёРЅРёРјР°РµС‚ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє (Rct: TRect)
+//РІРѕР·РІСЂР°С‰Р°РµС‚:
+//      0 - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ, СЏС‡РµР№РєРё РѕР±СЉРµРґРёРЅРµРЅС‹
+//      1 - СѓРєР°Р·Р°РЅРЅС‹Р№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РІС‹С…РѕРґРёС‚ Р·Р° РіСЂР°РЅРёС†С‹, СЏС‡РµР№РєРё РЅРµ РѕР±СЉРµРґРёРЅРµРЅС‹
+//      2 - СѓРєР°Р·Р°РЅРЅС‹Р№ РїСЂСЏРјРѕСѓРіРѕР»РЅРёРє РїРµСЂРµСЃРµРєР°РµС‚СЃСЏ(РІС…РѕРґРёС‚) РІРІРµРґС‘РЅРЅС‹Рµ СЂР°РЅРµРµ, СЏС‡РµР№РєРё РЅРµ РѕР±СЉРµРґРёРЅРµРЅС‹
+//      3 - РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РёР· РѕРґРЅРѕР№ СЏС‡РµР№РєРё РЅРµ РґРѕР±Р°РІР»СЏРµС‚
 function TZMergeCells.AddRect(Rct:TRect): byte;
 var
   i: integer;
@@ -2946,7 +2946,7 @@ begin
     result := 2;
     exit;
   end;
-  //если надо, увеличиваем кол-во строк/столбцов в хранилище
+  //РµСЃР»Рё РЅР°РґРѕ, СѓРІРµР»РёС‡РёРІР°РµРј РєРѕР»-РІРѕ СЃС‚СЂРѕРє/СЃС‚РѕР»Р±С†РѕРІ РІ С…СЂР°РЅРёР»РёС‰Рµ
   if (FSheet <> nil) then
   begin
     if Rct.Right > FSheet.ColCount - 1 then FSheet.ColCount := Rct.Right {+ 1};
@@ -2958,11 +2958,11 @@ begin
   result := 0;
 end;
 
-//Проверка на вхождение ячейки в левый верхний угол области (
-//принимает (ACol, ARow: integer) -  координаты ячейки
-//возвращает
-//      -1              ячейка не является левым верхним углом области
-//      int num >=0     номер области, в которой ячейка есть левый верхний угол
+//РџСЂРѕРІРµСЂРєР° РЅР° РІС…РѕР¶РґРµРЅРёРµ СЏС‡РµР№РєРё РІ Р»РµРІС‹Р№ РІРµСЂС…РЅРёР№ СѓРіРѕР» РѕР±Р»Р°СЃС‚Рё (
+//РїСЂРёРЅРёРјР°РµС‚ (ACol, ARow: integer) -  РєРѕРѕСЂРґРёРЅР°С‚С‹ СЏС‡РµР№РєРё
+//РІРѕР·РІСЂР°С‰Р°РµС‚
+//      -1              СЏС‡РµР№РєР° РЅРµ СЏРІР»СЏРµС‚СЃСЏ Р»РµРІС‹Рј РІРµСЂС…РЅРёРј СѓРіР»РѕРј РѕР±Р»Р°СЃС‚Рё
+//      int num >=0     РЅРѕРјРµСЂ РѕР±Р»Р°СЃС‚Рё, РІ РєРѕС‚РѕСЂРѕР№ СЏС‡РµР№РєР° РµСЃС‚СЊ Р»РµРІС‹Р№ РІРµСЂС…РЅРёР№ СѓРіРѕР»
 function TZMergeCells.InLeftTopCorner(ACol, ARow: integer): integer;
 var
   i: integer;
@@ -2977,11 +2977,11 @@ begin
   end;
 end;
 
-//Проверка на вхождение ячейки в область
-//принимает (ACol, ARow: integer) -  координаты ячейки
-//возвращает
-//      -1              ячейка не входит в область
-//      int num >=0     номер области, в которой содержится ячейка
+//РџСЂРѕРІРµСЂРєР° РЅР° РІС…РѕР¶РґРµРЅРёРµ СЏС‡РµР№РєРё РІ РѕР±Р»Р°СЃС‚СЊ
+//РїСЂРёРЅРёРјР°РµС‚ (ACol, ARow: integer) -  РєРѕРѕСЂРґРёРЅР°С‚С‹ СЏС‡РµР№РєРё
+//РІРѕР·РІСЂР°С‰Р°РµС‚
+//      -1              СЏС‡РµР№РєР° РЅРµ РІС…РѕРґРёС‚ РІ РѕР±Р»Р°СЃС‚СЊ
+//      int num >=0     РЅРѕРјРµСЂ РѕР±Р»Р°СЃС‚Рё, РІ РєРѕС‚РѕСЂРѕР№ СЃРѕРґРµСЂР¶РёС‚СЃСЏ СЏС‡РµР№РєР°
 function TZMergeCells.InMergeRange(ACol, ARow: integer): integer;
 var
   i: integer;
@@ -2997,10 +2997,10 @@ begin
   end;
 end;
 
-//удаляет облать num
-//возвращает
-//      - TRUE - область удалена
-//      - FALSE - num>Count-1 или num<0
+//СѓРґР°Р»СЏРµС‚ РѕР±Р»Р°С‚СЊ num
+//РІРѕР·РІСЂР°С‰Р°РµС‚
+//      - TRUE - РѕР±Р»Р°СЃС‚СЊ СѓРґР°Р»РµРЅР°
+//      - FALSE - num>Count-1 РёР»Рё num<0
 function TZMergeCells.DeleteItem(num: integer): boolean;
 var
   i: integer;
@@ -3018,13 +3018,13 @@ begin
   result := true;
 end;
 
-//Объединить ячейки входящие в прямоуголтник
-//принимает прямоугольник (x1, y1, x2, y2: integer)
-//возвращает:
-//      0 - всё нормально, ячейки объединены
-//      1 - указанный прямоугольник выходит за границы, ячейки не объединены
-//      2 - указанный прямоуголник пересекается(входит) введённые ранее, ячейки не объединены
-//      3 - прямоугольник из одной ячейки не добавляет
+//РћР±СЉРµРґРёРЅРёС‚СЊ СЏС‡РµР№РєРё РІС…РѕРґСЏС‰РёРµ РІ РїСЂСЏРјРѕСѓРіРѕР»С‚РЅРёРє
+//РїСЂРёРЅРёРјР°РµС‚ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє (x1, y1, x2, y2: integer)
+//РІРѕР·РІСЂР°С‰Р°РµС‚:
+//      0 - РІСЃС‘ РЅРѕСЂРјР°Р»СЊРЅРѕ, СЏС‡РµР№РєРё РѕР±СЉРµРґРёРЅРµРЅС‹
+//      1 - СѓРєР°Р·Р°РЅРЅС‹Р№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РІС‹С…РѕРґРёС‚ Р·Р° РіСЂР°РЅРёС†С‹, СЏС‡РµР№РєРё РЅРµ РѕР±СЉРµРґРёРЅРµРЅС‹
+//      2 - СѓРєР°Р·Р°РЅРЅС‹Р№ РїСЂСЏРјРѕСѓРіРѕР»РЅРёРє РїРµСЂРµСЃРµРєР°РµС‚СЃСЏ(РІС…РѕРґРёС‚) РІРІРµРґС‘РЅРЅС‹Рµ СЂР°РЅРµРµ, СЏС‡РµР№РєРё РЅРµ РѕР±СЉРµРґРёРЅРµРЅС‹
+//      3 - РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РёР· РѕРґРЅРѕР№ СЏС‡РµР№РєРё РЅРµ РґРѕР±Р°РІР»СЏРµС‚
 function TZMergeCells.AddRectXY(x1,y1,x2,y2: integer): byte;
 var
   Rct: TRect;
@@ -3490,12 +3490,12 @@ begin
 
     SheetOptions.Assign(zSource.SheetOptions);
 
-    //Объединённые ячейки
+    //РћР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ СЏС‡РµР№РєРё
     MergeCells.Clear();
     for i := 0 to ZSource.MergeCells.Count - 1 do
       MergeCells.AddRect(ZSource.MergeCells.GetItem(i));
 
-    {дописать что ещё нужно копировать}
+    {РґРѕРїРёСЃР°С‚СЊ С‡С‚Рѕ РµС‰С‘ РЅСѓР¶РЅРѕ РєРѕРїРёСЂРѕРІР°С‚СЊ}
     {tut!}
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -3593,14 +3593,14 @@ begin
       result := FRows[num].Height
 end;
 
-//установить ширину столбца по умолчанию
+//СѓСЃС‚Р°РЅРѕРІРёС‚СЊ С€РёСЂРёРЅСѓ СЃС‚РѕР»Р±С†Р° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
 procedure TZSheet.SetDefaultColWidth(const Value: real);
 begin
   if Value >= 0 then
     FDefaultColWidth := round(Value*100)/100;
 end;
 
-//установить высоту строки по умолчанию
+//СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РІС‹СЃРѕС‚Сѓ СЃС‚СЂРѕРєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
 procedure TZSheet.SetDefaultRowHeight(const Value: real);
 begin
   if Value >= 0 then
@@ -3622,7 +3622,7 @@ var
   i, j: integer;
 
 begin
-  //очистка ячеек
+  //РѕС‡РёСЃС‚РєР° СЏС‡РµРµРє
   for i:= 0 to FColCount - 1 do
   begin
     for j:= 0 to FRowCount - 1 do
@@ -3642,7 +3642,7 @@ end;
 
 procedure TZSheet.SetCell(ACol, ARow: integer; const Value: TZCell);
 begin
-  //добавить проверку на корректность текста
+  //РґРѕР±Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ РЅР° РєРѕСЂСЂРµРєС‚РЅРѕСЃС‚СЊ С‚РµРєСЃС‚Р°
   if (ACol >= 0) and (ACol < FColCount) and
      (ARow >= 0) and (ARow < FRowCount) then
   FCells[ACol, ARow].Assign(Value);
@@ -3657,7 +3657,7 @@ begin
   result := nil;
 end;
 
-//установить кол-во столбцов
+//СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РєРѕР»-РІРѕ СЃС‚РѕР»Р±С†РѕРІ
 procedure TZSheet.SetColCount(const Value: integer);
 var
   i, j: integer;
@@ -3691,13 +3691,13 @@ begin
   FColCount := Value;
 end;
 
-//получить кол-во столбцов
+//РїРѕР»СѓС‡РёС‚СЊ РєРѕР»-РІРѕ СЃС‚РѕР»Р±С†РѕРІ
 function TZSheet.GetColCount: integer;
 begin
   result := FColCount;
 end;
 
-//установить кол-во строк
+//СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РєРѕР»-РІРѕ СЃС‚СЂРѕРє
 procedure TZSheet.SetRowCount(const Value: integer);
 var
   i, j: integer;
@@ -3733,7 +3733,7 @@ begin
   FRowCount := Value;
 end;
 
-//получить кол-во строк
+//РїРѕР»СѓС‡РёС‚СЊ РєРѕР»-РІРѕ СЃС‚СЂРѕРє
 function TZSheet.GetRowCount: integer;
 begin
   result := FRowCount;
@@ -3828,25 +3828,25 @@ end;
 
 procedure TZEXMLDocumentProperties.SetAuthor(const Value: string);
 begin
-  //поставить проверку на валидность ввода
+  //РїРѕСЃС‚Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ РЅР° РІР°Р»РёРґРЅРѕСЃС‚СЊ РІРІРѕРґР°
   FAuthor := Value;
 end;
 
 procedure TZEXMLDocumentProperties.SetLastAuthor(const Value: string);
 begin
-  //поставить проверку на валидность ввода
+  //РїРѕСЃС‚Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ РЅР° РІР°Р»РёРґРЅРѕСЃС‚СЊ РІРІРѕРґР°
   FLastAuthor := Value;
 end;
 
 procedure TZEXMLDocumentProperties.SetCompany(const Value: string);
 begin
-  //поставить проверку на валидность ввода
+  //РїРѕСЃС‚Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ РЅР° РІР°Р»РёРґРЅРѕСЃС‚СЊ РІРІРѕРґР°
   FCompany := Value;
 end;
 
 procedure TZEXMLDocumentProperties.SetVersion(const Value: string);
 begin
-  //поставить проверку на валидность ввода
+  //РїРѕСЃС‚Р°РІРёС‚СЊ РїСЂРѕРІРµСЂРєСѓ РЅР° РІР°Р»РёРґРЅРѕСЃС‚СЊ РІРІРѕРґР°
   FVersion := Value;
 end;
 
@@ -3926,13 +3926,13 @@ begin
     FVertPixelSize := Value;
 end;
 
-//Получить HorPixelSize и VertPixelSize устройства hdc
+//РџРѕР»СѓС‡РёС‚СЊ HorPixelSize Рё VertPixelSize СѓСЃС‚СЂРѕР№СЃС‚РІР° hdc
 procedure TZEXMLSS.GetPixelSize(hdc: HWND);
 begin
   {$IFDEF FPC}
   {$ELSE}
-  HorPixelSize  := GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //горизонтальный размер пикселя в миллиметрах
-  VertPixelSize := GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикальный размер пикселя в миллиметрах
+  HorPixelSize  := GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ РІ РјРёР»Р»РёРјРµС‚СЂР°С…
+  VertPixelSize := GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //РІРµСЂС‚РёРєР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ РІ РјРёР»Р»РёРјРµС‚СЂР°С…
   {$ENDIF}
 end;
 
@@ -3948,11 +3948,11 @@ begin
 end;
 
 
-//Сохраняет в файл FileName
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of ansistring     - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
-//      CodePage: byte                   - кодировка:
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» FileName
+//      SheetsNumbers: array of integer  - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      SheetsNames: array of ansistring     - РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ СЃС‚СЂР°РЅРёС†
+//              РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РґРІСѓС… РјР°СЃСЃРёРІР°С… РґРѕР»Р¶РЅС‹ СЃРѕРІРїР°РґР°С‚СЊ
+//      CodePage: byte                   - РєРѕРґРёСЂРѕРІРєР°:
 //                                         0 - UTF-8
 //                                         1 - windows-1251
 //function TZEXMLSS.SaveToFile(const FileName: ansistring; const SheetsNumbers:array of integer;const SheetsNames: array of ansistring; CodePage: byte{$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer;
@@ -3976,20 +3976,20 @@ begin
 end;
 }
 
-//Сохраняет в поток
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of ansistring     - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
-//      CodePage: byte                   - кодировка:
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє
+//      SheetsNumbers: array of integer  - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      SheetsNames: array of ansistring     - РјР°СЃСЃРёРІ РЅР°Р·РІР°РЅРёР№ СЃС‚СЂР°РЅРёС†
+//              РєРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ РІ РґРІСѓС… РјР°СЃСЃРёРІР°С… РґРѕР»Р¶РЅС‹ СЃРѕРІРїР°РґР°С‚СЊ
+//      CodePage: byte                   - РєРѕРґРёСЂРѕРІРєР°:
 //                                         0 - UTF-8
 //                                         1 - windows-1251
 //function TZEXMLSS.SaveToStream(Stream: TStream; const SheetsNumbers:array of integer;const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer;
 {begin
 end;}
 
-//Сохраняет в файл FileName
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      CodePage: byte                   - кодировка:
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» FileName
+//      SheetsNumbers: array of integer  - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      CodePage: byte                   - РєРѕРґРёСЂРѕРІРєР°:
 //                                         0 - UTF-8
 //                                         1 - windows-1251
 {function TZEXMLSS.SaveToFile(const FileName: ansistring; const SheetsNumbers:array of integer; CodePage: byte = 0): integer;
@@ -3997,9 +3997,9 @@ begin
   result := SaveToFile(FileName, SheetsNumbers, [], CodePage);
 end;}
 
-//Сохраняет в поток
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      CodePage: byte                   - кодировка:
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє
+//      SheetsNumbers: array of integer  - РјР°СЃСЃРёРІ РЅРѕРјРµСЂРѕРІ СЃС‚СЂР°РЅРёС† РІ РЅСѓР¶РЅРѕР№ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+//      CodePage: byte                   - РєРѕРґРёСЂРѕРІРєР°:
 //                                         0 - UTF-8
 //                                         1 - windows-1251
 {function TZEXMLSS.SaveToStream(Stream: TStream; const SheetsNumbers:array of integer; CodePage: byte = 0): integer;
@@ -4007,8 +4007,8 @@ begin
   result := SaveToStream(Stream, SheetsNumbers, [], CodePage);
 end;}
 
-//Сохраняет в файл FileName
-//      CodePage: byte                   - кодировка:
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ С„Р°Р№Р» FileName
+//      CodePage: byte                   - РєРѕРґРёСЂРѕРІРєР°:
 //                                         0 - UTF-8
 //                                         1 - windows-1251
 {function TZEXMLSS.SaveToFile(const FileName: ansistring; CodePage: byte = 0): integer;
@@ -4016,8 +4016,8 @@ begin
   result := SaveToFile(FileName, [], [], CodePage);
 end;}
 
-//Сохраняет в поток
-//      CodePage: byte                   - кодировка:
+//РЎРѕС…СЂР°РЅСЏРµС‚ РІ РїРѕС‚РѕРє
+//      CodePage: byte                   - РєРѕРґРёСЂРѕРІРєР°:
 //                                         0 - UTF-8
 //                                         1 - windows-1251
 {function TZEXMLSS.SaveToStream(Stream: TStream; CodePage: byte = 0): integer;
@@ -4025,7 +4025,7 @@ begin
   result := SaveToStream(Stream, [], [], CodePage);
 end;}
 
-//регистрируем компонент
+//СЂРµРіРёСЃС‚СЂРёСЂСѓРµРј РєРѕРјРїРѕРЅРµРЅС‚
 procedure Register();
 begin
   RegisterComponents('ZColor', [TZEXMLSS]);
@@ -4112,7 +4112,7 @@ begin
   Result := True;
 end;
 
-//Условное форматирование
+//РЈСЃР»РѕРІРЅРѕРµ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ
 {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
 ////::::::::::::: TZConditionalStyleItem :::::::::::::::::////
@@ -4267,7 +4267,7 @@ var
 
 begin
   {tut}
-  //TODO: нужно ли ограничение на максимальное кол-во?
+  //TODO: РЅСѓР¶РЅРѕ Р»Рё РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»-РІРѕ?
   if (value >= 0) then
   begin
     if (value < FCount) then
@@ -4530,12 +4530,12 @@ begin
   end;
 end; //Delete
 
-//Определяет, находится ли ячейка в области
+//РћРїСЂРµРґРµР»СЏРµС‚, РЅР°С…РѕРґРёС‚СЃСЏ Р»Рё СЏС‡РµР№РєР° РІ РѕР±Р»Р°СЃС‚Рё
 //INPUT
-//      ColumnNum: integer  - номер столбца ячейки
-//      RowNum: integer     - номер строки ячейки
+//      ColumnNum: integer  - РЅРѕРјРµСЂ СЃС‚РѕР»Р±С†Р° СЏС‡РµР№РєРё
+//      RowNum: integer     - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё СЏС‡РµР№РєРё
 //RETURN
-//      boolean - true - ячейка входит в область
+//      boolean - true - СЏС‡РµР№РєР° РІС…РѕРґРёС‚ РІ РѕР±Р»Р°СЃС‚СЊ
 function TZConditionalAreas.IsCellInArea(ColumnNum, RowNum: integer): boolean;
 var
   i: integer;
@@ -4648,14 +4648,14 @@ begin
     result.Assign(Style);
 end; //Add
 
-//Добавить условное форматирование с областью
+//Р”РѕР±Р°РІРёС‚СЊ СѓСЃР»РѕРІРЅРѕРµ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ СЃ РѕР±Р»Р°СЃС‚СЊСЋ
 //INPUT
-//      ColumnNum: integer  - номер колонки
-//      RowNum: integer     - номер строки
-//      AreaWidth: integer  - ширина области
-//      AreaHeight: integer - высота области
+//      ColumnNum: integer  - РЅРѕРјРµСЂ РєРѕР»РѕРЅРєРё
+//      RowNum: integer     - РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё
+//      AreaWidth: integer  - С€РёСЂРёРЅР° РѕР±Р»Р°СЃС‚Рё
+//      AreaHeight: integer - РІС‹СЃРѕС‚Р° РѕР±Р»Р°СЃС‚Рё
 //RETURN
-//      TZConditionalStyle - добавленный стиль
+//      TZConditionalStyle - РґРѕР±Р°РІР»РµРЅРЅС‹Р№ СЃС‚РёР»СЊ
 function TZConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalStyle;
 var
   t: TZConditionalAreaItem;
@@ -5694,8 +5694,8 @@ initialization
 {$ENDIF}
 
 {
-GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //горизонтальный размер пикселя в миллиметрах
-GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикальный размер пикселя в миллиметрах
+GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ РІ РјРёР»Р»РёРјРµС‚СЂР°С…
+GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //РІРµСЂС‚РёРєР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РїРёРєСЃРµР»СЏ РІ РјРёР»Р»РёРјРµС‚СЂР°С…
 }
 
 {

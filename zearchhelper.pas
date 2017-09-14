@@ -1,4 +1,4 @@
-//****************************************************************
+п»ї//****************************************************************
 // Common routines for pack/unpack to/from zip.
 // Author:  Ruslan V. Neborak
 // e-mail:  avemey@tut.by
@@ -42,7 +42,7 @@ function ZEDelTree(ADir: string): boolean;
 
 implementation
 
-//Получает путь к темпу
+//РџРѕР»СѓС‡Р°РµС‚ РїСѓС‚СЊ Рє С‚РµРјРїСѓ
 function ZEGetTempDir(): string;
 begin
   {$IFDEF FPC}
@@ -52,12 +52,12 @@ begin
   {$ENDIF}
 end;
 
-//Создаёт уникальную пустую директорию в ADir
+//РЎРѕР·РґР°С‘С‚ СѓРЅРёРєР°Р»СЊРЅСѓСЋ РїСѓСЃС‚СѓСЋ РґРёСЂРµРєС‚РѕСЂРёСЋ РІ ADir
 //INPUT
-//  const ADir: string    - путь, в котором нужно создать директорию
-//  var retTmpDir: string - возвращаемый путь к временной директории
+//  const ADir: string    - РїСѓС‚СЊ, РІ РєРѕС‚РѕСЂРѕРј РЅСѓР¶РЅРѕ СЃРѕР·РґР°С‚СЊ РґРёСЂРµРєС‚РѕСЂРёСЋ
+//  var retTmpDir: string - РІРѕР·РІСЂР°С‰Р°РµРјС‹Р№ РїСѓС‚СЊ Рє РІСЂРµРјРµРЅРЅРѕР№ РґРёСЂРµРєС‚РѕСЂРёРё
 //RETURN
-//        boolean - true - директория успешно создана
+//        boolean - true - РґРёСЂРµРєС‚РѕСЂРёСЏ СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅР°
 function ZECreateUniqueTmpDir(const ADir: string; var retTmpDir: string): boolean;
 var
   l: integer;
@@ -93,11 +93,11 @@ begin
     retTmpDir := retTmpDir + stime + s + PathDelim;
 end; //ZECreateUniqueTmpDir
 
-//Удаляет директорию с содержимым
+//РЈРґР°Р»СЏРµС‚ РґРёСЂРµРєС‚РѕСЂРёСЋ СЃ СЃРѕРґРµСЂР¶РёРјС‹Рј
 //INPUT
-//      ADir: string - имя удаляемой директории
+//      ADir: string - РёРјСЏ СѓРґР°Р»СЏРµРјРѕР№ РґРёСЂРµРєС‚РѕСЂРёРё
 //RETURN
-//      boolean - true - директория успешно удалена
+//      boolean - true - РґРёСЂРµРєС‚РѕСЂРёСЏ СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°
 function ZEDelTree(ADir: string): boolean;
 
   function _DelTree(const AddDir: string): boolean;
