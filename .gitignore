@@ -15,6 +15,7 @@
 *.dcu
 *.res
 *.cfg
+*.dcp
 *.dsk
 *.identcache
 *.~dsk
