@@ -858,7 +858,7 @@ begin
       'Y': t := 24;
       'Z': t := 25;
       else
-        exit;
+        continue;
     end;
     num := num + (t + 1) * s;
     s := s * 26;
