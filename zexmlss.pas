@@ -29,7 +29,7 @@ interface
 // VER130 - Borland Delphi 5.0
 uses
   classes, Sysutils,
-  graphics,
+  graphics, UITypes,
   {$IFNDEF FPC}
   windows,
   {$ELSE}

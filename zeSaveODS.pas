@@ -34,7 +34,7 @@ end;
 function TZxODSSaver.DoSave: integer;
 begin
   Result := ExportXmlssToODFS( // todo
-    fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM,
+    fBook, FFile, GetPageNumbers, GetPageTitles, fConv, string(fCharSet), fBOM,
     false, FZipGen);
 end;
 
