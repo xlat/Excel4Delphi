@@ -34,7 +34,7 @@ end;
 function TZxXlsxSaver.DoSave: integer;
 begin
   Result := ExportXmlssToXLSX(
-    fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM,
+    fBook, FFile, GetPageNumbers, GetPageTitles, fConv, string(fCharSet), fBOM,
     false, FZipGen);
 end;
 
