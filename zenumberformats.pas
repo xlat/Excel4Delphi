@@ -2034,7 +2034,6 @@ var
   end;
 
 begin
-  _isLong := false;
   num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_DATETIME);
 
   while ((xml.TagType <> 6) or (xml.TagName <> ATagName)) do
@@ -2327,7 +2326,6 @@ var
     _currentpos: integer;   // current position for embeded text
 
   begin
-    _currentpos := 0;
     _ReadNumber_NumberPrepare();
 
     if (xml.TagType = 4) then

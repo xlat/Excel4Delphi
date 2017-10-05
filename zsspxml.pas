@@ -84,7 +84,7 @@ type
     function ToString(quote: ansichar): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
     function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload;  {$IFDEF Z_FPC_USE_TOSTRING} override; {$ELSE} virtual; {$ENDIF}
-    function IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
+    function IsContainsAttribute(const AttrName: ansistring; CaseSensitivity: boolean = true): boolean;
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
     property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
@@ -270,7 +270,7 @@ type
     function ReadTag(): boolean;
     procedure EndRead();
     function Eof(): boolean; virtual;
-    property Attributes: TZAttributes read FAttributes write SetAttributes;
+    property Attributes: TZAttributes read FAttributes;
     property AttributesMatch: boolean read FAttributesMatch write SetAttributesMatch;
     property InProcess: boolean read FInProcess;
     property RawTextTag: ansistring read FRawTextTag;
@@ -439,7 +439,7 @@ type
     function ReadTag(): boolean;
     procedure EndRead();
     function Eof(): boolean; virtual;
-    property Attributes: TZAttributesH read GetAttributes write SetAttributes;
+    property Attributes: TZAttributesH read GetAttributes;
     property AttributesMatch: boolean read GetAttributesMatch write SetAttributesMatch;
     property InProcess: boolean read GetInProcess;
     property RawTextTag: string read GetRawTextTag;
@@ -1589,7 +1589,7 @@ begin
   result := ToString('"', true);
 end;
 
-function TZAttributes.IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
+function TZAttributes.IsContainsAttribute(const AttrName: ansistring; CaseSensitivity: boolean = true): boolean;
 var
   i: integer;
   s: string;
@@ -1605,11 +1605,11 @@ begin
   begin
     if (CaseSensitivity) then
     begin
-      if (string(FItems[i][1]) = s) then
+      if (FItems[i][1] = s) then
         Result := true;
     end
     else
-      if (UpperCase(string(FItems[i][1])) = s) then
+      if (UpperCase(FItems[i][1]) = s) then
         Result := true;
 
     if (Result) then
@@ -3482,7 +3482,7 @@ end;
 
 function TZAttributesH.IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
 begin
-  Result := FAttributes.IsContainsAttribute(AttrName, CaseSensitivity);
+  Result := FAttributes.IsContainsAttribute(UTF8ToString(AttrName), CaseSensitivity);
 end;
 
 ////////////////////////////////////////////////////////////////////////////////

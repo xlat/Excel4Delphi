@@ -45,7 +45,7 @@ interface
 {$ENDIF}
 
 uses
-  SysUtils, Classes, Types, Graphics, UITypes,
+  SysUtils, Classes, Types, Graphics,
   zeformula, zsspxml, zexmlss, zesavecommon, zeZippy
   {$IFNDEF FPC}
   ,windows

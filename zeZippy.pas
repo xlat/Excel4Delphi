@@ -4,7 +4,7 @@
 
    (c) the Arioch, licensed under zLib license *)
 
-interface uses Classes, SysUtils, Types;
+interface uses Classes, SysUtils;
 
 type
 ///  Life span: create, add files, save to disk, free

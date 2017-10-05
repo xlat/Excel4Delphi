@@ -26,7 +26,7 @@ end;
 
 function TZxXMLSSSaver.DoSave: integer;
 begin
-  Result := SaveXmlssToEXML( fBook, FFile, GetPageNumbers, GetPageTitles, fConv, string(fCharSet), fBOM);
+  Result := SaveXmlssToEXML( fBook, FFile, GetPageNumbers, GetPageTitles, fConv, fCharSet, fBOM);
 end;
 
 initialization

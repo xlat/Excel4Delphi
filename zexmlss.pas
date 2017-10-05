@@ -29,7 +29,7 @@ interface
 // VER130 - Borland Delphi 5.0
 uses
   classes, Sysutils,
-  graphics, UITypes,
+  graphics,
   {$IFNDEF FPC}
   windows,
   {$ELSE}
@@ -1520,7 +1520,7 @@ var
     _date: TDateTime;
 
   begin
-    //Result := true;
+    Result := true;
     if (msindex >= 0) then
       _ms := a[msindex];
     if (lastdateindex >= 0) then

@@ -1399,7 +1399,6 @@ begin
   FCurrentLine[t].Count := ACount;
 end; //AddToLine
 
-{$HINTS OFF} // я не знаю как убрать H2077
 //Получить из текста условия (style:condition) уловие, оператор и значения
 //INPUT
 //  const ConditionalValue: string
@@ -1736,6 +1735,7 @@ begin
   Example:
   cell-content-is-between(0,3)
   }
+
   if (len > 0) then
   try
     _maxKol := 4;
@@ -1800,7 +1800,6 @@ begin
     SetLength(_strArr, 0);
   end; //if
 end; //ODFReadGetConditional
-{$HINTS ON}
 
 //Применить условные форматирования к листу
 //INPUT

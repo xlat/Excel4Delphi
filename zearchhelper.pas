@@ -68,7 +68,7 @@ var
   kol: integer;
 
 begin
-  //result := false;
+  result := false;
   l := length(ADir);
   retTmpDir := ADir;
   if (l > 1) then

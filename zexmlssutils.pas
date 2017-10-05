@@ -28,7 +28,7 @@ uses
   {$IFNDEF FPC}
   Windows,
   {$ENDIF}
-  SysUtils, UITypes, Types, Classes, Grids,
+  SysUtils, Types, Classes, Grids,
   {$IFNDEF NOZCOLORSTRINGGRID}
   ZColorStringGrid,
   {$ENDIF}
