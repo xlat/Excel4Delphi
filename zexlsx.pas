@@ -1762,6 +1762,7 @@ var
   _currCol: integer;
   _currSheet: TZSheet;
   _currCell: TZCell;
+  i: integer;
   s: string;
   _tmpr: real;
   _t: integer;
@@ -2741,9 +2742,30 @@ begin
       if ((xml.TagType = 4) and (xml.TagName = ZETag_conditionalFormatting)) then
         _ReadConditionFormatting()
       {$ENDIF}
+      // По идее этот блок надо оформить цивильно, но надо здесь и сейчас
+      // TODO: переписать с использованием нормального чтения свойств объекта
+      // Взять структуру с библиотеки OpenXML
+      else if ((xml.TagName = 'headerFooter') and (xml.TagType = 4)) then begin
+        _currSheet.SheetOptions.HeaderFooterData := '<'+xml.TagName;
+        for i := 0 to xml.Attributes.Count-1 do begin
+            _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData + ' '
+                + xml.Attributes.Items[i][0] + '="'+xml.Attributes.Items[i][1]+'"';
+        end;
+        _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData + '>';
+        while (not ((xml.TagType = 6) and (xml.TagName = 'headerFooter'))) do
+        begin
+          xml.ReadTag();
+          if (xml.Eof()) then
+            break;
+          if (xml.TagType = 6) and (xml.TagName <> 'headerFooter') then
+              _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData
+                + '<'+xml.TagName+'>'+ xml.TextBeforeTag + '</'+xml.TagName+'>';
+        end;
+        _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData + '</'+xml.TagName+'>';
+      end
       ;
     end; //while
-    
+
     result := true;
   finally
     if (Assigned(xml)) then
@@ -5695,6 +5717,8 @@ var
     //_xml.Attributes.Add('usePrinterDefaults', 'false', false); //do not use!
     _xml.Attributes.Add('verticalDpi', '300', false);
     _xml.WriteEmptyTag('pageSetup', true, false);
+
+    _xml.WriteRaw(_sheet.SheetOptions.HeaderFooterData, false, true);
     //  <headerFooter differentFirst="false" differentOddEven="false">
     //    <oddHeader> ... </oddHeader>
     //    <oddFooter> ... </oddFooter>

@@ -473,6 +473,7 @@ type
                                         //    в пикселях, если SplitMode = ZSplitSplit
                                         //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
                                         // Если SplitMode = ZSplitNone, то фиксация столбцов/ячеек не работает
+    FHeaderFooterData: string; // as xml
     function GetHeaderData(): string;
     procedure SetHeaderData(Value: string);
     function GetFooterData(): string;
@@ -521,6 +522,7 @@ type
     property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
     property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
+    property HeaderFooterData: string read FHeaderFooterData write FHeaderFooterData;
   end;
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -3377,6 +3379,7 @@ begin
     IsEvenHeaderEqual := t.IsEvenHeaderEqual;
     ScaleToPercent := t.ScaleToPercent;
     ScaleToPages := t.ScaleToPages;
+    FHeaderFooterData := t.FHeaderFooterData;
     HeaderMargins.Assign(t.HeaderMargins);
     FooterMargins.Assign(t.FooterMargins);
   end else
