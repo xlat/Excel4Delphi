@@ -1032,15 +1032,17 @@ begin
   FFormats[11] := '0.00E+00';
   FFormats[12] := '# ?/?';
   FFormats[13] := '# ??/??';
-  FFormats[14] := 'mm-dd-yy';
-  FFormats[15] := 'd-mmm-yy';
-  FFormats[16] := 'd-mmm';
-  FFormats[17] := 'mmm-yy';
-  FFormats[18] := 'h:mm AM/PM';
-  FFormats[19] := 'h:mm:ss AM/PM';
-  FFormats[20] := 'h:mm';
-  FFormats[21] := 'h:mm:ss';
-  FFormats[22] := 'm/d/yy h:mm';
+
+  FFormats[14] := 'dd/mm/yyyy';
+  FFormats[15] := 'dd/mmm/yy';
+  FFormats[16] := 'dd/mmm';
+  FFormats[17] := 'mmm/yy';
+  FFormats[18] := 'hh:mm AM/PM';
+  FFormats[19] := 'hh:mm:ss AM/PM';
+  FFormats[20] := 'hh:mm';
+  FFormats[21] := 'hh:mm:ss';
+  FFormats[22] := 'dd/mm/yyyy hh:mm';
+
   FFormats[27] := '[$-404]e/m/d';
   FFormats[37] := '#,##0 ;(#,##0)';
   FFormats[38] := '#,##0 ;[Red](#,##0)';
@@ -1064,9 +1066,7 @@ begin
   FFormats[67] := 't0%';
   FFormats[68] := 't0.00%';
   FFormats[69] := 't# ?/?';
-
   FFormats[70] := 't# ??/??';
-
   FFormats[81] := 'd/m/bb';
 
 
