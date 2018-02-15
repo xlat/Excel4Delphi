@@ -432,13 +432,6 @@ type
     property UseAutoFitHeight: boolean read FUseAutoFitHeight write FUseAutoFitHeight default true;
   end;
 
-  TRelationship = record
-    FId: string;
-    FType: string;
-    FTarget: string;
-    FBody: TBytes;
-  end;
-
   //WorkSheetOptions
   TZSheetOptions = class (TPersistent)
   private
@@ -485,8 +478,6 @@ type
                                         //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
                                         // Если SplitMode = ZSplitNone, то фиксация столбцов/ячеек не работает
     FHeaderFooterData: string; // as xml
-    FRelationship: TRelationship;
-
     function GetHeaderData(): string;
     procedure SetHeaderData(Value: string);
     function GetFooterData(): string;
@@ -538,7 +529,6 @@ type
     property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
     property HeaderFooterData: string read FHeaderFooterData write FHeaderFooterData;
-    property Relationship: TRelationship read FRelationship write FRelationship;
   end;
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -1084,7 +1074,6 @@ type
     FSheetOptions: TZSheetOptions;
     FSelected: boolean;
     FPrintRows, FPrintCols: TZSheetPrintTitles;
-    FPrinterSettings: TBytes;
 
     {$IFDEF ZUSE_CHARTS}
     FCharts: TZEChartStore;
@@ -3438,7 +3427,6 @@ begin
     FHeaderFooterData := t.FHeaderFooterData;
     HeaderMargins.Assign(t.HeaderMargins);
     FooterMargins.Assign(t.FooterMargins);
-    FRelationship = t.FRelationship;
   end else
     inherited Assign(Source);
 end;
