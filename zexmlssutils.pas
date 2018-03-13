@@ -892,7 +892,7 @@ var
   _xml: TZsspXMLWriterH;
   i, j, t, l: integer;
   NumTopLeft, NumArea: integer;
-  s: string;
+  s, value,numformat: string;
   Att: TZAttributesH;
 
 function HTMLStyleTable(name: string; const Style: TZStyle): string;
@@ -901,7 +901,7 @@ var
   i, l: integer;
 
 begin
-  result := #13#10 + ' .' + name + '{'#13#10     ;
+  result := #13#10 + ' .' + name + '{'#13#10;
   for i := 0 to 3 do
   begin
     s := 'border-';
@@ -915,13 +915,19 @@ begin
     s := s + '#' + ColorToHTMLHex(Style.Border[i].Color);
     if Style.Border[i].Weight <> 0 then
       s := s + ' ' + IntToStr(Style.Border[i].Weight) + 'px'
-    else inc(l);
+    else
+        inc(l);
     case Style.Border[i].LineStyle of
-      ZEContinuous, ZEHair: s := s + ' ' + 'solid';
-      ZEDot, ZEDashDotDot: s := s + ' ' + 'dotted';
-      ZEDash, ZEDashDot, ZESlantDashDot: s := s + ' ' + 'dashed';
-      ZEDouble: s := s + ' ' + 'double';
-      else inc(l);
+      ZEContinuous  : s := s + ' ' + 'solid';
+      ZEHair        : s := s + ' ' + 'solid';
+      ZEDot         : s := s + ' ' + 'dotted';
+      ZEDashDotDot  : s := s + ' ' + 'dotted';
+      ZEDash        : s := s + ' ' + 'dashed';
+      ZEDashDot     : s := s + ' ' + 'dashed';
+      ZESlantDashDot: s := s + ' ' + 'dashed';
+      ZEDouble      : s := s + ' ' + 'double';
+      else
+        inc(l);
     end;
     s := s + ';';
     if l <> 2 then
@@ -961,8 +967,10 @@ begin
       s := s + 'color:#' + ColorToHTMLHex(XMLSS.Styles.DefaultStyle.Font.Color) + ';';
       s := s + 'font-size:' + inttostr(XMLSS.Styles.DefaultStyle.Font.Size) + 'px;';
       s := s + 'font-family:' + XMLSS.Styles.DefaultStyle.Font.Name + ';}';
+
       s := s + HTMLStyleTable('T19', XMLSS.Styles.DefaultStyle);
       s := s + HTMLStyleFont('F19', XMLSS.Styles.DefaultStyle);
+
       for i := 0 to XMLSS.Styles.Count - 1 do
       begin
         s := s + HTMLStyleTable('T' + IntToStr(i + 20), XMLSS.Styles[i]);
@@ -994,18 +1002,17 @@ begin
       for i := 0 to XMLSS.Sheets[PageNum].RowCount - 1 do
       begin
         Attributes.Clear();
+        Attributes.Add('height', floattostr(XMLSS.Sheets[PageNum].RowHeights[i]).Replace(',','.'));
         WriteTagNode('TR',true, true, true);
-        for j := 0 to XMLSS.Sheets[PageNum].ColCount - 1 do
-        begin
+        Attributes.Clear();
+        for j := 0 to XMLSS.Sheets[PageNum].ColCount - 1 do begin
           NumTopLeft := XMLSS.Sheets[PageNum].MergeCells.InLeftTopCorner(j, i);
           NumArea := XMLSS.Sheets[PageNum].MergeCells.InMergeRange(j, i);
           // если ячейка входит в объединённые области и не является
           // верхней левой ячейков в этой области - пропускаем её
-          if not ((NumArea >= 0) and (NumTopLeft = -1)) then
-          begin
+          if not ((NumArea >= 0) and (NumTopLeft = -1)) then begin
             Attributes.Clear();
-            if NumTopLeft >= 0 then
-            begin
+            if NumTopLeft >= 0 then begin
               {tut}
               t := XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Right -
                    XMLSS.Sheets[PageNum].MergeCells.Items[NumTopLeft].Left;
@@ -1023,8 +1030,9 @@ begin
               Attributes.Add('align', 'right') else
             if XMLSS.Styles[t].Alignment.Horizontal = ZHJustify then
               Attributes.Add('align', 'justify');
+            numformat := XMLSS.Styles[t].NumberFormat;
             Attributes.Add('class', 'T'+IntToStr(t + 20));
-            Attributes.Add('width',inttostr(XMLSS.Sheets[PageNum].Columns[j].WidthPix)+'px');
+            Attributes.Add('width', inttostr(XMLSS.Sheets[PageNum].Columns[j].WidthPix)+'px');
 
             WriteTagNode('TD', true, false, false);
             Attributes.Clear();
@@ -1048,7 +1056,16 @@ begin
               Attributes.Clear();
             end;
 
-            WriteTag('FONT', XMLSS.Sheets[PageNum].Cell[j, i].Data, Att, false, false, true);
+            value := XMLSS.Sheets[PageNum].Cell[j, i].Data;
+            case XMLSS.Sheets[PageNum].Cell[j, i].CellType of
+              TZCellType.ZENumber: begin
+                value := FloatToStr(XMLSS.Sheets[PageNum].Cell[j, i].AsDouble);
+              end;
+              TZCellType.ZEDateTime : begin
+              end;
+            end;
+            WriteTag('FONT', value, Att, false, false, true);
+
             if l > 0 then
               WriteEndTagNode(); // A
 
