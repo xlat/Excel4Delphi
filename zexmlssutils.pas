@@ -28,7 +28,7 @@ uses
   {$IFNDEF FPC}
   Windows,
   {$ENDIF}
-  SysUtils, UITypes, Types, Classes, Grids,
+  SysUtils, UITypes, Types, Classes, Grids, Math,
   {$IFNDEF NOZCOLORSTRINGGRID}
   ZColorStringGrid,
   {$ENDIF}
@@ -890,10 +890,12 @@ function SaveXmlssToHtml(var XMLSS: TZEXMLSS; const PageNum: integer; Title: str
                          TextConverter: TAnsiToCPConverter; CodePageName: string): integer; overload;
 var
   _xml: TZsspXMLWriterH;
-  i, j, t, l: integer;
+  i, j, t, l,r: integer;
   NumTopLeft, NumArea: integer;
   s, value,numformat: string;
   Att: TZAttributesH;
+  max_width: Real;
+  strArray: TArray<string>;
 
 function HTMLStyleTable(name: string; const Style: TZStyle): string;
 var
@@ -987,14 +989,20 @@ begin
       WriteTag('META','', true, false, false);
       WriteEndTagNode(); // HEAD
 
+      max_width := 0.0;
+      for i := 0 to XMLSS.Sheets[PageNum].ColCount-1 do begin
+        max_width:=max_width+XMLSS.Sheets[PageNum].ColWidths[i];
+      end;
+
       //BODY
       Attributes.Clear();
       WriteTagNode('BODY',true, true, false);
 
       //Table
+      Attributes.Clear();
       Attributes.Add('cellSpacing', '0');
       Attributes.Add('border','0');
-      Attributes.Add('width','100%');
+      Attributes.Add('width', FloatToStr(max_width).Replace(',','.'));
       WriteTagNode('TABLE',true, true, false);
 
       Att := TZAttributesH.Create();
@@ -1057,14 +1065,31 @@ begin
             end;
 
             value := XMLSS.Sheets[PageNum].Cell[j, i].Data;
+
+            //value := value.Replace(#13#10, '<br>');
             case XMLSS.Sheets[PageNum].Cell[j, i].CellType of
               TZCellType.ZENumber: begin
-                value := FloatToStr(XMLSS.Sheets[PageNum].Cell[j, i].AsDouble);
+                r := numformat.IndexOf('.');
+                if r > -1 then begin
+                    value := FloatToStrF(
+                        XMLSS.Sheets[PageNum].Cell[j, i].AsDouble,
+                        ffNumber,
+                        12,
+                        Min(4, Max(0, numformat.Substring(r).Length-1)));
+                end else begin
+                    value := FloatToStr(XMLSS.Sheets[PageNum].Cell[j, i].AsDouble);
+                end;
               end;
               TZCellType.ZEDateTime : begin
+                // todo: make datetimeformat from cell NumberFormat
+                value := FormatDateTime('dd.mm.yyyy', XMLSS.Sheets[PageNum].Cell[j, i].AsDateTime);
               end;
             end;
-            WriteTag('FONT', value, Att, false, false, true);
+            strArray := value.Split([#13,#10], TStringSplitOptions.ExcludeEmpty);
+            for r := 0 to Length(strArray)-1 do begin
+                if r > 0 then WriteTag('BR','');
+                WriteTag('FONT', strArray[r], Att, false, false, true);
+            end;
 
             if l > 0 then
               WriteEndTagNode(); // A
