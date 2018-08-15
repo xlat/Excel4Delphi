@@ -1039,6 +1039,8 @@ type
 
   {$ENDIF} //ZUSE_CHARTS
 
+  TZRange = class;
+
   //лист документа
   TZSheet = class (TPersistent)
   private
@@ -1098,6 +1100,10 @@ type
     procedure SetRowCount(const Value: integer); virtual;
     function  GetColCount: integer; virtual;
     procedure SetColCount(const Value: integer); virtual;
+    function  GetRange(AC1,AR1,AC2,AR2: integer): TZRange; virtual;
+    procedure SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange); virtual;
+    function  GetRangeRef(AFrom, ATo: string): TZRange; virtual;
+    procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
   public
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor Destroy(); override;
@@ -1108,6 +1114,8 @@ type
     property ColWidths[num: integer]: real read GetColWidth write SetColWidth;
     property Columns[num: integer]: TZColOptions read GetColumn write SetColumn;
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
+    property Range[AC1,AR1,AC2,AR2: integer]: TZRange read GetRange write SetRange;
+    property RangeRef[AFrom, ATo: string]: TZRange read GetRangeRef write SetRangeRef;
     property RowHeights[num: integer]: real read GetRowHeight write SetRowHeight;
     property DefaultColWidth: real read FDefaultColwidth write SetDefaultColWidth;// default 48;
     property DefaultRowHeight: real read FDefaultRowHeight write SetDefaultRowHeight;// default 12.75;
@@ -1155,6 +1163,55 @@ type
     procedure Assign(Source: TPersistent); override;
     property Count: integer read FCount write SetSheetCount;
     property Sheet[num: integer]: TZSheet read GetSheet write SetSheet; default;
+  end;
+
+  TZRange = class(TPersistent)
+  private
+    FSheet: TZSheet;
+    FC1,FR1,FC2,FR2: Integer;
+
+    function HasStyle: Boolean;
+    procedure ApplyStyleValue(proc: TProc<TZStyle>);
+    function GetVerticalAlignment(): TZVerticalAlignment;
+    procedure SetVerticalAlignment(const Value: TZVerticalAlignment);
+    function GetHorizontalAlignment(): TZHorizontalAlignment;
+    procedure SetHorizontalAlignment(const Value: TZHorizontalAlignment);
+    function GetBgColor(): TColor;
+    procedure SetBgColor(const Value: TColor);
+    function GetFontColor(): TColor;
+    procedure SetFontColor(const Value: TColor);
+    function GetFontSize(): Byte;
+    procedure SetFontSize(const Value: Byte);
+    function GetFontStyle(): TFontStyles;
+    procedure SetFontStyle(const Value: TFontStyles);
+    function GetBorderStyle(Num: TZBordersPos): TZBorderType;
+    procedure SetBorderStyle(Num: TZBordersPos; const Value: TZBorderType);
+    function GetBorderWeight(Num: TZBordersPos): Byte;
+    procedure SetBorderWeight(Num: TZBordersPos; const Value: Byte);
+    function GetBorderColor(Num: TZBordersPos): TColor;
+    procedure SetBorderColor(Num: TZBordersPos; const Value: TColor);
+    function GetWordWrap(): Boolean;
+    procedure SetWordWrap(const Value: Boolean);
+    function GetNumberFormat(): string;
+    procedure SetNumberFormat(const Value: string);
+  protected
+  public
+    constructor Create(ASheet: TZSheet; AFC1, AFR1, AFC2, AFR2: Integer); overload;
+    procedure Assign(Source: TPersistent); override;
+    destructor Destroy(); override;
+    property VerticalAlignment: TZVerticalAlignment read GetVerticalAlignment write SetVerticalAlignment;
+    property HorizontalAlignment: TZHorizontalAlignment read GetHorizontalAlignment write SetHorizontalAlignment;
+    property BgColor: TColor read GetBgColor write SetBgColor;
+    property FontColor: TColor read GetFontColor write SetFontColor;
+    property FontSize: Byte read GetFontSize write SetFontSize;
+    property FontStyle: TFontStyles read GetFontStyle write SetFontStyle;
+    property BorderStyle[num: TZBordersPos]: TZBorderType read GetBorderStyle write SetBorderStyle;
+    property BorderWeight[num: TZBordersPos]: Byte read GetBorderWeight write SetBorderWeight;
+    property BorderColor[num: TZBordersPos]: TColor read GetBorderColor write SetBorderColor;
+    property WordWrap: Boolean read GetWordWrap write SetWordWrap;
+    property NumberFormat: string read GetNumberFormat write SetNumberFormat;
+    procedure Merge();
+    procedure Clear();
   end;
 
   //Свойства документа
@@ -1289,6 +1346,8 @@ function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTi
 function IntToStrN(value: integer; NullCount: integer): string;
 
 implementation
+
+uses zeformula;
 
 //Переводит число в строку минимальной длины NullCount
 //TODO: надо глянуть что с функциями в FlyLogReader-е
@@ -2981,8 +3040,7 @@ begin
       ((FMergeArea[i].right >= Rct.Left) and (FMergeArea[i].right <= Rct.Right))) and
      (((FMergeArea[i].Top >= Rct.Top) and (FMergeArea[i].Top <= Rct.Bottom)) or
       ((FMergeArea[i].Bottom >= Rct.Top) and (FMergeArea[i].Bottom <= Rct.Bottom))) then}
-  if usl(FMergeArea[i], Rct) or usl(rct, FMergeArea[i]) then 
-  begin
+  if usl(FMergeArea[i], Rct) or usl(rct, FMergeArea[i]) then  begin
     result := 2;
     exit;
   end;
@@ -3004,14 +3062,11 @@ end;
 //      -1              ячейка не является левым верхним углом области
 //      int num >=0     номер области, в которой ячейка есть левый верхний угол
 function TZMergeCells.InLeftTopCorner(ACol, ARow: integer): integer;
-var
-  i: integer;
-
+var i: integer;
 begin
   result := -1;
   for i := 0 to FCount - 1 do
-  if (ACol = FMergeArea[i].Left) and (ARow = FMergeArea[i].top) then
-  begin
+  if (ACol = FMergeArea[i].Left) and (ARow = FMergeArea[i].top) then begin
     result := i;
     break;
   end;
@@ -3023,15 +3078,12 @@ end;
 //      -1              ячейка не входит в область
 //      int num >=0     номер области, в которой содержится ячейка
 function TZMergeCells.InMergeRange(ACol, ARow: integer): integer;
-var
-  i: integer;
-
+var i: integer;
 begin
   result := -1;
   for i := 0 to FCount - 1 do
   if (ACol >= FMergeArea[i].Left) and (ACol <= FMergeArea[i].Right) and
-     (ARow >= FMergeArea[i].Top) and (ARow <= FMergeArea[i].Bottom) then
-  begin
+     (ARow >= FMergeArea[i].Top) and (ARow <= FMergeArea[i].Bottom) then begin
     result := i;
     break;
   end;
@@ -3051,12 +3103,9 @@ end;
 //      - TRUE - область удалена
 //      - FALSE - num>Count-1 или num<0
 function TZMergeCells.DeleteItem(num: integer): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
-  if (num>count-1)or(num<0) then
-  begin
+  if (num>count-1)or(num<0) then begin
     result := false;
     exit;
   end;
@@ -3075,8 +3124,7 @@ end;
 //      2 - указанный прямоуголник пересекается(входит) введённые ранее, ячейки не объединены
 //      3 - прямоугольник из одной ячейки не добавляет
 function TZMergeCells.AddRectXY(x1,y1,x2,y2: integer): byte;
-var
-  Rct: TRect;
+var Rct: TRect;
 begin
   Rct.left := x1;
   Rct.Top := y1;
@@ -3099,8 +3147,7 @@ end;
 
 procedure TZRowColOptions.Assign(Source: TPersistent);
 begin
-  if Source is TZRowColOptions then
-  begin
+  if Source is TZRowColOptions then begin
     Hidden := (Source as TZRowColOptions).Hidden;
     StyleID := (Source as TZRowColOptions).StyleID;
     FSize := (Source as TZRowColOptions).FSize;
@@ -3600,7 +3647,32 @@ begin
     result := nil;
 end;
 
-procedure TZSheet.SetRow(num: integer; const Value:TZRowOptions);
+procedure TZSheet.SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange);
+begin
+
+end;
+
+procedure TZSheet.SetRangeRef(AFrom, ATo: string; const Value: TZRange);
+begin
+
+end;
+
+function TZSheet.GetRange(AC1,AR1,AC2,AR2: integer): TZRange;
+begin
+  Result := TZRange.Create(Self, AC1,AR1,AC2,AR2);
+end;
+
+function TZSheet.GetRangeRef(AFrom, ATo: string): TZRange;
+var AC1,AR1,AC2,AR2: Integer;
+begin
+  AC1 := ZEGetColByA1(AFrom);
+  AR1 := ZERangeToRow(AFrom)-1;
+  AC2 := ZEGetColByA1(ATo);
+  AR2 := ZERangeToRow(ATo)-1;
+  Result := TZRange.Create(Self, AC1,AR1,AC2,AR2);
+end;
+
+procedure TZSheet.SetRow(num: integer; const Value: TZRowOptions);
 begin
   if (num >= 0) and (num < FRowCount) then
     FRows[num].Assign(Value);
@@ -5796,5 +5868,229 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикаль
  40       German Std. Fanfold      8 1/2" x 12"
  41       German Legal Fanfold     8 1/2" x 13"
 }
+
+{ TZRange }
+procedure TZRange.Assign(Source: TPersistent);
+begin
+  inherited;
+
+end;
+
+constructor TZRange.Create(ASheet: TZSheet; AFC1, AFR1, AFC2, AFR2: Integer);
+begin
+  FSheet := ASheet;
+  FC1 := AFC1;
+  FR1 := AFR1;
+  FC2 := AFC2;
+  FR2 := AFR2;
+end;
+
+destructor TZRange.Destroy;
+begin
+  FSheet := nil;
+  inherited;
+end;
+
+function TZRange.HasStyle: Boolean;
+begin
+  Result := FSheet.Cell[FC1,FR1].FCellStyle > -1;
+end;
+
+procedure TZRange.Merge;
+var I: Integer;
+begin
+  for I := FSheet.MergeCells.Count-1 downto 0 do begin
+    if FSheet.MergeCells.IsCrossWithArea(I, FC1, FR1, FC2, FR2) then
+      FSheet.MergeCells.DeleteItem(I);
+  end;
+  FSheet.MergeCells.AddRectXY(FC1, FR1, FC2, FR2);
+end;
+
+procedure TZRange.ApplyStyleValue(proc: TProc<TZStyle>);
+var col, row, id: Integer; style: TZStyle;
+begin
+  for col := FC1 to FC2 do begin
+    for row := FR1 to FR2 do begin
+      style := TZStyle.Create();
+      id := FSheet.Cell[col, row].CellStyle;
+      if id > -1 then
+         style.Assign(FSheet.FStore.Styles[id])
+      else if (FSheet.FStore.Styles.Count > 0) then
+         style.Assign(FSheet.FStore.Styles[0]);
+
+      proc(style);
+
+      id := FSheet.FStore.Styles.Add(style, true);
+      FSheet.Cell[col, row].CellStyle := id;
+    end;
+  end;
+end;
+
+procedure TZRange.Clear;
+var col, row: Integer;
+begin
+  for col := FC1 to FC2 do begin
+    for row := FR1 to FR2 do begin
+      FSheet.Cell[col, row].Data := '';
+      FSheet.Cell[col, row].Formula := '';
+      FSheet.Cell[col, row].Comment := '';
+      FSheet.Cell[col, row].CommentAuthor := '';
+    end;
+  end;
+end;
+
+function TZRange.GetBgColor: TColor;
+begin
+  Result := 0;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].BGColor;
+end;
+
+function TZRange.GetBorderColor(Num: TZBordersPos): TColor;
+begin
+  Result := 0;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Border[Num].Color;
+end;
+
+function TZRange.GetBorderStyle(Num: TZBordersPos): TZBorderType;
+begin
+  Result := TZBorderType.ZENone;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Border[Num].LineStyle;
+end;
+
+function TZRange.GetBorderWeight(Num: TZBordersPos): Byte;
+begin
+  Result := 0;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Border[Num].Weight;
+end;
+
+function TZRange.GetFontColor: TColor;
+begin
+  Result := 0;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Font.Color;
+end;
+
+function TZRange.GetFontSize: Byte;
+begin
+  Result := 0;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Font.Size;
+end;
+
+function TZRange.GetFontStyle: TFontStyles;
+begin
+  Result := [];
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Font.Style;
+end;
+
+function TZRange.GetHorizontalAlignment: TZHorizontalAlignment;
+begin
+  Result := TZHorizontalAlignment.ZHAutomatic;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Alignment.Horizontal;
+end;
+
+function TZRange.GetNumberFormat: string;
+begin
+  Result := '';
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].NumberFormat;
+end;
+
+function TZRange.GetVerticalAlignment: TZVerticalAlignment;
+begin
+  Result := TZVerticalAlignment.ZVAutomatic;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Alignment.Vertical;
+end;
+
+function TZRange.GetWordWrap: Boolean;
+begin
+  Result := false;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Alignment.WrapText;
+end;
+
+procedure TZRange.SetBgColor(const Value: TColor);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.BGColor := Value;
+  end);
+end;
+
+procedure TZRange.SetBorderColor(Num: TZBordersPos; const Value: TColor);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Border[Num].Color := Value;
+  end);
+end;
+
+procedure TZRange.SetBorderStyle(Num: TZBordersPos; const Value: TZBorderType);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Border[Num].LineStyle := Value;
+  end);
+end;
+
+procedure TZRange.SetBorderWeight(Num: TZBordersPos; const Value: Byte);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Border[Num].Weight := Value;
+  end);
+end;
+
+procedure TZRange.SetFontColor(const Value: TColor);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Font.Color := Value;
+  end);
+end;
+
+procedure TZRange.SetFontSize(const Value: Byte);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Font.Size := Value;
+  end);
+end;
+
+procedure TZRange.SetFontStyle(const Value: TFontStyles);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Font.Style := Value;
+  end);
+end;
+
+procedure TZRange.SetHorizontalAlignment(const Value: TZHorizontalAlignment);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Alignment.Horizontal := Value;
+  end);
+end;
+
+procedure TZRange.SetNumberFormat(const Value: string);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.NumberFormat := Value;
+  end);
+end;
+
+procedure TZRange.SetVerticalAlignment(const Value: TZVerticalAlignment);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Alignment.Vertical := Value;
+  end);
+end;
+
+procedure TZRange.SetWordWrap(const Value: Boolean);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Alignment.WrapText := Value;
+  end);
+end;
 
 end.
