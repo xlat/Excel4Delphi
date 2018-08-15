@@ -2788,7 +2788,8 @@ begin
         //s := xml.Attributes.ItemsByName['paperHeight']; //если утановлены paperHeight и Width, то paperSize игнорируется
         //s := xml.Attributes.ItemsByName['paperWidth'];
 
-        //s := xml.Attributes.ItemsByName['scale'];
+        s := xml.Attributes.ItemsByName['scale'];
+        _currSheet.SheetOptions.ScaleToPercent := StrToIntDef(s, 100);
         //s := xml.Attributes.ItemsByName['useFirstPageNumber'];
         //s := xml.Attributes.ItemsByName['usePrinterDefaults'];
         //s := xml.Attributes.ItemsByName['verticalDpi'];
@@ -5832,7 +5833,7 @@ var
     _xml.Attributes.Add('pageOrder', 'downThenOver', false);
     _xml.Attributes.Add('paperSize', intToStr(_sheet.SheetOptions.PaperSize), false);
     if (_sheet.SheetOptions.FitToWidth=-1)and(_sheet.SheetOptions.FitToWidth=-1) then
-      _xml.Attributes.Add('scale', '100', false);
+      _xml.Attributes.Add('scale', IntToStr(_sheet.SheetOptions.ScaleToPercent), false);
     _xml.Attributes.Add('useFirstPageNumber', 'true', false);
     //_xml.Attributes.Add('usePrinterDefaults', 'false', false); //do not use!
     _xml.Attributes.Add('verticalDpi', '300', false);
