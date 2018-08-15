@@ -385,7 +385,9 @@ type
     procedure Assign(Source: TPersistent); override;
     constructor Create(const owner: TZSheet; const ForColumns: boolean);
 
-    function ToString: string; {$IfDef Delphi_Unicode} override; {$EndIf} {$IFDEF Z_FPC_USE_TOSTRING} override; {$ENDIF}
+    function ToString: string;
+    {$IfDef Delphi_Unicode} override; {$EndIf}
+    {$IFDEF Z_FPC_USE_TOSTRING} override; {$ENDIF}
 // introduced in D2009 according to http://blog.marcocantu.com/blog/6hidden_delphi2009.html
 // introduced don't know when in FPC
   published
