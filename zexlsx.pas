@@ -2638,6 +2638,29 @@ var
   end; //_ReadConditionFormatting
   {$ENDIF}
 
+  procedure _ReadHeaderFooter();
+  begin
+    _currSheet.SheetOptions.IsDifferentFirst   := ZEStrToBoolean(xml.Attributes['differentFirst']);
+    _currSheet.SheetOptions.IsDifferentOddEven := ZEStrToBoolean(xml.Attributes['differentOddEven']);
+    while (not ((xml.TagType = 6) and (xml.TagName = 'headerFooter'))) do begin
+      xml.ReadTag();
+      if (xml.Eof()) then break;
+      if xml.TagType = 6 then begin
+        if xml.TagName = 'oddHeader' then
+          _currSheet.SheetOptions.Header := ClenuapXmlTagValue(xml.TextBeforeTag)
+        else if xml.TagName = 'oddFooter' then
+          _currSheet.SheetOptions.Footer := ClenuapXmlTagValue(xml.TextBeforeTag)
+        else if xml.TagName = 'evenHeader' then
+          _currSheet.SheetOptions.EvenHeader := ClenuapXmlTagValue(xml.TextBeforeTag)
+        else if xml.TagName = 'evenFooter' then
+          _currSheet.SheetOptions.EvenFooter := ClenuapXmlTagValue(xml.TextBeforeTag)
+        else if xml.TagName = 'firstHeader' then
+          _currSheet.SheetOptions.FirstPageHeader := ClenuapXmlTagValue(xml.TextBeforeTag)
+        else if xml.TagName = 'firstFooter' then
+          _currSheet.SheetOptions.FirstPageFooter := ClenuapXmlTagValue(xml.TextBeforeTag);
+      end;
+    end;
+  end;
 begin
   xml := nil;
   result := false;
@@ -2768,28 +2791,8 @@ begin
       if ((xml.TagType = 4) and (xml.TagName = ZETag_conditionalFormatting)) then
         _ReadConditionFormatting()
       {$ENDIF}
-      // По идее этот блок надо оформить цивильно, но надо здесь и сейчас
-      // TODO: переписать с использованием нормального чтения свойств объекта
-      // Взять структуру с библиотеки OpenXML
-      else if ((xml.TagName = 'headerFooter') and (xml.TagType = 4)) then begin
-        _currSheet.SheetOptions.HeaderFooterData := '<'+xml.TagName;
-        for i := 0 to xml.Attributes.Count-1 do begin
-            _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData + ' '
-                + xml.Attributes.Items[i][0] + '="'+xml.Attributes.Items[i][1]+'"';
-        end;
-        _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData + '>';
-        while (not ((xml.TagType = 6) and (xml.TagName = 'headerFooter'))) do
-        begin
-          xml.ReadTag();
-          if (xml.Eof()) then
-            break;
-          if (xml.TagType = 6) and (xml.TagName <> 'headerFooter') then
-              _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData
-                + '<'+xml.TagName+'>'+ xml.TextBeforeTag + '</'+xml.TagName+'>';
-        end;
-        _currSheet.SheetOptions.HeaderFooterData := _currSheet.SheetOptions.HeaderFooterData + '</'+xml.TagName+'>';
-      end
-      ;
+      else if ((xml.TagName = 'headerFooter') and (xml.TagType = 4)) then
+        _ReadHeaderFooter();
     end; //while
 
     result := true;
@@ -5697,6 +5700,30 @@ var
     WriteHelper.WriteHyperLinksTag(_xml);
   end; //WriteXLSXSheetData
 
+  procedure WriteColontituls();
+  begin
+    _xml.Attributes.Clear;
+    if _sheet.SheetOptions.IsDifferentOddEven then
+      _xml.Attributes.Add('differentOddEven', '1');
+    if _sheet.SheetOptions.IsDifferentFirst then
+      _xml.Attributes.Add('differentFirst', '1');
+    _xml.WriteTagNode('headerFooter', true, true, false);
+
+    _xml.Attributes.Clear;
+    _xml.WriteTag('oddHeader', _sheet.SheetOptions.Header, true, false, true);
+    _xml.WriteTag('oddFooter', _sheet.SheetOptions.Footer, true, false, true);
+
+    if _sheet.SheetOptions.IsDifferentOddEven then begin
+      _xml.WriteTag('evenHeader', _sheet.SheetOptions.EvenHeader, true, false, true);
+      _xml.WriteTag('evenFooter', _sheet.SheetOptions.EvenFooter, true, false, true);
+    end;
+    if _sheet.SheetOptions.IsDifferentFirst then begin
+      _xml.WriteTag('firstHeader', _sheet.SheetOptions.FirstPageHeader, true, false, true);
+      _xml.WriteTag('firstFooter', _sheet.SheetOptions.FirstPageFooter, true, false, true);
+    end;
+
+    _xml.WriteEndTagNode(); //headerFooter
+  end;
   procedure WriteXLSXSheetFooter();
   var
     s: string;
@@ -5748,11 +5775,8 @@ var
     _xml.Attributes.Add('verticalDpi', '300', false);
     _xml.WriteEmptyTag('pageSetup', true, false);
 
-    _xml.WriteRaw(_sheet.SheetOptions.HeaderFooterData, false, true);
-    //  <headerFooter differentFirst="false" differentOddEven="false">
-    //    <oddHeader> ... </oddHeader>
-    //    <oddFooter> ... </oddFooter>
-    //  </headerFooter>
+    WriteColontituls();
+
     //  <legacyDrawing r:id="..."/>
   end; //WriteXLSXSheetFooter
 

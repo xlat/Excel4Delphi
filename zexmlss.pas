@@ -392,24 +392,6 @@ type
     property Active: boolean read FActive write SetActive;
   end;
 
-  //Footer/Header
-  TZSheetFooterHeader = class (TPersistent)
-  private
-    FDataLeft: string;
-    FData: string;
-    FDataRight: string;
-    FIsDisplay: boolean;
-  public
-    constructor Create();
-    procedure Assign(Source: TPersistent); override;
-    function IsEqual(Source: TPersistent): boolean; virtual;
-  published
-    property DataLeft: string read FDataLeft write FDataLeft;
-    property Data: string read FData write FData;
-    property DataRight: string read FDataRight write FDataRight;
-    property IsDisplay: boolean read FIsDisplay write FIsDisplay;
-  end;
-
   //Header/Footer margins
   TZHeaderFooterMargins = class (TPersistent)
   private
@@ -449,13 +431,15 @@ type
     FCenterHorizontal: boolean;
     FCenterVertical: boolean;
     FStartPageNumber: integer;
-    FIsEvenFooterEqual: boolean;      //Is the footer on even and odd pages the same?
-    FIsEvenHeaderEqual: boolean;      //Is the header on even and odd pages the same?
+    FDifferentOddEven: Boolean;
+    FDifferentFirst: Boolean;
 
-    FHeader: TZSheetFooterHeader;     //Header for all pages. When IsEvenFooterEqual = false - only for odd pages.
-    FFooter: TZSheetFooterHeader;     //Footer for all pages. When IsEvenFooterEqual = false - only for odd pages.
-    FEvenHeader: TZSheetFooterHeader; //Header for even pages. Used only if IsEvenFooterEqual = false
-    FEvenFooter: TZSheetFooterHeader; //Footer for even pages. Used only if IsEvenFooterEqual = false
+    FHeader: string;     //Header for all pages. When IsEvenFooterEqual = false - only for odd pages.
+    FFooter: string;     //Footer for all pages. When IsEvenFooterEqual = false - only for odd pages.
+    FEvenHeader: string; //Header for even pages. Used only if IsEvenFooterEqual = false
+    FEvenFooter: string; //Footer for even pages. Used only if IsEvenFooterEqual = false
+    FFirstPageHeader: string;
+    FFirstPageFooter: string;
 
     FHeaderBGColor: TColor;
     FFooterBGColor: TColor;
@@ -477,11 +461,6 @@ type
                                         //    в пикселях, если SplitMode = ZSplitSplit
                                         //    в кол-ве строк/столбцов, если SplitMode = ZSplitFrozen
                                         // Если SplitMode = ZSplitNone, то фиксация столбцов/ячеек не работает
-    FHeaderFooterData: string; // as xml
-    function GetHeaderData(): string;
-    procedure SetHeaderData(Value: string);
-    function GetFooterData(): string;
-    procedure SetfooterData(Value: string);
     function GetHeaderMargin(): word;
     procedure SetHeaderMargin(Value: word);
     function GetFooterMargin(): word;
@@ -512,14 +491,14 @@ type
     property FooterMargin: word read GetFooterMargin write SetFooterMargin default 13; //deprecated!
     property HeaderMargins: TZHeaderFooterMargins read FHeaderMargins;
     property FooterMargins: TZHeaderFooterMargins read FFooterMargins;
-    property IsEvenFooterEqual: boolean read FIsEvenFooterEqual write FIsEvenFooterEqual default true;
-    property IsEvenHeaderEqual: boolean read FIsEvenHeaderEqual write FIsEvenHeaderEqual default true;
-    property HeaderData: string read GetHeaderData write SetHeaderData; //deprecated
-    property FooterData: string read GetFooterData write SetFooterData; //deprecated
-    property Header: TZSheetFooterHeader read FHeader;
-    property Footer: TZSheetFooterHeader read FFooter;
-    property EvenHeader: TZSheetFooterHeader read FEvenHeader;
-    property EvenFooter: TZSheetFooterHeader read FEvenFooter;
+    property IsDifferentFirst: Boolean read FDifferentFirst write FDifferentFirst;
+    property IsDifferentOddEven: Boolean read FDifferentOddEven write FDifferentOddEven;
+    property Header: string read FHeader write FHeader;
+    property Footer: string read FFooter write FFooter;
+    property EvenHeader: string read FEvenHeader write FEvenHeader;
+    property EvenFooter: string read FEvenFooter write FEvenFooter;
+    property FirstPageHeader: string read FFirstPageHeader write FFirstPageHeader;
+    property FirstPageFooter: string read FFirstPageFooter write FFirstPageFooter;
     property HeaderBGColor: TColor read FHeaderBGColor write FHeaderBGColor default clWindow;
     property FooterBGColor: TColor read FFooterBGColor write FFooterBGColor default clWindow;
     property ScaleToPercent: integer read FScaleToPercent write FScaleToPercent default 100;
@@ -528,7 +507,6 @@ type
     property SplitHorizontalMode: TZSplitMode read FSplitHorizontalMode write FSplitHorizontalMode default ZSplitNone;
     property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
-    property HeaderFooterData: string read FHeaderFooterData write FHeaderFooterData;
   end;
 
   {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
@@ -3201,50 +3179,6 @@ begin
   FSize := PixelToPoint(Value, t);
 end;
 
-////::::::::::::: TZSheetFooterHeader :::::::::::::::::////
-
-constructor TZSheetFooterHeader.Create();
-begin
-  inherited;
-  FDataLeft := '';
-  FData := '';
-  FDataRight := '';
-  FIsDisplay := false;
-end;
-
-procedure TZSheetFooterHeader.Assign(Source: TPersistent);
-var
-  _t: TZSheetFooterHeader;
-
-begin
-  if (Source is TZSheetFooterHeader) then
-  begin
-    _t := Source as TZSheetFooterHeader;
-    FDataLeft := _t.DataLeft;
-    FData := _t.Data;
-    FDataRight := _t.DataRight;
-    FIsDisplay := _t.IsDisplay;
-  end
-  else
-    inherited;
-end;
-
-function TZSheetFooterHeader.IsEqual(Source: TPersistent): boolean;
-var
-  _t: TZSheetFooterHeader;
-
-begin
-  result := false;
-  if (Source is TZSheetFooterHeader) then
-  begin
-    _t := Source as TZSheetFooterHeader;
-    result := (_t.IsDisplay = FIsDisplay) and
-              (_t.DataLeft = FDataLeft) and
-              (_t.Data = FData) and
-              (_t.DataRight = FDataRight);
-  end;
-end;
-
 ////::::::::::::: TZHeaderFooterMargins :::::::::::::::::////
 
 constructor TZHeaderFooterMargins.Create();
@@ -3315,13 +3249,15 @@ begin
   FFitToHeight:=-1;
   FFitToWidth:=-1;
 
-  FIsEvenFooterEqual := true;
-  FIsEvenHeaderEqual := true;
+  FDifferentFirst    := False;
+  FDifferentOddEven  := False;
 
-  FHeader := TZSheetFooterHeader.Create();
-  FFooter := TZSheetFooterHeader.Create();
-  FEvenHeader := TZSheetFooterHeader.Create();
-  FEvenFooter := TZSheetFooterHeader.Create();
+  FHeader := '';
+  FFooter := '';
+  FEvenHeader := '';
+  FEvenFooter := '';
+  FFirstPageHeader := '';
+  FFirstPageFooter := '';
 
   FHeaderBGColor := clWindow;
   FFooterBGColor := clWindow;
@@ -3338,33 +3274,9 @@ end;
 
 destructor TZSheetOptions.Destroy();
 begin
-  FreeAndNil(FHeader);
-  FreeAndNil(FFooter);
-  FreeAndNil(FEvenHeader);
-  FreeAndNil(FEvenFooter);
   FreeAndNil(FHeaderMargins);
   FreeAndNil(FFooterMargins);
   inherited;
-end;
-
-function TZSheetOptions.GetHeaderData(): string;
-begin
-  result := FHeader.Data;
-end;
-
-procedure TZSheetOptions.SetHeaderData(Value: string);
-begin
-  FHeader.Data := Value;
-end;
-
-function TZSheetOptions.GetFooterData(): string;
-begin
-  result := FFooter.Data;
-end;
-
-procedure TZSheetOptions.SetfooterData(Value: string);
-begin
-  FFooter.Data := Value;
 end;
 
 function TZSheetOptions.GetHeaderMargin(): word;
@@ -3405,8 +3317,6 @@ begin
     CenterHorizontal := t.CenterHorizontal;
     CenterVertical := t.CenterVertical;
     StartPageNumber := t.StartPageNumber;
-    HeaderData := t.HeaderData;
-    FooterData := t.FooterData;
     PaperSize := t.PaperSize;
     FitToHeight := t.FitToHeight;
     FitToWidth := t.FitToWidth;
@@ -3414,17 +3324,18 @@ begin
     SplitHorizontalMode := t.SplitHorizontalMode;
     SplitVerticalValue := t.SplitVerticalValue;
     SplitHorizontalValue := t.SplitHorizontalValue;
-    Footer.Assign(t.Footer);
-    Header.Assign(t.Header);
-    EvenHeader.Assign(t.EvenHeader);
-    EvenFooter.Assign(t.EvenFooter);
+    Footer := t.Footer;
+    Header := t.Header;
+    EvenHeader := t.EvenHeader;
+    EvenFooter := t.EvenFooter;
+    FirstPageHeader := t.FirstPageHeader;
+    FirstPageFooter := t.FirstPageFooter;
     HeaderBGColor := t.HeaderBGColor;
     FooterBGColor := t.FooterBGColor;
-    IsEvenFooterEqual := t.IsEvenFooterEqual;
-    IsEvenHeaderEqual := t.IsEvenHeaderEqual;
+    IsDifferentFirst := t.IsDifferentFirst;
+    IsDifferentOddEven:= t.IsDifferentOddEven;
     ScaleToPercent := t.ScaleToPercent;
     ScaleToPages := t.ScaleToPages;
-    FHeaderFooterData := t.FHeaderFooterData;
     HeaderMargins.Assign(t.HeaderMargins);
     FooterMargins.Assign(t.FooterMargins);
   end else
