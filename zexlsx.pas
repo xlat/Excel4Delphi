@@ -2214,6 +2214,34 @@ var
         _currSheet.FitToPage := ZEStrToBoolean(xml.Attributes.ItemsByName['fitToPage']);
     end;
   end; //_ReadSheetPr();
+  procedure _ReadRowBreaks();
+  begin
+    _currSheet.RowBreaks := [];
+    while (not ((xml.TagName = 'rowBreaks') and (xml.TagType = 6))) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+
+      if xml.TagName = 'brk' then
+        _currSheet.RowBreaks := _currSheet.RowBreaks
+            + [ StrToIntDef(xml.Attributes.ItemsByName['id'], 0) ];
+    end;
+  end;
+  procedure _ReadColBreaks();
+  begin
+    _currSheet.ColBreaks := [];
+    while (not ((xml.TagName = 'colBreaks') and (xml.TagType = 6))) do
+    begin
+      xml.ReadTag();
+      if (xml.Eof()) then
+        break;
+
+      if xml.TagName = 'brk' then
+        _currSheet.ColBreaks := _currSheet.ColBreaks
+            + [ StrToIntDef(xml.Attributes.ItemsByName['id'], 0) ];
+    end;
+  end;
 
   //<sheetViews> ... </sheetViews>
   procedure _ReadSheetViews();
@@ -2249,6 +2277,10 @@ var
         s := xml.Attributes.ItemsByName['ySplit'];
         if (not TryStrToInt(s, hValue)) then
           hValue := 0;
+
+        _currSheet.ViewMode := zvmNormal;
+        if xml.Attributes.ItemsByName['view'] = 'pageBreakPreview' then
+            _currSheet.ViewMode := zvmPageBreakPreview;
 
         _currSheet.SheetOptions.SplitVerticalValue := vValue;
         _currSheet.SheetOptions.SplitHorizontalValue := hValue;
@@ -2783,6 +2815,12 @@ begin
       else
       if ((xml.TagName = 'sheetPr') and (xml.TagType = 4)) then
         _ReadSheetPr()
+      else
+      if ((xml.TagName = 'rowBreaks') and (xml.TagType = 4)) then
+        _ReadRowBreaks()
+      else
+      if ((xml.TagName = 'colBreaks') and (xml.TagType = 4)) then
+        _ReadColBreaks()
       else
       if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
         _ReadSheetViews()
@@ -5448,7 +5486,12 @@ var
       _xml.Attributes.Add('tabSelected', 'true', false);
 
     _xml.Attributes.Add('topLeftCell', 'A1', false);
-    _xml.Attributes.Add('view', 'normal', false);
+
+    if _sheet.ViewMode = zvmPageBreakPreview then
+      _xml.Attributes.Add('view', 'pageBreakPreview', false)
+    else
+      _xml.Attributes.Add('view', 'normal', false);
+
     _xml.Attributes.Add('windowProtection', 'false', false);
     _xml.Attributes.Add('workbookViewId', '0', false);
     _xml.Attributes.Add('zoomScale', '100', false);
@@ -5724,6 +5767,26 @@ var
 
     _xml.WriteEndTagNode(); //headerFooter
   end;
+
+  procedure WriteBreakData(tagName: string; breaks: TArray<Integer>; manV, maxV: string);
+  var brk: Integer;
+  begin
+    if Length(breaks) > 0 then begin
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('count', IntToStr(Length(breaks)));
+      _xml.Attributes.Add('manualBreakCount', IntToStr(Length(breaks)));
+      _xml.WriteTagNode(tagName, true, true, true);
+      for brk in breaks do begin
+        _xml.Attributes.Clear();
+        _xml.Attributes.Add('id', IntToStr(brk));
+        _xml.Attributes.Add('man', manV);
+        _xml.Attributes.Add('max', maxV);
+        _xml.WriteEmptyTag('brk', true, false);
+      end;
+      _xml.WriteEndTagNode(); //(row|col)Breaks
+    end;
+  end;
+
   procedure WriteXLSXSheetFooter();
   var
     s: string;
@@ -5778,6 +5841,10 @@ var
     WriteColontituls();
 
     //  <legacyDrawing r:id="..."/>
+
+    // write (row|col)Breaks
+    WriteBreakData('rowBreaks', _sheet.RowBreaks, '1', '16383');
+    WriteBreakData('colBreaks', _sheet.ColBreaks, '1', '1048575');
   end; //WriteXLSXSheetFooter
 
 begin

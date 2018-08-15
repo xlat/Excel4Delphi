@@ -1057,6 +1057,9 @@ type
     FCharts: TZEChartStore;
     {$ENDIF}
 
+    FViewMode: TZViewMode;
+    FRowBreaks:TArray<integer>;
+    FColBreaks:TArray<integer>;
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FConditionalFormatting: TZConditionalFormatting;
     procedure SetConditionalFormatting(Value: TZConditionalFormatting);
@@ -1121,6 +1124,9 @@ type
     {$IFDEF ZUSE_CHARTS}
     property Charts: TZEChartStore read FCharts write SetCharts;
     {$ENDIF}
+    property ViewMode: TZViewMode read FViewMode write FViewMode;
+    property RowBreaks: TArray<integer> read FRowBreaks write FRowBreaks;
+    property ColBreaks: TArray<integer> read FColBreaks write FColBreaks;
   end;
 
   //Страницы
@@ -3434,7 +3440,10 @@ begin
     Protect     := zSource.Protect;
     RightToLeft := zSource.RightToLeft;
     DefaultRowHeight := zSource.DefaultRowHeight;
-    DefaultColWidth := zSource.DefaultColWidth;
+    DefaultColWidth  := zSource.DefaultColWidth;
+    FViewMode  := zSource.FViewMode;
+    FRowBreaks := zSource.FRowBreaks;
+    FColBreaks := zSource.FColBreaks;
 
     for i := 0 to RowCount - 1 do
       Rows[i] := ZSource.Rows[i];
