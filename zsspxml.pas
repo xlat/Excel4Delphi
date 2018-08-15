@@ -485,6 +485,8 @@ function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistr
 function CheckStrEntity(const st: string; checkamp: boolean = true): string; overload;
 {$ENDIF}
 
+function ClenuapXmlTagValue(const str: string): string;
+
 //проверяем на корректность сущность (не факт, что валидную), в случае
 //чего заменяем '&' на '&amp;'
 procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring); {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
@@ -612,9 +614,9 @@ begin
     ReadCPChar(s, _eof);
     text := text + s;
     if _eof then exit;
-    {$HINTS OFF}
+    //{$HINTS OFF}
     num := num + (ord(s[1]) shl 8);
-    {$HINTS ON}
+    //{$HINTS ON}
     if num >= $d800 then
     for i := 1 to 2 do
     begin
@@ -961,6 +963,17 @@ begin
       else result := result + st[i];
     end;
   end;
+end;
+
+function ClenuapXmlTagValue(const str: string): string;
+begin
+  result := str
+    .Replace('&lt;',   '<')
+    .Replace('&amp;',  '&')
+    .Replace('&gt;',   '>')
+    .Replace('&apos;', '''')
+    .Replace('&quot;', '"')
+    ;
 end;
 
 {$IFDEF DELPHI_UNICODE}
