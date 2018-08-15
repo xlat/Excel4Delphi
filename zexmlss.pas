@@ -294,6 +294,7 @@ type
     FCount: integer;            //кол-во объединённых областей
     FMergeArea: Array of TRect;
     function GetItem(Num: integer): TRect;
+    procedure SetItem(Num: integer; const rect: TRect);
   public
     constructor Create(ASheet: TZSheet);virtual;
     destructor Destroy();override;
@@ -304,7 +305,7 @@ type
     function InMergeRange(ACol, ARow: integer): integer;
     procedure Clear();
     property Count: integer read FCount;
-    property Items[Num: Integer]: TRect read GetItem; default;
+    property Items[Num: Integer]: TRect read GetItem write SetItem; default;
   end;
 
   TZCellColumn = array of TZCell;
@@ -2921,6 +2922,11 @@ begin
     result.Right  := 0;
     result.Bottom := 0;
   end;
+end;
+
+procedure TZMergeCells.SetItem(Num: integer; const rect: TRect);
+begin
+  FMergeArea[Num] := rect;
 end;
 
 //Объединить ячейки входящие в прямоуголтник
