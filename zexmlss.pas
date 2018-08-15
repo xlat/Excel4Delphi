@@ -64,6 +64,8 @@ type
   //Закрепление строк/столбцов
   TZSplitMode = (ZSplitNone, ZSplitFrozen, ZSplitSplit);
 
+  TZViewMode = (zvmNormal, zvmPageBreakPreview);
+
   //ячейка
   TZCell = class(TPersistent)
   private
