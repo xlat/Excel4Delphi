@@ -100,14 +100,14 @@ type
   TZXLSXDiffBorder = class(TPersistent)
   private
     FBorder: array [0..5] of TZXLSXDiffBorderItemStyle;
-    procedure SetBorder(Num: integer; Const Value: TZXLSXDiffBorderItemStyle);
-    function GetBorder(Num: integer): TZXLSXDiffBorderItemStyle;
+    procedure SetBorder(Num: TZBordersPos; Const Value: TZXLSXDiffBorderItemStyle);
+    function GetBorder(Num: TZBordersPos): TZXLSXDiffBorderItemStyle;
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Clear();
     procedure Assign(Source: TPersistent);override;
-    property Border[Num: integer]: TZXLSXDiffBorderItemStyle read GetBorder write SetBorder; default;
+    property Border[Num: TZBordersPos]: TZXLSXDiffBorderItemStyle read GetBorder write SetBorder; default;
   end;
 
   //Итем для дифференцированного форматирования
@@ -895,8 +895,7 @@ procedure TZXLSXDiffBorder.Assign(Source: TPersistent);
 var
   brd: TZXLSXDiffBorder;
   b: boolean;
-  i: integer;
-
+  i: TZBordersPos;
 begin
   b := true;
 
@@ -905,8 +904,8 @@ begin
     begin
       b := false;
       brd := Source as TZXLSXDiffBorder;
-      for i := 0 to 5 do
-        FBorder[i].Assign(brd[i]);
+      for i := bpLeft to bpDiagonalRight do
+        FBorder[Ord(i)].Assign(brd[i]);
     end;
 
   if (b) then
@@ -914,26 +913,24 @@ begin
 end; //Assign
 
 procedure TZXLSXDiffBorder.Clear();
-var
-  i: integer;
-
+var i: TZBordersPos;
 begin
-  for i := 0 to 5 do
-    FBorder[i].Clear();
+  for i := bpLeft to bpDiagonalRight do
+    FBorder[Ord(i)].Clear();
 end;
 
-function TZXLSXDiffBorder.GetBorder(Num: integer): TZXLSXDiffBorderItemStyle;
+function TZXLSXDiffBorder.GetBorder(Num: TZBordersPos): TZXLSXDiffBorderItemStyle;
 begin
   result := nil;
-  if ((num >= 0 ) and (num < 6)) then
-    result := FBorder[num];
+  if ((num >= bpLeft) and (num <= bpDiagonalRight)) then
+    result := FBorder[ord(num)];
 end;
 
-procedure TZXLSXDiffBorder.SetBorder(Num: integer; const Value: TZXLSXDiffBorderItemStyle);
+procedure TZXLSXDiffBorder.SetBorder(Num: TZBordersPos; const Value: TZXLSXDiffBorderItemStyle);
 begin
-  if ((num >= 0) and (num < 6)) then
+  if ((num >= bpLeft) and (num <= bpDiagonalRight)) then
     if (Assigned(Value)) then
-      FBorder[num].Assign(Value);
+      FBorder[Ord(num)].Assign(Value);
 end;
 
 ////::::::::::::: TZXLSXDiffFormatingItem :::::::::::::::::////
@@ -1762,7 +1759,6 @@ var
   _currCol: integer;
   _currSheet: TZSheet;
   _currCell: TZCell;
-  i: integer;
   s: string;
   _tmpr: real;
   _t: integer;
@@ -2465,7 +2461,7 @@ var
         _df: TZXLSXDiffFormattingItem;
         _r, _c: integer;
         _t: integer;
-        i: integer;
+        i: TZBordersPos;
 
       begin
         //_currSheet
@@ -2503,7 +2499,7 @@ var
               _tmpStyle.PatternColor := _df.PatternColor;
           end;
           if (_df.UseBorder) then
-            for i := 0 to 5 do
+            for i := bpLeft to bpDiagonalRight do
             begin
               if (_df.Borders[i].UseStyle) then
               begin
@@ -3984,11 +3980,11 @@ var
 
     procedure _ReadDFBorder();
     var
-      _borderNum: integer;
+      _borderNum: TZBordersPos;
       t: byte;
       _bt: TZBorderType;
 
-      procedure _SetDFBorder(BorderNum: integer);
+      procedure _SetDFBorder(BorderNum: TZBordersPos);
       begin
         _borderNum := BorderNum;
         s := xml.Attributes['style'];
@@ -4004,7 +4000,7 @@ var
 
     begin
       _df.UseBorder := true;
-      _borderNum := 0;
+      _borderNum := bpLeft;
       while ((xml.TagType <> 6) or (xml.TagName <> 'border')) do
       begin
         xml.ReadTag();
@@ -4015,31 +4011,30 @@ var
         begin
           _tmptag := xml.TagName;
           if (_tmptag = 'left') then
-            _SetDFBorder(0)
+            _SetDFBorder(bpLeft)
           else
           if (_tmptag = 'right') then
-            _SetDFBorder(2)
+            _SetDFBorder(bpRight)
           else
           if (_tmptag = 'top') then
-            _SetDFBorder(1)
+            _SetDFBorder(bpTop)
           else
           if (_tmptag = 'bottom') then
-            _SetDFBorder(3)
+            _SetDFBorder(bpBottom)
           else
           if (_tmptag = 'vertical') then
-            _SetDFBorder(4)
+            _SetDFBorder(bpDiagonalLeft)
           else
           if (_tmptag = 'horizontal') then
-            _SetDFBorder(5)
+            _SetDFBorder(bpDiagonalRight)
           else
           if (_tmptag = 'color') then
           begin
             s := xml.Attributes['rgb'];
             if (length(s) > 2) then
               delete(s, 1, 2);
-            if ((_borderNum >= 0) and (_borderNum < 6)) then
-              if (s <> '') then
-              begin
+            if ((_borderNum >= bpLeft) and (_borderNum <= bpDiagonalRight)) then
+              if (s <> '') then begin
                 _df.UseBorder := true;
                 _df.Borders[_borderNum].UseColor := true;
                 _df.Borders[_borderNum].Color := HTMLHexToColor(s);
@@ -4114,7 +4109,7 @@ var
   procedure _ApplyStyle(var XMLSSStyle: TZStyle; var XLSXStyle: TZXLSXCellStyle);
   var
     i: integer;
-
+    b: TZBordersPos;
   begin
     if (XLSXStyle.numFmtId >= 0) then
       XMLSSStyle.NumberFormat := ReadHelper.NumberFormats.GetFormat(XLSXStyle.numFmtId);
@@ -4140,13 +4135,13 @@ var
     begin
       n := XLSXStyle.borderId;
       if ((n >= 0) and (n < BorderCount)) then
-        for i := 0 to 5 do
-        if (BorderArray[n][i].isEnabled) then
+        for b := bpLeft to bpDiagonalRight do
+        if (BorderArray[n][Ord(b)].isEnabled) then
         begin
-          XMLSSStyle.Border[i].LineStyle := BorderArray[n][i].style;
-          XMLSSStyle.Border[i].Weight := BorderArray[n][i].Weight;
-          if (BorderArray[n][i].isColor) then
-            XMLSSStyle.Border[i].Color := BorderArray[n][i].color;
+          XMLSSStyle.Border[b].LineStyle := BorderArray[n][Ord(b)].style;
+          XMLSSStyle.Border[b].Weight := BorderArray[n][Ord(b)].Weight;
+          if (BorderArray[n][Ord(b)].isColor) then
+            XMLSSStyle.Border[b].Color := BorderArray[n][Ord(b)].color;
         end;
     end;
 
@@ -5471,6 +5466,8 @@ var
     _xml.Attributes.Add('ref', s);
     _xml.WriteEmptyTag('dimension', true, false);
 
+
+
     _xml.Attributes.Clear();
     _xml.WriteTagNode('sheetViews', true, true, true);
 
@@ -5791,7 +5788,6 @@ var
   procedure WriteXLSXSheetFooter();
   var
     s: string;
-
   begin
     _xml.Attributes.Clear();
     _xml.Attributes.Add('headings', 'false', false);
@@ -6425,7 +6421,7 @@ var
   end; //WriteXLSXFills();
 
   //единичная граница
-  procedure _WriteBorderItem(StyleNum: integer; BorderNum: integer);
+  procedure _WriteBorderItem(StyleNum: integer; BorderNum: TZBordersPos);
   var
     s, s1: string;
     _border: TZBorderStyle;
@@ -6434,10 +6430,10 @@ var
   begin
     _xml.Attributes.Clear();
     case BorderNum of
-      0: s := 'left';
-      1: s := 'top';
-      2: s := 'right';
-      3: s := 'bottom';
+      bpLeft:   s := 'left';
+      bpTop:    s := 'top';
+      bpRight:  s := 'right';
+      bpBottom: s := 'bottom';
       else
         s := 'diagonal';
     end;
@@ -6550,21 +6546,21 @@ var
     begin
       _xml.Attributes.Clear();
       s := 'false';
-      if (XMLSS.Styles[i].Border[4].Weight > 0) and (XMLSS.Styles[i].Border[4].LineStyle <> ZENone) then
+      if (XMLSS.Styles[i].Border[bpDiagonalLeft].Weight > 0) and (XMLSS.Styles[i].Border[bpDiagonalLeft].LineStyle <> ZENone) then
         s := 'true';
       _xml.Attributes.Add('diagonalDown', s);
       s := 'false';
-      if (XMLSS.Styles[i].Border[5].Weight > 0) and (XMLSS.Styles[i].Border[5].LineStyle <> ZENone) then
+      if (XMLSS.Styles[i].Border[bpDiagonalRight].Weight > 0) and (XMLSS.Styles[i].Border[bpDiagonalRight].LineStyle <> ZENone) then
         s := 'true';
       _xml.Attributes.Add('diagonalUp', s, false);
       _xml.WriteTagNode('border', true, true, true);
 
-      _WriteBorderItem(i, 0);
-      _WriteBorderItem(i, 2);
-      _WriteBorderItem(i, 1);
-      _WriteBorderItem(i, 3);
-      _WriteBorderItem(i, 4);
-
+      _WriteBorderItem(i, bpLeft);
+      _WriteBorderItem(i, bpRight);
+      _WriteBorderItem(i, bpTop);
+      _WriteBorderItem(i, bpBottom);
+      _WriteBorderItem(i, bpDiagonalLeft);
+      //_WriteBorderItem(i, bpDiagonalRight);
       _xml.WriteEndTagNode(); //border
     end; //if
 

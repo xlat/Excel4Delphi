@@ -134,24 +134,26 @@ type
   //   3 - Bottom         нижняя граница
   //   4 - DiagonalLeft   диагоняль от верхнего левого угла до нижнего правого
   //   5 - DiagonalRight  диагоняль от нижнего левого угла до правого верхнего
+  TZBordersPos=(bpLeft,bpTop,bpRight,bpBottom,bpDiagonalLeft,bpDiagonalRight);
+
   TZBorder = class (TPersistent)
   private
     FBorder: array [0..5] of TZBorderStyle;
-    procedure SetBorder(Num: integer; Const Value: TZBorderStyle);
-    function GetBorder(Num: integer):TZBorderStyle;
+    procedure SetBorder(Num: TZBordersPos; Const Value: TZBorderStyle);
+    function GetBorder(Num: TZBordersPos):TZBorderStyle;
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent);override;
-    property Border[Num: integer]: TZBorderStyle read GetBorder write SetBorder; default;
+    property Border[Num: TZBordersPos]: TZBorderStyle read GetBorder write SetBorder; default;
     function IsEqual(Source: TPersistent): boolean; virtual;
   published
-    property Left         : TZBorderStyle index 0 read GetBorder write SetBorder;
-    property Top          : TZBorderStyle index 1 read GetBorder write SetBorder;
-    property Right        : TZBorderStyle index 2 read GetBorder write SetBorder;
-    property Bottom       : TZBorderStyle index 3 read GetBorder write SetBorder;
-    property DiagonalLeft : TZBorderStyle index 4 read GetBorder write SetBorder;
-    property DiagonalRight: TZBorderStyle index 5 read GetBorder write SetBorder;
+    property Left         : TZBorderStyle index bpLeft          read GetBorder write SetBorder;
+    property Top          : TZBorderStyle index bpTop           read GetBorder write SetBorder;
+    property Right        : TZBorderStyle index bpRight         read GetBorder write SetBorder;
+    property Bottom       : TZBorderStyle index bpBottom        read GetBorder write SetBorder;
+    property DiagonalLeft : TZBorderStyle index bpDiagonalLeft  read GetBorder write SetBorder;
+    property DiagonalRight: TZBorderStyle index bpDiagonalRight read GetBorder write SetBorder;
   end;
 
   /// Угол поворота текста в ячейке. Целое со знаком.
@@ -2315,15 +2317,13 @@ begin
 end;
 
 procedure TZBorder.Assign(Source: TPersistent);
-var
-  zSource: TZBorder;
-  i: integer;
-
+var zSource: TZBorder;
+  i: TZBordersPos;
 begin
   if (Source is TZBorder) then
   begin
     zSource := Source as TZBorder;
-    for i := 0 to 5 do
+    for i := bpLeft to bpDiagonalRight do
       Border[i].Assign(zSource.Border[i]);
   end else
     inherited Assign(Source);
@@ -2332,31 +2332,31 @@ end;
 function TZBorder.IsEqual(Source: TPersistent): boolean;
 var
   zSource: TZBorder;
-  i: integer;
+  i: TZBordersPos;
 begin
   Result := false;
   if not (Source is TZBorder) then exit;
   zSource := Source as TZBorder;
 
-  for i := 0 to 5 do
-  if not FBorder[i].IsEqual(zSource.Border[i]) then
+  for i := bpLeft to bpDiagonalRight do
+  if not FBorder[Ord(i)].IsEqual(zSource.Border[i]) then
     exit;
 
   Result := True;
 end;
 
 //установить стиль границы
-procedure TZBorder.SetBorder(Num: integer; Const Value: TZBorderStyle);
+procedure TZBorder.SetBorder(Num: TZBordersPos; Const Value: TZBorderStyle);
 begin
-  if (Num>=0) and (Num <=3) then
+  if (Num >= bpLeft) and (Num <= bpDiagonalRight) then
     Border[num].Assign(Value);
 end;
 
 //прочитать стиль границы
-function TZBorder.GetBorder(Num: integer): TZBorderStyle;
+function TZBorder.GetBorder(Num: TZBordersPos): TZBorderStyle;
 begin
-  if (Num>=0) and (Num <=5) then
-    result := FBorder[Num]
+  if (Num >= bpLeft) and (Num <= bpDiagonalRight) then
+    result := FBorder[Ord(Num)]
   else
     result := nil;
 end;

@@ -382,15 +382,15 @@ begin
       tmpstyle.Assign(XMLSS.Styles.DefaultStyle);
       if _border > 0 then
       begin
-        tmpstyle.Border[0].LineStyle := ZEContinuous;
-        tmpstyle.Border[0].Weight := 1;
+        tmpstyle.Border[bpLeft].LineStyle := ZEContinuous;
+        tmpstyle.Border[bpLeft].Weight := 1;
       end else
       begin
-        tmpstyle.Border[0].LineStyle := ZENone;
-        tmpstyle.Border[0].Weight := 0;
+        tmpstyle.Border[bpLeft].LineStyle := ZENone;
+        tmpstyle.Border[bpLeft].Weight := 0;
       end;
       for i := 1 to 3 do
-        tmpstyle.Border[i].Assign(tmpstyle.Border[0]);
+        tmpstyle.Border[TZBordersPos(i)].Assign(tmpstyle.Border[TZBordersPos(i)]);
       //номер стиля
       t.Left := XMLSS.Styles.Add(tmpstyle, true);
       for i := BCol to ECol do
@@ -914,12 +914,12 @@ begin
       2: s := s + 'right:';
       3: s := s + 'bottom:';
     end;
-    s := s + '#' + ColorToHTMLHex(Style.Border[i].Color);
-    if Style.Border[i].Weight <> 0 then
-      s := s + ' ' + IntToStr(Style.Border[i].Weight) + 'px'
+    s := s + '#' + ColorToHTMLHex(Style.Border[ TZBordersPos(i)].Color);
+    if Style.Border[TZBordersPos(i)].Weight <> 0 then
+      s := s + ' ' + IntToStr(Style.Border[TZBordersPos(i)].Weight) + 'px'
     else
         inc(l);
-    case Style.Border[i].LineStyle of
+    case Style.Border[TZBordersPos(i)].LineStyle of
       ZEContinuous  : s := s + ' ' + 'solid';
       ZEHair        : s := s + ' ' + 'solid';
       ZEDot         : s := s + ' ' + 'dotted';
@@ -1299,11 +1299,10 @@ var
 
   function AddBorders(const _border: TZborder; _def: boolean): integer;
   var
-    i: integer;
     t: TZAttributesH;
-
+    b: TZBordersPos;
     //необязательные атрибуты
-    procedure NonReqBorderAttr(num: integer);
+    procedure NonReqBorderAttr(num: TZBordersPos);
     begin
       //Color
       AddAttributeColor('ss:Color', _border[num].Color, clBlack, XMLSS.Styles.DefaultStyle.Border[num].Color, _def);
@@ -1323,21 +1322,21 @@ var
 
   begin
      result := 0;
-     for i := 0 to 5 do
+     for b := bpLeft to bpDiagonalRight do
      begin
        _xml.Attributes.Clear();
-       if not(((_border[i].LineStyle = ZEContinuous) or (_border[i].LineStyle = ZEHair)) and 
-              (_border[i].Weight = 0)) then
+       if not(((_border[b].LineStyle = ZEContinuous) or (_border[b].LineStyle = ZEHair)) and
+              (_border[b].Weight = 0)) then
        begin
-         case i of
-           0: _xml.Attributes.Add('ss:Position','Left', false);
-           1: _xml.Attributes.Add('ss:Position','Top', false);
-           2: _xml.Attributes.Add('ss:Position','Right', false);
-           3: _xml.Attributes.Add('ss:Position','Bottom', false);
-           4: _xml.Attributes.Add('ss:Position','DiagonalLeft', false);
-           5: _xml.Attributes.Add('ss:Position','DiagonalRight', false);
+         case b of
+           bpLeft:          _xml.Attributes.Add('ss:Position','Left', false);
+           bpTop:           _xml.Attributes.Add('ss:Position','Top', false);
+           bpRight:         _xml.Attributes.Add('ss:Position','Right', false);
+           bpBottom:        _xml.Attributes.Add('ss:Position','Bottom', false);
+           bpDiagonalLeft:  _xml.Attributes.Add('ss:Position','DiagonalLeft', false);
+           bpDiagonalRight: _xml.Attributes.Add('ss:Position','DiagonalRight', false);
          end;
-         NonReqBorderAttr(i);
+         NonReqBorderAttr(b);
        end;
        if _xml.Attributes.Count > 1 then
        begin
@@ -1874,21 +1873,21 @@ var
 
       //Header
       Attributes.Clear();
-      if (ProcessedSheet.SheetOptions.HeaderData > '') then
+      if (ProcessedSheet.SheetOptions.Header > '') then
       begin
         if (ProcessedSheet.SheetOptions.HeaderMargins.Height) <> 13 then
           Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##', ProcessedSheet.SheetOptions.HeaderMargins.Height / ZE_MMinInch)));
-        Attributes.Add('x:Data', ProcessedSheet.SheetOptions.HeaderData, false);
+        Attributes.Add('x:Data', ProcessedSheet.SheetOptions.Header, false);
         WriteEmptyTag('Header', true, true);
       end;
 
       //Footer
       Attributes.Clear();
-      if (ProcessedSheet.SheetOptions.FooterData > '') then
+      if (ProcessedSheet.SheetOptions.Footer > '') then
       begin
         if ProcessedSheet.SheetOptions.FooterMargins.Height <> 13 then
           Attributes.Add('x:Margin', ZEFloatSeparator(FormatFloat('0.##', ProcessedSheet.SheetOptions.FooterMargins.Height / ZE_MMinInch)));
-        Attributes.Add('x:Data', ProcessedSheet.SheetOptions.FooterData, false);
+        Attributes.Add('x:Data', ProcessedSheet.SheetOptions.Footer, false);
         WriteEmptyTag('Footer', true, true);
       end;
 
@@ -2146,7 +2145,7 @@ var
   procedure ReadEXMLOneStyle(const IDStyle: integer);
   var
     s: string;
-    i: integer;
+    i: TZBordersPos;
 
   begin
     if IDStyle <> -1 then
@@ -2206,17 +2205,17 @@ var
             if (s > '') then
             begin
               if s = 'Left' then
-                i := 0
+                i := bpLeft
               else if s = 'Top' then
-                i := 1
+                i := bpTop
               else if s = 'Right' then
-                i := 2
+                i := bpRight
               else if s = 'Bottom' then
-                i := 3
+                i := bpBottom
               else if s = 'DiagonalLeft' then
-                i := 4
+                i := bpDiagonalLeft
               else
-                i := 5;
+                i := bpDiagonalRight;
               s := _xml.Attributes.ItemsByName['ss:LineStyle'];
               if (s > '') then
                 Border[i].LineStyle := StrToZBorderType(s);
@@ -2634,14 +2633,14 @@ var
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if (s > '') then
             _SheetOptions.HeaderMargins.Height := abs(round(ZETryStrToFloat(s)*25.4));
-          _SheetOptions.HeaderData := _xml.Attributes.ItemsByName['x:Data'];
+          //_SheetOptions.Header := _xml.Attributes.ItemsByName['x:Data'];
         end else
         if IfTag('Footer', 5) then
         begin
           s := _xml.Attributes.ItemsByName['x:Margin'];
           if (s > '') then
             _SheetOptions.FooterMargins.Height := abs(round(ZETryStrToFloat(s)*25.4));
-          _SheetOptions.FooterData := _xml.Attributes.ItemsByName['x:Data'];
+          //_SheetOptions.Footer := _xml.Attributes.ItemsByName['x:Data'];
         end;
       end else
       //Print
