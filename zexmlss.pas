@@ -28,8 +28,7 @@ interface
 // подключаем sysd7.
 // VER130 - Borland Delphi 5.0
 uses
-  classes, Sysutils,
-  graphics, UITypes,
+  classes, Sysutils, graphics, UITypes, Math,
   {$IFNDEF FPC}
   windows,
   {$ELSE}
@@ -1101,9 +1100,9 @@ type
     function  GetColCount: integer; virtual;
     procedure SetColCount(const Value: integer); virtual;
     function  GetRange(AC1,AR1,AC2,AR2: integer): TZRange; virtual;
-    procedure SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange); virtual;
+    //procedure SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange); virtual;
     function  GetRangeRef(AFrom, ATo: string): TZRange; virtual;
-    procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
+    //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
   public
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor Destroy(); override;
@@ -1114,8 +1113,8 @@ type
     property ColWidths[num: integer]: real read GetColWidth write SetColWidth;
     property Columns[num: integer]: TZColOptions read GetColumn write SetColumn;
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
-    property Range[AC1,AR1,AC2,AR2: integer]: TZRange read GetRange write SetRange;
-    property RangeRef[AFrom, ATo: string]: TZRange read GetRangeRef write SetRangeRef;
+    property Range[AC1,AR1,AC2,AR2: integer]: TZRange read GetRange{ write SetRange};
+    property RangeRef[AFrom, ATo: string]: TZRange read GetRangeRef{ write SetRangeRef};
     property RowHeights[num: integer]: real read GetRowHeight write SetRowHeight;
     property DefaultColWidth: real read FDefaultColwidth write SetDefaultColWidth;// default 48;
     property DefaultRowHeight: real read FDefaultRowHeight write SetDefaultRowHeight;// default 12.75;
@@ -1197,7 +1196,7 @@ type
     procedure SetNumberFormat(const Value: string);
   protected
   public
-    constructor Create(ASheet: TZSheet; AFC1, AFR1, AFC2, AFR2: Integer); overload;
+    constructor Create(ASheet: TZSheet; AFC1, AFR1, AFC2, AFR2: Integer); virtual;
     procedure Assign(Source: TPersistent); override;
     destructor Destroy(); override;
     property VerticalAlignment: TZVerticalAlignment read GetVerticalAlignment write SetVerticalAlignment;
@@ -3648,6 +3647,7 @@ begin
     result := nil;
 end;
 
+{
 procedure TZSheet.SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange);
 begin
 
@@ -3657,6 +3657,7 @@ procedure TZSheet.SetRangeRef(AFrom, ATo: string; const Value: TZRange);
 begin
 
 end;
+}
 
 function TZSheet.GetRange(AC1,AR1,AC2,AR2: integer): TZRange;
 begin
@@ -5872,9 +5873,53 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикаль
 
 { TZRange }
 procedure TZRange.Assign(Source: TPersistent);
+var src: TZRange; r,c,id: Integer; style: TZStyle; rect: TRect;
 begin
   inherited;
+  if Source is TZRange then begin
+    src := TZRange(Source);
 
+    // resize columns or rows if need
+    if FSheet.RowCount <= Max(src.FR2, FR2) then
+      FSheet.RowCount := Max(src.FR2, FR2);
+
+    if FSheet.ColCount <= Max(src.FC2, FC2) then
+      FSheet.ColCount := Max(src.FC2, FC2);
+
+    // copy cells and styles
+    for c := 0 to src.FC2-src.FC1 do begin
+      for r := 0 to src.FR2-src.FR1 do begin
+        FSheet.Cell[FC1+c, FR1+r].Assign(src.FSheet.Cell[src.FC1+c, src.FR1+r]);
+        id := FSheet.Cell[FC1+c, FR1+r].CellStyle;
+        if id > -1 then begin
+          style := TZStyle.Create();
+          // style must copy from source sheet
+          style.Assign( src.FSheet.WorkBook.Styles[id] );
+          id := FSheet.WorkBook.Styles.Add(style, true);
+          FSheet.Cell[FC1+c, FR1+r].CellStyle := id;
+        end;
+      end;
+    end;
+
+    // remove cross merges
+    for id := FSheet.MergeCells.Count-1 downto 0 do begin
+      if FSheet.MergeCells.IsCrossWithArea(id, FC1, FR1, FC1+(src.FC2-src.FC1), FR1+(src.FR2-src.FR1)) then
+        FSheet.MergeCells.DeleteItem(id);
+    end;
+
+    // copy and reloc merges
+    for id := 0 to src.FSheet.MergeCells.Count-1 do begin
+      if src.FSheet.MergeCells.IsCrossWithArea(id, src.FC1, src.FR1, src.FC2, src.FR2) then begin
+        rect := src.FSheet.MergeCells[id];
+        FSheet.MergeCells.AddRectXY(
+          FC1+(rect.Left-src.FC1),
+          FR1+(rect.Top-src.FR1),
+          FC1+(rect.Right-src.FC1),
+          FR1+(rect.Bottom-src.FR1)
+        );
+      end;
+    end;
+  end;
 end;
 
 constructor TZRange.Create(ASheet: TZSheet; AFC1, AFR1, AFC2, AFR2: Integer);
@@ -5889,12 +5934,16 @@ end;
 destructor TZRange.Destroy;
 begin
   FSheet := nil;
+  FC1 := 0;
+  FR1 := 0;
+  FC2 := 0;
+  FR2 := 0;
   inherited;
 end;
 
 function TZRange.HasStyle: Boolean;
 begin
-  Result := FSheet.Cell[FC1,FR1].FCellStyle > -1;
+  Result := FSheet.Cell[FC1, FR1].FCellStyle > -1;
 end;
 
 procedure TZRange.Merge;
