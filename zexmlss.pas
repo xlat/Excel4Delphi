@@ -1131,6 +1131,7 @@ type
     property MergeCells: TZMergeCells read FMergeCells write FMergeCells;
     property SheetOptions: TZSheetOptions read GetSheetOptions write SetSheetOptions;
     property Selected: boolean read FSelected write FSelected;
+    property WorkBook: TZEXMLSS read FStore;
 
     property RowsToRepeat: TZSheetPrintTitles read FPrintRows write SetPrintRows;
     property ColsToRepeat: TZSheetPrintTitles read FPrintCols write SetPrintCols;
