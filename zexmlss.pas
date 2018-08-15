@@ -1103,6 +1103,8 @@ type
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     procedure Clear(); virtual;
+    procedure InsertRows(ARow, ACount: Integer);
+    procedure CopyRows(ARowDst, ARowSrc, ACount: Integer);
     property ColWidths[num: integer]: real read GetColWidth write SetColWidth;
     property Columns[num: integer]: TZColOptions read GetColumn write SetColumn;
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
@@ -3516,6 +3518,66 @@ end;
 function TZSheet.GetSheetOptions(): TZSheetOptions;
 begin
   result := FSheetOptions;
+end;
+
+procedure TZSheet.InsertRows(ARow, ACount: Integer);
+var r,c: Integer;
+begin
+  // resize
+  SetRowCount(FRowCount + ACount);
+
+  // append and reloc cells
+  for r := Length(FRows) - 1 downto ARow do begin
+    // reloc rows
+    if (r - ACount) < ARow then begin
+      FRows[r] := TZRowOptions.Create(Self);
+      FRows[r].Height := DefaultRowHeight;
+    end else begin
+      FRows[r] := FRows[r - ACount];
+    end;
+    // reloc cells
+    for c := 0 to ColCount-1 do begin
+      if (r - ACount) < ARow then begin
+        FCells[c][r].Clear();// := TZCell.Create();
+      end else begin
+        FCells[c][r].Assign(FCells[c][r-ACount]);
+      end;
+    end;
+  end;
+
+  // reloc merged areas
+  for r := 0 to MergeCells.Count-1 do begin
+    if MergeCells[r].Top >= ARow then begin
+      MergeCells.Items[r] := TRect.Create(
+        MergeCells.Items[r].Left,
+        MergeCells.Items[r].Top + ACount,
+        MergeCells.Items[r].Right,
+        MergeCells.Items[r].Bottom + ACount);
+    end;
+  end;
+end;
+
+procedure TZSheet.CopyRows(ARowDst, ARowSrc, ACount: Integer);
+var r, c: integer;
+begin
+  // copy row's and cell's info
+  for r := 0 to ACount-1 do begin
+    FRows[ARowDst+r].Assign( FRows[ARowSrc+r] );
+    for c := 0 to FColCount-1 do begin
+      FCells[c][ARowDst+r].Assign( FCells[c][ARowSrc+r] );
+    end;
+  end;
+
+  // reloc merged areas
+  for r := 0 to MergeCells.Count-1 do begin
+    if (MergeCells[r].Top >= ARowSrc) and (MergeCells[r].Bottom < ARowSrc + ACount) then begin
+      MergeCells.AddRect(TRect.Create(
+        MergeCells.Items[r].Left,
+        MergeCells.Items[r].Top + ACount,
+        MergeCells.Items[r].Right,
+        MergeCells.Items[r].Bottom + ACount));
+    end;
+  end;
 end;
 
 procedure TZSheet.SetSheetOptions(Value: TZSheetOptions);
