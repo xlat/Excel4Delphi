@@ -56,6 +56,7 @@ const
   ZE_ATR_DEL_PREFIX     =   1;  //Удалять все символы до первого '='
 
 function ZEGetA1byCol(ColNum: integer; StartZero: boolean = true): string;
+function ZERangeToRow(range: string): integer;
 function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
 
 function ZER1C1ToA1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
@@ -809,6 +810,17 @@ begin
     retFormula := retFormula + s;
   result := retFormula;
 end; //ZEA1ToR1C1
+
+function ZERangeToRow(range: string): integer;
+var i : integer;
+begin
+    for I := 1 to Length(range)-1 do begin
+        if CharInSet(range.Chars[i], ['0'..'9']) then begin
+            exit(StrToInt(range.Substring(i)));
+        end;
+    end;
+    raise Exception.Create('Не удалось вычислить номер строки из формулы: ' + range);
+end;
 
 //Возвращает номер столбца по буквенному обозначению
 //INPUT

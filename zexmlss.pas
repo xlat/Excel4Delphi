@@ -305,6 +305,7 @@ type
     function DeleteItem(num: integer): boolean;
     function InLeftTopCorner(ACol, ARow: integer): integer;
     function InMergeRange(ACol, ARow: integer): integer;
+    function IsCrossWithArea(AID,AC1,AR1,AC2,AR2: integer): Boolean;
     procedure Clear();
     property Count: integer read FCount;
     property Items[Num: Integer]: TRect read GetItem write SetItem; default;
@@ -3032,6 +3033,15 @@ begin
     result := i;
     break;
   end;
+end;
+
+function TZMergeCells.IsCrossWithArea(AID, AC1, AR1, AC2, AR2: integer): Boolean;
+begin
+  result :=
+    (((Items[AID].Left    >= AC1) and (Items[AID].Left   <= AC2)) or
+      ((Items[AID].right  >= AC1) and (Items[AID].right  <= AC2))) and
+     (((Items[AID].Top    >= AR1) and (Items[AID].Top    <= AR2)) or
+      ((Items[AID].Bottom >= AR1) and (Items[AID].Bottom <= AR2)));
 end;
 
 //удаляет облать num
