@@ -34,7 +34,6 @@ requires
 contains
   zexmlss in 'zexmlss.pas',
   zsspxml in 'zsspxml.pas',
-  zeodfs in 'zeodfs.pas',
   duansistr in 'duansistr.pas',
   zesavecommon in 'zesavecommon.pas',
   zeformula in 'zeformula.pas',
@@ -42,8 +41,6 @@ contains
   zearchhelper in 'zearchhelper.pas',
   zexlsx in 'zexlsx.pas',
   zeSave in 'zeSave.pas',
-  zeSaveEXML in 'zeSaveEXML.pas',
-  zeSaveODS in 'zeSaveODS.pas',
   zeSaveXLSX in 'zeSaveXLSX.pas',
   zeZippy in 'zeZippy.pas',
   zeZippyXE2 in 'zeZippyXE2.pas',

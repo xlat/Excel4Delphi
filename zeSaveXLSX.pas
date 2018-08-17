@@ -34,14 +34,11 @@ end;
 function TZxXlsxSaver.DoSave: integer;
 begin
   Result := ExportXmlssToXLSX(
-    fBook, FFile, GetPageNumbers, GetPageTitles, fConv, string(fCharSet), fBOM,
-    false, FZipGen);
+    fBook, FFile, GetPageNumbers, GetPageTitles, fConv, string(fCharSet), fBOM, false, FZipGen);
 end;
 
 initialization
     TZxXlsxSaver.Register;
-//    TZXMLSSave.RegisterFormat(TZxXlsxSaver);
 finalization
     TZxXlsxSaver.UnRegister;
-//    TZXMLSSave.UnRegisterFormat(TZxXlsxSaver);
 end.
