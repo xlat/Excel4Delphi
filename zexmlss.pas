@@ -3605,7 +3605,7 @@ begin
 end;
 
 procedure TZSheet.CopyRows(ARowDst, ARowSrc, ACount: Integer);
-var r, c: integer;
+var r, c, delta: integer;
 begin
   // copy row's and cell's info
   for r := 0 to ACount-1 do begin
@@ -3615,14 +3615,16 @@ begin
     end;
   end;
 
+  delta := ARowDst - ARowSrc;
+
   // reloc merged areas
   for r := 0 to MergeCells.Count-1 do begin
     if (MergeCells[r].Top >= ARowSrc) and (MergeCells[r].Bottom < ARowSrc + ACount) then begin
       MergeCells.AddRect(TRect.Create(
         MergeCells.Items[r].Left,
-        MergeCells.Items[r].Top + ACount,
+        MergeCells.Items[r].Top + delta,
         MergeCells.Items[r].Right,
-        MergeCells.Items[r].Bottom + ACount));
+        MergeCells.Items[r].Bottom + delta));
     end;
   end;
 end;
