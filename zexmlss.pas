@@ -1186,8 +1186,8 @@ type
     procedure SetFontStyle(const Value: TFontStyles);
     function GetBorderStyle(Num: TZBordersPos): TZBorderType;
     procedure SetBorderStyle(Num: TZBordersPos; const Value: TZBorderType);
-    function GetBorderWeight(Num: TZBordersPos): Byte;
-    procedure SetBorderWeight(Num: TZBordersPos; const Value: Byte);
+    function GetBorderWidht(Num: TZBordersPos): Byte;
+    procedure SetBorderWidht(Num: TZBordersPos; const Value: Byte);
     function GetBorderColor(Num: TZBordersPos): TColor;
     procedure SetBorderColor(Num: TZBordersPos; const Value: TColor);
     function GetWordWrap(): Boolean;
@@ -1206,7 +1206,7 @@ type
     property FontSize: Byte read GetFontSize write SetFontSize;
     property FontStyle: TFontStyles read GetFontStyle write SetFontStyle;
     property BorderStyle[num: TZBordersPos]: TZBorderType read GetBorderStyle write SetBorderStyle;
-    property BorderWeight[num: TZBordersPos]: Byte read GetBorderWeight write SetBorderWeight;
+    property BorderWidht[num: TZBordersPos]: Byte read GetBorderWidht write SetBorderWidht;
     property BorderColor[num: TZBordersPos]: TColor read GetBorderColor write SetBorderColor;
     property WordWrap: Boolean read GetWordWrap write SetWordWrap;
     property NumberFormat: string read GetNumberFormat write SetNumberFormat;
@@ -6012,7 +6012,7 @@ begin
     Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Border[Num].LineStyle;
 end;
 
-function TZRange.GetBorderWeight(Num: TZBordersPos): Byte;
+function TZRange.GetBorderWidht(Num: TZBordersPos): Byte;
 begin
   Result := 0;
   if HasStyle then
@@ -6089,7 +6089,7 @@ begin
   end);
 end;
 
-procedure TZRange.SetBorderWeight(Num: TZBordersPos; const Value: Byte);
+procedure TZRange.SetBorderWidht(Num: TZBordersPos; const Value: Byte);
 begin
   ApplyStyleValue(procedure (style: TZStyle) begin
     style.Border[Num].Weight := Value;
