@@ -1095,13 +1095,15 @@ type
     procedure SetDefaultRowHeight(const Value: real); virtual;
     function  GetCell(ACol, ARow: integer): TZCell; virtual;
     procedure SetCell(ACol, ARow: integer; const Value: TZCell); virtual;
+    function  GetCellRef(ACol: string; ARow: integer): TZCell; virtual;
+    procedure SetCellRef(ACol: string; ARow: integer; const Value: TZCell); virtual;
     function  GetRowCount: integer; virtual;
     procedure SetRowCount(const Value: integer); virtual;
     function  GetColCount: integer; virtual;
     procedure SetColCount(const Value: integer); virtual;
     function  GetRange(AC1,AR1,AC2,AR2: integer): TZRange; virtual;
     //procedure SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange); virtual;
-    function  GetRangeRef(AFrom, ATo: string): TZRange; virtual;
+    function  GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange; virtual;
     //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
   public
     constructor Create(AStore: TZEXMLSS); virtual;
@@ -1114,11 +1116,12 @@ type
     property Columns[num: integer]: TZColOptions read GetColumn write SetColumn;
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
     property Range[AC1,AR1,AC2,AR2: integer]: TZRange read GetRange{ write SetRange};
-    property RangeRef[AFrom, ATo: string]: TZRange read GetRangeRef{ write SetRangeRef};
+    property RangeRef[AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer]: TZRange read GetRangeRef{ write SetRangeRef};
     property RowHeights[num: integer]: real read GetRowHeight write SetRowHeight;
     property DefaultColWidth: real read FDefaultColwidth write SetDefaultColWidth;// default 48;
     property DefaultRowHeight: real read FDefaultRowHeight write SetDefaultRowHeight;// default 12.75;
     property Cell[ACol, ARow: integer]: TZCell read GetCell write SetCell; default;
+    property CellRef[ACol: string; ARow: integer]: TZCell read GetCellRef write SetCellRef;
     property AutoFilter: string read FAutoFilter write FAutoFilter;
     property Protect: boolean read FProtect write FProtect default false; //защищён ли лист от изменения
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
@@ -3666,13 +3669,13 @@ begin
   Result := TZRange.Create(Self, AC1,AR1,AC2,AR2);
 end;
 
-function TZSheet.GetRangeRef(AFrom, ATo: string): TZRange;
+function TZSheet.GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange;
 var AC1,AR1,AC2,AR2: Integer;
 begin
-  AC1 := ZEGetColByA1(AFrom);
-  AR1 := ZERangeToRow(AFrom)-1;
-  AC2 := ZEGetColByA1(ATo);
-  AR2 := ZERangeToRow(ATo)-1;
+  AC1 := ZEGetColByA1(AFromCol);
+  AR1 := AFromRow;
+  AC2 := ZEGetColByA1(AToCol);
+  AR2 := AToRow;
   Result := TZRange.Create(Self, AC1,AR1,AC2,AR2);
 end;
 
@@ -3775,6 +3778,11 @@ begin
   FCells[ACol, ARow].Assign(Value);
 end;
 
+procedure TZSheet.SetCellRef(ACol: string; ARow: integer; const Value: TZCell);
+begin
+    SetCell(ZEGetColByA1(ACol), ARow, Value);
+end;
+
 function TZSheet.GetCell(ACol, ARow: integer):TZCell;
 begin
   if (ACol >= 0) and (ACol < FColCount) and
@@ -3782,6 +3790,11 @@ begin
   result := FCells[ACol, ARow]
     else
   result := nil;
+end;
+
+function TZSheet.GetCellRef(ACol: string; ARow: integer): TZCell;
+begin
+    Result := GetCell(ZEGetColByA1(ACol), ARow);
 end;
 
 //установить кол-во столбцов
