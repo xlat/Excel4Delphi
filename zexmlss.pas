@@ -1105,6 +1105,7 @@ type
     //procedure SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange); virtual;
     function  GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange; virtual;
     //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
+    function GetSheetIndex(): integer;
   public
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor Destroy(); override;
@@ -1127,6 +1128,7 @@ type
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
     property FitToPage: Boolean read FFitToPage write FFitToPage default false;
     property Title: string read FTitle write FTitle;
+    property SheetIndex: integer read GetSheetIndex;
     property RowCount: integer read GetRowCount write SetRowCount;
     property RightToLeft: boolean read FRightToLeft write FRightToLeft default false;
     property ColCount: integer read GetColCount write SetColCount;
@@ -3564,6 +3566,15 @@ begin
     FCharts.Assign(Value);
 end;
 {$ENDIF}
+
+function TZSheet.GetSheetIndex: integer;
+var i: Integer;
+begin
+  Result := 0;
+  for I := 0 to WorkBook.FSheets.Count-1 do
+    if WorkBook.FSheets[i] = Self then
+        Exit(i);
+end;
 
 function TZSheet.GetSheetOptions(): TZSheetOptions;
 begin
