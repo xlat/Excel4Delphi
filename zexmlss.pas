@@ -1197,6 +1197,8 @@ type
     procedure SetBorderColor(Num: TZBordersPos; const Value: TColor);
     function GetWrapText(): Boolean;
     procedure SetWrapText(const Value: Boolean);
+    function GetVerticalText(): Boolean;
+    procedure SetVerticalText(const Value: Boolean);
     function GetNumberFormat(): string;
     procedure SetNumberFormat(const Value: string);
   protected
@@ -1214,6 +1216,7 @@ type
     property BorderWidht[num: TZBordersPos]: Byte read GetBorderWidht write SetBorderWidht;
     property BorderColor[num: TZBordersPos]: TColor read GetBorderColor write SetBorderColor;
     property WrapText: Boolean read GetWrapText write SetWrapText;
+    property VerticalText: Boolean read GetVerticalText write SetVerticalText;
     property NumberFormat: string read GetNumberFormat write SetNumberFormat;
     procedure Merge();
     procedure Clear();
@@ -6085,6 +6088,13 @@ begin
     Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Alignment.Vertical;
 end;
 
+function TZRange.GetVerticalText: Boolean;
+begin
+  Result := false;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Alignment.VerticalText;
+end;
+
 function TZRange.GetWrapText: Boolean;
 begin
   Result := false;
@@ -6159,6 +6169,13 @@ procedure TZRange.SetVerticalAlignment(const Value: TZVerticalAlignment);
 begin
   ApplyStyleValue(procedure (style: TZStyle) begin
     style.Alignment.Vertical := Value;
+  end);
+end;
+
+procedure TZRange.SetVerticalText(const Value: Boolean);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Alignment.VerticalText := Value;
   end);
 end;
 
