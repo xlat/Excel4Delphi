@@ -3079,10 +3079,7 @@ begin
     xml.Attributes.Add(ZETag_style_volatile, 'true');
 end; //PrepareCommonStyleAttributes
 
-procedure TODSNumberFormatMapItem.WriteNumberStyle(const xml: TZsspXMLWriterH;
-                                                   const AStyleName: string;
-                                                   const NumProperties: integer;
-                                                   isVolatile: boolean = false);
+procedure TODSNumberFormatMapItem.WriteNumberStyle(const xml: TZsspXMLWriterH;const AStyleName: string;const NumProperties: integer;isVolatile: boolean = false);
 var
   i: integer;
   _DecimalCount: integer;
@@ -3112,8 +3109,7 @@ var
   //<style:text-properties />
   procedure _WriteTextProperties();
   begin
-    if (isColor) then
-    begin
+    if (isColor) then begin
       xml.Attributes.Clear();
       xml.Attributes.Add(ZETag_fo_color, ColorStr);
       xml.WriteEmptyTag(ZETag_style_text_properties, true, true);
@@ -3132,8 +3128,7 @@ var
     //     isExtrazero: boolean - true = 0, false = #
     procedure _CheckDigit(isExtrazero: boolean);
     begin
-      if (_isSci) then
-      begin
+      if (_isSci) then begin
         inc(_exponentDigitsCount);
         Exit;
       end;
@@ -3141,12 +3136,9 @@ var
       inc(_TotalDigitsCount);
       inc(_CurrentPos);
 
-      if (_isDecimal) then
-      begin
+      if (_isDecimal) then begin
         inc(_DecimalCount);
-      end
-      else
-      begin
+      end else begin
         inc(_IntDigitsCount);
         if (isExtrazero) then
           inc(_MinIntDigitsCount);
@@ -3165,21 +3157,16 @@ var
 
     procedure _AddEmbebedText(isAdd: boolean);
     begin
-      if (isAdd) then
-      begin
-        if ((_TotalDigitsCount > 0) or _isFirstText) then
-        begin
-          if (FEmbededTextCount >= FEmbededMaxCount) then
-          begin
+      if (isAdd) then begin
+        if ((_TotalDigitsCount > 0) or _isFirstText) then begin
+          if (FEmbededTextCount >= FEmbededMaxCount) then begin
             inc(FEmbededMaxCount, 10);
             SetLength(FEmbededTextArray, FEmbededMaxCount);
           end;
           FEmbededTextArray[FEmbededTextCount].Txt := s;
           FEmbededTextArray[FEmbededTextCount].NumberPosition := _CurrentPos;
           inc(FEmbededTextCount);
-        end
-        else
-        begin
+        end else begin
           _isFirstText := true;
           _firstText := s;
         end;
@@ -3190,8 +3177,7 @@ var
     procedure _ProgressPercent();
     begin
       s := s + ch;
-      if ((not _isFirstText) and (_TotalDigitsCount = 0) and (FEmbededTextCount = 0)) then
-      begin
+      if ((not _isFirstText) and (_TotalDigitsCount = 0) and (FEmbededTextCount = 0)) then begin
         _isFirstText := true;
         _firstText := s;
         s := '';
@@ -3207,12 +3193,10 @@ var
     _isDecimal := false;
     i := 1;
     _txt_len := Length(FNumberFormat);
-    while (i <= _txt_len) do
-    begin
+    while (i <= _txt_len) do begin
       ch := FNumberFormat[i];
 
-      if ((ch = '\') and (not _isQuote)) then
-      begin
+      if ((ch = '\') and (not _isQuote)) then begin
         inc(i);
         if (i > _txt_len) then
           break;
@@ -3222,14 +3206,12 @@ var
         ch := #0;
       end;
 
-      if (ch = '"') then
-      begin
+      if (ch = '"') then begin
         _AddEmbebedText(_isQuote and (not _isDecimal));
         _isQuote := not _isQuote;
       end;
 
-      if (_isQuote) then
-      begin
+      if (_isQuote) then begin
         if (ch <> '"') then
           s := s + ch
       end
@@ -3252,9 +3234,7 @@ var
 
   //<number:number > </number:number>
   procedure _WriteNumberMain();
-  var
-    i: integer;
-
+  var i: integer;
     procedure _FillMainAttrib();
     begin
       xml.Attributes.Clear();
@@ -3345,26 +3325,22 @@ var
 
     _FillMainAttrib();
 
-    if (FEmbededTextCount > 0) then
-    begin
+    if (FEmbededTextCount > 0) then begin
       _StartEmbededTextTag();
 
       //TODO: Is it possible to use embeded text for fraction and scientific formats?
       if (not _isFraction) then
-        for i := 0 to FEmbededTextCount - 1 do
-        begin
+        for i := 0 to FEmbededTextCount - 1 do begin
           xml.Attributes.Clear();
           xml.Attributes.Add(ZETag_number_position, IntToStr(_IntDigitsCount - FEmbededTextArray[i].NumberPosition));
           xml.WriteTag(ZETag_number_embedded_text, FEmbededTextArray[i].Txt, true, false, true);
         end;
 
       _EndEmbededTextTag();
-    end
-    else
+    end else
       _WriteEmptyNumberTag();
 
-    if (s <> '') then
-    begin
+    if (s <> '') then begin
       xml.Attributes.Clear();
       xml.WriteTag(ZETag_number_text, s, true, false, true);
     end;
@@ -3397,9 +3373,7 @@ end; //WriteNumberStyle
 //     const AStyleName: string   - style name
 //           isVolatile: boolean  - is volatile? (for now - ignore)
 procedure TODSNumberFormatMapItem.WriteTextStyle(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false);
-var
-  _isText: boolean;
-
+var _isText: boolean;
 begin
   _isText := false;
   PrepareCommonStyleAttributes(xml, AStyleName, isVolatile);
@@ -3433,14 +3407,8 @@ begin
   xml.WriteEndTagNode(); //number:text-style
 end; //WriteTextStyle
 
-function TODSNumberFormatMapItem.WriteDateTimeStyle(const xml: TZsspXMLWriterH;
-                                                    const AStyleName: string;
-                                                    isVolatile: boolean = false): integer;
-
-var
-  s: string;
-  _tagName: string;
-
+function TODSNumberFormatMapItem.WriteDateTimeStyle(const xml: TZsspXMLWriterH; const AStyleName: string; isVolatile: boolean = false): integer;
+var s,_tagName: string;
   procedure _WriteYear(var item: TZDateTimeProcessItem);
   begin
     if (item.Len > 2) then
@@ -3533,57 +3501,29 @@ var
   end; //_WriteEraJap
 
   procedure _WriteItems();
-  var
-    i: integer;
-
+  var i: integer;
   begin
-    for i := 0 to FDateTimeODSFormatParser.FCount - 1 do
-    begin
+    for i := 0 to FDateTimeODSFormatParser.FCount - 1 do begin
       xml.Attributes.Clear();
       case (FDateTimeODSFormatParser.FItems[i].ItemType) of
-        ZE_DATETIME_ITEM_TEXT:
-                              xml.WriteTag(ZETag_number_text, FDateTimeODSFormatParser.FItems[i].TextValue, true, false, true);
-
-        ZE_DATETIME_ITEM_YEAR:
-                              _WriteYear(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_MONTH:
-                              _WriteMonth(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_DAY:
-                              _WriteDay(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_HOUR:
-                              _WriteHour(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_MINUTE:
-                              _WriteMinute(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_SECOND:
-                              _WriteSecond(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_WEEK:
-                              _WriteWeek(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_QUARTER:
-                              _WriteQuarter(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_ERA_JAP:
-                              _WriteEraJap(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_ERA_YEAR:
-                              _WriteEraYear(FDateTimeODSFormatParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_AMPM:
-                              xml.WriteEmptyTag(ZETag_number_am_pm, true, false);
+        ZE_DATETIME_ITEM_TEXT:     xml.WriteTag(ZETag_number_text, FDateTimeODSFormatParser.FItems[i].TextValue, true, false, true);
+        ZE_DATETIME_ITEM_YEAR:     _WriteYear(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_MONTH:    _WriteMonth(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_DAY:      _WriteDay(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_HOUR:     _WriteHour(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_MINUTE:   _WriteMinute(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_SECOND:   _WriteSecond(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_WEEK:     _WriteWeek(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_QUARTER:  _WriteQuarter(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_ERA_JAP:  _WriteEraJap(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_ERA_YEAR: _WriteEraYear(FDateTimeODSFormatParser.FItems[i]);
+        ZE_DATETIME_ITEM_AMPM:     xml.WriteEmptyTag(ZETag_number_am_pm, true, false);
       end; //case
     end; //for i
   end; //_WriteItems
 
   function _GetAdditionalProperties(): integer;
-  var
-    i: integer;
-
+  var i: integer;
   begin
     for i := 0 to FDateTimeODSFormatParser.FCount - 1 do
       case (FDateTimeODSFormatParser.FItems[i].ItemType) of
@@ -3607,8 +3547,7 @@ begin
   FDateTimeODSFormatParser.TryToParseDateFormat(FNumberFormat, FNumberFormatParser);
   FDateTimeODSFormatParser.DeleteRepeatedItems();
 
-  if (FDateTimeODSFormatParser.GetValidCount() > 0) then
-  begin
+  if (FDateTimeODSFormatParser.GetValidCount() > 0) then begin
     Result := _GetAdditionalProperties();
 
     if (Result = 0) then

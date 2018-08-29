@@ -25,10 +25,21 @@ end;
 
 class function TZxXlsxSaver.FormatDescriptions: TStringDynArray;
 begin
-  Result := SplitString(
-   '.XLSX*.XLSM*application/vnd.openxmlformats-officedocument.spreadsheetml.sheet*'+
-   'Excel 2007*Excel 2010*Office 2007*Office 2010*'+
-   'Office Open XML*OOXML*OpenXML*ECMA-376*ISO/IEC 29500*ISO 29500', '*');
+  Result := [
+    '.XLSX',
+    '.XLSM',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Excel 2007',
+    'Excel 2010',
+    'Office 2007',
+    'Office 2010',
+    'Office Open XML',
+    'OOXML',
+    'OpenXML',
+    'ECMA-376',
+    'ISO/IEC 29500',
+    'ISO 29500'
+  ];
 end;
 
 function TZxXlsxSaver.DoSave: integer;
