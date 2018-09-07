@@ -6354,22 +6354,21 @@ var
       _xml.WriteTagNode('fill', true, true, true);
 
       case XMLSS.Styles[i].CellPattern of
-        ZPSolid:      s := 'solid';
-        ZPNone:       s := 'none';
-        ZPGray125:    s := 'gray125';
-        ZPGray0625:   s := 'gray0625';
-        ZPDiagStripe: s := 'darkUp';
-        ZPGray50:     s := 'mediumGray';
-        ZPGray75:     s := 'darkGray';
-        ZPGray25:     s := 'lightGray';
-        ZPHorzStripe: s := 'darkHorizontal';
-        ZPVertStripe: s := 'darkVertical';
-        ZPReverseDiagStripe:  s := 'darkDown';
-//        ZPDiagStripe:         s := 'darkUpDark'; ??
-        ZPDiagCross:          s := 'darkGrid';
-        ZPThickDiagCross:     s := 'darkTrellis';
-        ZPThinHorzStripe:     s := 'lightHorizontal';
-        ZPThinVertStripe:     s := 'lightVertical'; 
+        ZPSolid:                  s := 'solid';
+        ZPNone:                   s := 'none';
+        ZPGray125:                s := 'gray125';
+        ZPGray0625:               s := 'gray0625';
+        ZPDiagStripe:             s := 'darkUp';
+        ZPGray50:                 s := 'mediumGray';
+        ZPGray75:                 s := 'darkGray';
+        ZPGray25:                 s := 'lightGray';
+        ZPHorzStripe:             s := 'darkHorizontal';
+        ZPVertStripe:             s := 'darkVertical';
+        ZPReverseDiagStripe:      s := 'darkDown';
+        ZPDiagCross:              s := 'darkGrid';
+        ZPThickDiagCross:         s := 'darkTrellis';
+        ZPThinHorzStripe:         s := 'lightHorizontal';
+        ZPThinVertStripe:         s := 'lightVertical';
         ZPThinReverseDiagStripe:  s := 'lightDown';
         ZPThinDiagStripe:         s := 'lightUp';
         ZPThinHorzCross:          s := 'lightGrid';
@@ -6377,9 +6376,13 @@ var
         else
           s := 'solid';
       end; //case
-      _xml.Attributes.Clear();
-      _xml.Attributes.Add('patternType', s);
+
       b := (XMLSS.Styles[i].PatternColor <> clWindow) or (XMLSS.Styles[i].BGColor <> clWindow);
+      _xml.Attributes.Clear();
+      if b and (XMLSS.Styles[i].CellPattern = ZPNone) then
+        _xml.Attributes.Add('patternType', 'solid')
+      else
+        _xml.Attributes.Add('patternType', s);
 
       if (b) then
         _xml.WriteTagNode('patternFill', true, true, false)
@@ -6387,6 +6390,7 @@ var
         _xml.WriteEmptyTag('patternFill', true, false);
 
       _reverse := not (XMLSS.Styles[i].CellPattern in [ZPNone, ZPSolid]);
+
       if (XMLSS.Styles[i].BGColor <> clWindow) then
       begin
         _xml.Attributes.Clear();
@@ -6394,7 +6398,7 @@ var
           _tmpColor := XMLSS.Styles[i].PatternColor
         else
           _tmpColor := XMLSS.Styles[i].BGColor;
-        _xml.Attributes.Add('rgb', '00' + ColorToHTMLHex(_tmpColor));
+        _xml.Attributes.Add('rgb', 'FF' + ColorToHTMLHex(_tmpColor));
         _xml.WriteEmptyTag('fgColor', true);
       end;
 
@@ -6405,7 +6409,7 @@ var
           _tmpColor := XMLSS.Styles[i].BGColor
         else
           _tmpColor := XMLSS.Styles[i].PatternColor;
-        _xml.Attributes.Add('rgb', '00' + ColorToHTMLHex(_tmpColor));
+        _xml.Attributes.Add('rgb', 'FF' + ColorToHTMLHex(_tmpColor));
         _xml.WriteEmptyTag('bgColor', true);
       end;
 
