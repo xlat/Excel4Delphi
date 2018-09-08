@@ -27,10 +27,6 @@ uses
 const
   ZE_MMinInch: real = 25.4;
 
-//type
-//  TZESaveIntArray = array of integer; // Since Delphi 7 and FPC 2005 - TIntegerDynArray
-//  TZESaveStrArray = array of string;  // Since Delphi 7 and FPC 2005 - TStringDynArray
-
 //Попытка преобразовать строку в число
 function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
 function ZETryStrToFloat(const st: string; valueIfError: double = 0): double; overload;
@@ -67,15 +63,15 @@ function ZEReplaceEntity(const st: string): string;
 // This fn brings it back into -90 .. +90 range
 function ZENormalizeAngle90(const value: TZCellTextRotate): integer;
 
-// despite formal angle datatype declaration in default "range check off" mode
-//    it can be anywhere -32K to +32K
-// This fn brings it back into 0 .. +179 range
+/// <summary>
+/// Despite formal angle datatype declaration in default "range check off" mode it can be anywhere -32K to +32K
+/// This fn brings it back into 0 .. +179 range
+/// </summary>
 function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 
-// single place to update version et all
-function ZELibraryName: string;
-
-//Trying to convert string like "n%" to integer
+/// <summary>
+/// Trying to convert string like "n%" to integer
+/// </summary>
 function TryStrToIntPercent(s: string; out Value: integer): boolean;
 
 //Get DateTime from XML scheme 2 duration string
@@ -104,22 +100,6 @@ implementation
 uses
   dateutils //IncHour etc
   ;
-
-function ZELibraryName: string;
-begin   // todo: compiler version and date ?
-  Result := 'ZEXMLSSlib/' + ZELibraryVersion;
-  {$WARNINGS OFF}
-  if ZELibraryFork <> '' then Result := Result + '@' + ZELibraryFork;
-  {$WARNINGS ON}
-
-  Result := Result + '$' +
-    {$IFDEF FPC}
-     'FPC';
-    {$ELSE}
-    'DELPHI_or_CBUILDER';
-    {$ENDIF}
-  Result := Result + ' ZEXMLSS'
-end;
 
 // despite formal angle datatype declaration in default "range check off" mode
 //    it can be anywhere -32K to +32K
@@ -338,14 +318,10 @@ end; //ZETryStrToFloat
 //  const st: string        - строка
 //    valueIfError: double  - значение, которое подставляется при ошибке преобразования
 function ZETryStrToFloat(const st: string; valueIfError: double = 0): double;
-var
-  s: string;
-  i: integer;
-
+var s: string; i: integer;
 begin
   result := 0;
-  if (trim(st) <> '') then
-  begin
+  if (trim(st) <> '') then begin
     s := '';
     for i := 1 to length(st) do
       {$IFDEF DELPHI_UNICODE}
@@ -370,9 +346,7 @@ end; //ZETryStrToFloat
 
 //заменяет все запятые на точки
 function ZEFloatSeparator(st: string): string;
-var
-  k: integer;
-
+var k: integer;
 begin
   result := '';
   for k := 1 to length(st) do
@@ -380,15 +354,6 @@ begin
       result := result + '.'
     else
       result := result + st[k];
-  {
-  result := st;
-  k := pos(',', result);
-  while k <> 0 do
-  begin
-    result[k] := '.';
-    k := pos(',', result);
-  end;
-  }
 end;
 
 //BOM<?xml version="1.0" encoding="CodePageName"?>
@@ -398,8 +363,7 @@ end;
 //  const BOM: ansistring       - BOM
 procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
 begin
-  with (xml) do
-  begin
+  with (xml) do begin
     WriteRaw(BOM, false, false);
     Attributes.Add('version', '1.0');
     if (CodePageName > '') then
@@ -427,10 +391,7 @@ resourcestring
 //  var st: string - строка
 //      n: integer - номер
 procedure ZECorrectStrForSave(var st: string; n: integer);
-var
-  l, i, m, num: integer;
-  s: string;
-
+var l, i, m, num: integer; s: string;
 begin
   if Trim(st) = '' then
      st := DefaultSheetName;  // behave uniformly with ZECheckTablesTitle
@@ -442,13 +403,11 @@ begin
   begin
     m := l;
     for i := l downto 1 do
-    if st[i] = '(' then
-    begin
+    if st[i] = '(' then begin
       m := i;
       break;
     end;
-    if m <> l then
-    begin
+    if m <> l then begin
       s := copy(st, m+1, l-m - 1);
       try
         num := StrToInt(s) + 1;
@@ -466,21 +425,15 @@ end; //ZECorrectStrForSave
 //INPUT
 //  var mas: array of string - массив со значениями
 procedure ZECorrectTitles(var mas: array of string);
-var
-  i, num, k, _kol: integer;
-  s: string;
-
+var i, num, k, _kol: integer; s: string;
 begin
   num := 0;
   _kol := High(mas);
-  while (num < _kol) do
-  begin
+  while (num < _kol) do begin
     s := UpperCase(mas[num]);
     k := 0;
-    for i := num + 1 to _kol do
-    begin
-      if (s = UpperCase(mas[i])) then
-      begin
+    for i := num + 1 to _kol do begin
+      if (s = UpperCase(mas[i])) then begin
         inc(k);
         ZECorrectStrForSave(mas[i], k);
       end;
@@ -504,9 +457,7 @@ end; //CorrectTitles
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; out _pages: TIntegerDynArray;
                             out _names: TStringDynArray; out retCount: integer): boolean;
-var
-  t1, t2, i: integer;
-
+var t1, t2, i: integer;
   // '!' is allowed; ':' is not; whatever else ?
   procedure SanitizeTitle(var s: string);   var i: integer;
   begin
@@ -600,9 +551,7 @@ end; //ZECheckTablesTitle
 //RETURN
 //      boolean - true - Ok
 function TryStrToIntPercent(s: string; out Value: integer): boolean;
-var
-  l: integer;
-
+var l: integer;
 begin
   l := length(s);
   if (l > 1) then
@@ -625,7 +574,6 @@ var
   _min: integer;
   _sec: integer;
   _msec: integer;
-
 begin
   _h := HoursBetween(ADateTime, 0);
   _t := IncHour(0, _h);

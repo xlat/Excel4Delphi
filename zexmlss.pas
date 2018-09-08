@@ -38,6 +38,8 @@ uses
   zsspxml
   ;
 
+var ZE_XLSX_APPLICATION: string;
+
 const
    _PointToMM:    real = 0.3528;  // 1 типографский пункт = 0.3528 мм
 
