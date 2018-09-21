@@ -5176,9 +5176,10 @@ var _xml: TZsspXMLWriterH;    //писатель
           ZEString:   s := 'str';
           ZEError:    s := 'e';
         end;
-        
+
         // если тип ячейки ZEGeneral, то атрибут опускаем
-        if _sheet.Cell[j, i].CellType <> ZEGeneral then
+        if  (_sheet.Cell[j, i].CellType <> ZEGeneral)
+        and (_sheet.Cell[j, i].CellType <> ZEDateTime) then
           _xml.Attributes.Add('t', s, false);
 
         if (b) then begin
