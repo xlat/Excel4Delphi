@@ -235,6 +235,7 @@ type
     FBGColor: TColor;
     FPatternColor: TColor;
     FCellPattern: TZCellPattern;
+    FNumberFormatId: Integer;
     FNumberFormat: string;
     FProtect: boolean;
     FHideFormula: boolean;
@@ -261,6 +262,7 @@ type
     property HideFormula: boolean read FHideFormula write FHideFormula default false;
     property CellPattern: TZCellPattern read FCellPattern write SetCellPattern default ZPNone;
     property NumberFormat: string read FNumberFormat write SetNumberFormat;
+    property NumberFormatId: Integer read FNumberFormatId write FNumberFormatId default -1;
   end;
 
   //стили
@@ -2562,6 +2564,7 @@ begin
   FPatternColor := clWindow;
   FCellPattern := ZPNone;
   FNumberFormat := ''; // '' = General
+  FNumberFormatId := -1;
   FProtect := true;
   FHideFormula := false;
 end;
@@ -2589,6 +2592,7 @@ begin
     FPatternColor := zSource.PatternColor;
     FCellPattern := zSource.CellPattern;
     FNumberFormat := zSource.NumberFormat;
+    FNumberFormatId := zSource.NumberFormatId;
     FProtect := zSource.Protect;
     FHideFormula := zSource.HideFormula;
   end else
@@ -2663,6 +2667,7 @@ end;
 procedure TZStyle.SetNumberFormat(const Value: string);
 begin
   FNumberFormat := Value;
+  FNumberFormatId := -1;
 end;
 
 ////::::::::::::: TZStyles :::::::::::::::::////
@@ -2863,7 +2868,8 @@ end;
 procedure TZCell.SetDataAsDateTime(const Value: TDateTime);
 begin
   FCellType := ZEDateTime;
-  FData := ZEDateTimeToStr(Value, true);
+  //FData := ZEDateTimeToStr(Value, true);
+  FData := FloatToStr(Value).Replace(',','.');
 end;
 
 function TZCell.GetDataAsDouble: double;

@@ -3710,7 +3710,8 @@ var
   begin
     if (XLSXStyle.numFmtId >= 0) then
       XMLSSStyle.NumberFormat := ReadHelper.NumberFormats.GetFormat(XLSXStyle.numFmtId);
-    
+    XMLSSStyle.NumberFormatId := XLSXStyle.numFmtId;
+
     if (XLSXStyle.applyAlignment) then begin
       XMLSSStyle.Alignment.Horizontal  := XLSXStyle.alignment.horizontal;
       XMLSSStyle.Alignment.Vertical    := XLSXStyle.alignment.vertical;
@@ -5498,12 +5499,13 @@ var
     _numfmt_counter: integer;
 
     function _GetNumFmt(StyleNum: integer): integer;
-    var i, j, k: integer;
-      b: boolean;
+    var i, j, k: integer; b: boolean;
       _cs, _cr, _cc: integer;
     begin
       Result := 0;
       _style := XMLSS.Styles[StyleNum];
+      if (_style.NumberFormatId > 0) and (_style.NumberFormatId < 164) then
+        Exit(_style.NumberFormatId);
 
       //If cell type is datetime and cell style is empty then need write default NumFmtId = 14.
       if ((Trim(_style.NumberFormat) = '') or (UpperCase(_style.NumberFormat) = 'GENERAL')) then begin
@@ -5512,22 +5514,17 @@ var
         else begin
           b := false;
           _cs := _currSheet;
-          for i := _cs to XMLSS.Sheets.Count - 1 do
-          begin
+          for i := _cs to XMLSS.Sheets.Count - 1 do begin
             _sheet := XMLSS.Sheets[i];
             _cr := _currRow;
-            for j := _cr to _sheet.RowCount - 1 do
-            begin
+            for j := _cr to _sheet.RowCount - 1 do begin
               _cc := _currCol;
-              for k := _cc to _sheet.ColCount - 1 do
-              begin
+              for k := _cc to _sheet.ColCount - 1 do begin
                 _currstylenum := _sheet[k, j].CellStyle + 1;
                 if (_currstylenum >= 0) and (_currstylenum < kol) then
-                  if (_sheet[k, j].CellType = ZEDateTime) then
-                  begin
+                  if (_sheet[k, j].CellType = ZEDateTime) then begin
                     _is_dateTime[_currstylenum] := true;
-                    if (_currstylenum = StyleNum + 1) then
-                    begin
+                    if (_currstylenum = StyleNum + 1) then begin
                       b := true;
                       break;
                     end;
@@ -5553,8 +5550,7 @@ var
       else begin
         s := ConvertFormatNativeToXlsx(_style.NumberFormat, _FmtParser, _DateParser);
         i := _nfmt.FindFormatID(s);
-        if (i < 0) then
-        begin
+        if (i < 0) then begin
           i := _numfmt_counter;
           _nfmt.Format[i] := s;
           inc(_numfmt_counter);
