@@ -40,8 +40,7 @@ uses
 
 var ZE_XLSX_APPLICATION: string;
 
-const
-   _PointToMM:    real = 0.3528;  // 1 типографский пункт = 0.3528 мм
+const _PointToMM: real = 0.3528;  // 1 типографский пункт = 0.3528 мм
 
 type
   //тип данных ячейки
@@ -1369,17 +1368,13 @@ uses zeformula;
 //RETURN
 //      string
 function IntToStrN(value: integer; NullCount: integer): string;
-var
-  t: integer;
-  k: integer;
-
+var t, k: integer;
 begin
   t := value;
   k := 0;
   if (t = 0) then
     k := 1;
-  while t > 0 do
-  begin
+  while t > 0 do begin
     inc(k);
     t := t div 10;
   end;
@@ -1393,9 +1388,7 @@ end; //IntToStrN
 //      ATime: TDateTime - нужная дата/время
 //      Addmms: boolean  - need add ms to result
 function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
-var
-  HH, MM, SS, MS: word;
-
+var HH, MM, SS, MS: word;
 begin
   DecodeDate(ATime, HH, MM, SS);
   result := IntToStrN(HH, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(SS, 2) + 'T';
@@ -1409,9 +1402,7 @@ end;
 //INPUT
 //      ADate: TDateTime - date
 function ZEDateToStr(ADate: TDateTime): string;
-var
-  YY, MM, DD: word;
-
+var YY, MM, DD: word;
 begin
   DecodeDate(ADate, YY, MM, DD);
   result := IntToStrN(YY, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(DD, 2);
@@ -1422,9 +1413,7 @@ end;
 //      ATime: TDateTime - time
 //      Addmms: boolean  - need add ms to result
 function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
-var
-  HH, MM, SS, MS: word;
-
+var HH, MM, SS, MS: word;
 begin
   DecodeTime(ATime, HH, MM, SS, MS);
   result := 'T' + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
@@ -1439,8 +1428,7 @@ end;
 //RETURN
 //      boolean - true - ok
 function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
-var
-  a: array [0..10] of word;
+var a: array [0..10] of word;
   i, l: integer;
   s, ss: string;
   count: integer;
@@ -1458,79 +1446,59 @@ var
 
   function TryAddToArray(const ST: string): boolean;
   begin
-    if (count > 10) then
-    begin
+    if (count > 10) then begin
       Result := false;
       exit;
     end;
     Result := TryStrToInt(ST, tmp);
-    if (Result) then
-    begin
+    if (Result) then begin
       a[Count] := word(tmp);
       inc(Count);
     end
   end;
 
   procedure _CheckDigits();
-  var
-    _l: integer;
-
+  var _l: integer;
   begin
     _l := length(s);
-    if (_l > 0) then
-    begin
-      if (_l > 4) then //it is not good
-      begin
-        if (istimesign) then
-        begin
+    if (_l > 0) then begin
+      if (_l > 4) then begin//it is not good
+        if (istimesign) then begin
           // HHMMSS?
-          if (_l = 6) then
-          begin
+          if (_l = 6) then begin
             ss := copy(s, 1, 2);
-            if (TryAddToArray(ss)) then
-            begin
+            if (TryAddToArray(ss)) then begin
               ss := copy(s, 3, 2);
-              if (TryAddToArray(ss)) then
-              begin
+              if (TryAddToArray(ss)) then begin
                 ss := copy(s, 5, 2);
                 if (not TryAddToArray(ss)) then
                   Result := false;
-              end
-              else
+              end else
                 Result := false;
-            end
-            else
+            end else
               Result := false
-          end
-          else
+          end else
             Result := false;
-        end
-        else
-        begin
+        end else begin
           // YYYYMMDD?
-          if (_l = 8) then
-          begin
+          if (_l = 8) then begin
             ss := copy(s, 1, 4);
             if (not TryAddToArray(ss)) then
               Result := false
-            else
-            begin
+            else begin
               ss := copy(s, 5, 2);
               if (not TryAddToArray(ss)) then
                 Result := false
-              else
-              begin
+              else begin
                 ss := copy(s, 7, 2);
                 if (not TryAddToArray(ss)) then
                   Result := false;
               end;
             end;
-          end
-          else
+          end else
             Result := false;
         end;
-      end
-      else
+      end else
         if (not TryAddToArray(s)) then
           Result := false;
     end; //if
@@ -1562,13 +1530,11 @@ var
   procedure _processDateDelimiter();
   begin
     _CheckDigits();
-    if (istimesign) then
-    begin
+    if (istimesign) then begin
       tzindex := count;
       istimezone := true;
       timezonemul := -1;
-    end
-    else
+    end else
       inc(datedelimeters);
   end;
 
@@ -1592,38 +1558,29 @@ var
   end;
 
   function _TryGetDateTime(): boolean;
-  var
-    _time: TDateTime;
-    _date: TDateTime;
-
+  var _time, _date: TDateTime;
   begin
     //Result := true;
     if (msindex >= 0) then
       _ms := a[msindex];
-    if (lastdateindex >= 0) then
-    begin
+    if (lastdateindex >= 0) then begin
       Result := TryEncodeDate(a[0], a[1], a[2], _date);
-      if (Result) then
-      begin
+      if (Result) then begin
         Result := TryEncodeTime(a[lastdateindex + 1], a[lastdateindex + 2], a[lastdateindex + 3], _ms, _time);
         if (Result) then
           retDateTime := _date + _time;
       end;
-    end
-    else
+    end else
       Result := TryEncodeTime(a[lastdateindex + 1], a[lastdateindex + 2], a[lastdateindex + 3], _ms, retDateTime);
   end;
 
   function _TryGetDate(): boolean;
   begin
-    if (datedelimeters = 0) and (timedelimeters >= 2) then
-    begin
+    if (datedelimeters = 0) and (timedelimeters >= 2) then begin
       if (msindex >= 0) then
         _ms := a[msindex];
       result := TryEncodeTime(a[0], a[1], a[2], _ms, retDateTime);
-    end
-    else
-    if (count >= 3) then
+    end else if (count >= 3) then
       Result := TryEncodeDate(a[0], a[1], a[2], retDateTime)
     else
       Result := false;
@@ -1645,17 +1602,16 @@ begin
   l := length(AStrDateTime);
   s := '';
   count := 0;
-  for i := 1 to l do
-  begin
+  for i := 1 to l do begin
     ch := AStrDateTime[i];
     case (ch) of
       '0'..'9': _processDigit();
       't', 'T': _processTimeSign();
-      '-': _processDateDelimiter();
-      ':': _processTimeDelimiter();
+      '-':      _processDateDelimiter();
+      ':':      _processTimeDelimiter();
       '.', ',': _processMSDelimiter();
       'z', 'Z': _processTimeZoneSign();
-      '+': _processTimeZonePlus();
+      '+':      _processTimeZonePlus();
     end;
     if (not Result) then
       break
@@ -1664,8 +1620,7 @@ begin
   if (Result and (s <> '')) then
     _CheckDigits();
 
-  if (Result) then
-  begin
+  if (Result) then begin
     if (istimesign) then
       Result := _TryGetDateTime()
     else
@@ -1682,8 +1637,7 @@ end; //TryZEStrToDateTime
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 begin
   Result := Assigned(Font1) and (Assigned(Font2));
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := false;
     if (Font1.Color <> Font2.Color) then
       exit;
@@ -1714,8 +1668,7 @@ end; //ZEIsFontsEquals
 //      var UseXMLNS: boolean - есть ли в строке правильные парные тэги
 //                              true - есть
 procedure CorrectStrForXML(const St: string; var Corrected: string; var UseXMLNS: boolean);
-type
-  StackData = record
+type StackData = record
     TextBeforeTag: string;
     TagName: string;
     RawTag: string;
@@ -1723,20 +1676,16 @@ type
     isClose: boolean;
   end;
 
-var
-  i, kol, _length, t: integer;
+var i, kol, _length, t: integer;
   s: string;
   Stack: array of StackData;
-
   //проверка тэга
   procedure _CheckTag(var _num: integer; const _s: string; var D: StackData);
-  var
-    i, l, f, t: integer;
+  var i, l, f, t: integer;
     s: string;
     _param: string;
     _Start: boolean;
     _zz: string;
-
   begin
     l := length(_s);
     f := 0;
@@ -1745,30 +1694,24 @@ var
     _param := '';
     _zz := '';
     for i := _num + 1 to length(_s) do
-    if _s[i] = '>' then
-    begin
-      f := i;
-      break;
-    end;
+      if _s[i] = '>' then begin
+        f := i;
+        break;
+      end;
     //убитый тэг
-    if f = 0 then
-    begin
+    if f = 0 then begin
       D.isBad := true;
       D.RawTag := copy(_s, _num, l - _num + 1);
       _num := l;
-    end else
-    begin
-      for i := _num + 1 to f do
-      begin
+    end else begin
+      for i := _num + 1 to f do begin
         case _s[i] of
           '>':
              begin
                if (_zz > '') or (_param <> '') then
                  D.isBad := true;
-               if s > '' then
-               begin
-                 if not _start then
-                 begin
+               if s > '' then begin
+                 if not _start then begin
                    if s > '' then
                      D.TagName := s;
                    D.RawTag := D.RawTag + s;
@@ -1779,21 +1722,17 @@ var
              end;
           '"', '''':
              begin
-               if _zz = '' then
-               begin
+               if _zz = '' then begin
                  D.isBad := true;
-               end else
-               begin
+               end else begin
                  t := length(_zz);
-                 if _zz[t] = '=' then
-                 begin
+                 if _zz[t] = '=' then begin
                    _zz := _zz + _s[i];
                    if s > '' then
                      D.isBad := true;
                    D.RawTag := D.RawTag + _s[i];
                    s := '';
-                 end else
-                 begin
+                 end else begin
                    D.RawTag := D.RawTag + s + _s[i];
                    s := '';
                    _zz := '';
@@ -1803,27 +1742,21 @@ var
              end;
           ' ', #13, #10, #9:
               begin
-                if not _Start then
-                begin
-                  if s > '' then
-                  begin
+                if not _Start then begin
+                  if s > '' then begin
                     _Start := true;
                     D.RawTag := D.RawTag + s +_s[i];
                     D.TagName := s;
                     s := '';
                   end else
                     D.isBad := true;
-                end else
-                begin
-                  if s <> '' then
-                  begin
-                    if _param = '' then
-                    begin
+                end else begin
+                  if s <> '' then begin
+                    if _param = '' then begin
                       _param := s;
                       D.RawTag := D.RawTag + s;
                       s := '';
-                    end else
-                    begin
+                    end else begin
                       if _zz = '' then
                         D.isBad := true;
                     end;
@@ -1847,14 +1780,11 @@ var
              end;
           '/':
              begin
-               if not _Start then
-               begin
+               if not _Start then begin
                  D.RawTag := D.RawTag + '/';
-                 if s = '' then
-                 begin
+                 if s = '' then begin
                    D.isClose := true;
-                 end else
-                 begin
+                 end else begin
                    D.RawTag := D.RawTag + s;
                    D.isBad := true;
                    s := '';
@@ -1866,8 +1796,7 @@ var
              begin
                if _zz > '' then
                  D.isBad := true
-               else
-               begin
+               else begin
                   if (s > '') and (_param > '') then
                     D.isBad := true;
                  _zz := '=';
@@ -1879,9 +1808,8 @@ var
             s := s + _s[i];
         end;
         // если тэг запорчен
-        if D.isBad then
-        begin
-          D.RawTag :=copy(_s, _num,  f - _num + 1);
+        if D.isBad then begin
+          D.RawTag := copy(_s, _num,  f - _num + 1);
           break;
         end;
       end;
@@ -1903,8 +1831,7 @@ begin
   _length := length(St);
   t := 0;
   i := 0;
-  while i < _length do
-  begin
+  while i < _length do begin
     inc(i);
     case St[i] of
       '<':
@@ -1919,24 +1846,18 @@ begin
            _CheckTag(i, St, Stack[kol]);
            if Stack[kol].isBad then
              _BadTag(s, Stack[kol])
-           else
-           begin
+           else begin
              inc(t);
-             if Stack[kol].isClose then
-             begin
-               if kol > 0 then
-               begin
-                 if Stack[kol].TagName = Stack[kol-1].TagName then
-                 begin
+             if Stack[kol].isClose then begin
+               if kol > 0 then begin
+                 if Stack[kol].TagName = Stack[kol-1].TagName then begin
                    dec(t);
-                   if t <> 1 then
-                   begin
+                   if t <> 1 then begin
                      Stack[kol-2].TextBeforeTag := Corrected + Stack[kol-2].TextBeforeTag;
                      Stack[kol-2].RawTag := Stack[kol-2].RawTag + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
                                             Stack[kol].TextBeforeTag + Stack[kol].RawTag ;
                      Corrected := '';
-                   end
-                   else
+                   end else
                      Corrected := Corrected + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
                                   Stack[kol].TextBeforeTag + Stack[kol].RawTag;
                    dec(t);
@@ -1954,20 +1875,16 @@ begin
       '>': s := s + '&gt;';
       #13, #10:
          begin
-           if St[i] = #13 then
-           begin
-             if i < _length then
-             begin
+           if St[i] = #13 then begin
+             if i < _length then begin
                if St[i+1] = #10 then
                  s := s + '&#10;'
                else
                  s := s + St[i];
              end else
                s := s + St[i];
-           end else
-           begin
-             if i > 1 then
-             begin
+           end else begin
+             if i > 1 then begin
                if St[i-1] <> #13 then
                  s := s + '&#10;'
                {else
@@ -1976,8 +1893,8 @@ begin
                s := s + '&#10;';
            end;
          end;
-      '&': Correct_Entity(St, i, s);
-      '"': s := s + '&quot;';
+      '&':  Correct_Entity(St, i, s);
+      '"':  s := s + '&quot;';
       '''': s := s + '&apos;';
       else
         s := s + St[i];
@@ -1994,9 +1911,7 @@ end;
 
 //переводит TColor в Hex RGB
 function ColorToHTMLHex(Color: TColor): string;
-var
-  _RGB: integer;
-
+var _RGB: integer;
 begin
   _RGB := ColorToRGB(Color);
   //result := IntToHex(GetRValue(_RGB), 2) + IntToHex(GetGValue(_RGB), 2) + IntToHex(GetBValue(_RGB), 2);
@@ -2005,14 +1920,11 @@ end;
 
 //переводит Hex RGB (string) в TColor
 function HTMLHexToColor(value: string): TColor;
-var
-  a: array [0..2] of integer;
+var a: array [0..2] of integer;
   i, n, t: integer;
-
 begin
   result := 0;
-  if (value > '') then
-  begin
+  if (value > '') then begin
     value := UpperCase(value);
     {$HINTS OFF}
     FillChar(a, sizeof(a), 0);
@@ -2020,8 +1932,7 @@ begin
     n := 0;
     if value[1] = '#' then delete(value, 1, 1);
     //А что, если будут цвета типа "black"?  {tut}
-    for i := 1 to length(value) do
-    begin
+    for i := 1 to length(value) do begin
       if n > 2 then break;
       case value[i] of
         '0'..'9': t := ord(value[i]) - 48;
@@ -2038,21 +1949,17 @@ begin
 end;
 
 function ARGBToColor(value: string): TColor;
-var
-  a: array [0..2] of integer;
-  i, n, t: integer;
+var a: array [0..2] of integer; i, n, t: integer;
 begin
   result := 0;
-  if (value > '') then
-  begin
+  if (value > '') then begin
     value := UpperCase(value);
     {$HINTS OFF}
     FillChar(a, sizeof(a), 0);
     {$HINTS ON}
     n := 0;
     if value[1] = '#' then delete(value, 1, 1);
-    for i := 3 to length(value) do
-    begin
+    for i := 3 to length(value) do begin
       if n > 2 then break;
       case value[i] of
         '0'..'9': t := ord(value[i]) - 48;
@@ -2061,7 +1968,8 @@ begin
           t := 0;
       end;
       a[n] := a[n] * 16 + t;
-      if i mod 2 = 0 then inc(n);
+      if i mod 2 = 0 then
+        inc(n);
     end;
     result := a[2] shl 16 or a[1] shl 8 or a[0]//RGB(a[0], a[1], a[2]);
     //a[2] shl 16 or a[1] shl 8 or a[0]; = RGB
@@ -2323,8 +2231,7 @@ end;
 
 procedure TZBorderStyle.Assign(Source: TPersistent);
 begin
-  if Source is TZBorderStyle then
-  begin
+  if Source is TZBorderStyle then begin
     Weight := (Source as TZBorderStyle).Weight;
     Color := (Source as TZBorderStyle).Color;
     LineStyle := (Source as TZBorderStyle).LineStyle;
@@ -2333,11 +2240,11 @@ begin
 end;
 
 function TZBorderStyle.IsEqual(Source: TPersistent): boolean;
-var
-  zSource: TZBorderStyle;
+var zSource: TZBorderStyle;
 begin
   Result := false;
-  if not (Source is TZBorderStyle) then exit;
+  if not (Source is TZBorderStyle) then
+    exit;
   zSource := Source as TZBorderStyle;
 
   if Self.LineStyle <> zSource.LineStyle then
@@ -2372,18 +2279,14 @@ end;
 ////::::::::::::: TZBorder :::::::::::::::::////
 
 constructor TZBorder.Create();
-var
-  i:integer;
-
+var i:integer;
 begin
   for i := 0 to 5 do
     FBorder[i]:= TZBorderStyle.Create();
 end;
 
 destructor TZBorder.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to 5 do
     FreeAndNil(FBorder[i]);
@@ -2391,11 +2294,9 @@ begin
 end;
 
 procedure TZBorder.Assign(Source: TPersistent);
-var zSource: TZBorder;
-  i: TZBordersPos;
+var zSource: TZBorder; i: TZBordersPos;
 begin
-  if (Source is TZBorder) then
-  begin
+  if (Source is TZBorder) then begin
     zSource := Source as TZBorder;
     for i := bpLeft to bpDiagonalRight do
       Border[i].Assign(zSource.Border[i]);
@@ -2404,18 +2305,15 @@ begin
 end;
 
 function TZBorder.IsEqual(Source: TPersistent): boolean;
-var
-  zSource: TZBorder;
-  i: TZBordersPos;
+var zSource: TZBorder; i: TZBordersPos;
 begin
   Result := false;
-  if not (Source is TZBorder) then exit;
-  zSource := Source as TZBorder;
-
-  for i := bpLeft to bpDiagonalRight do
-  if not FBorder[Ord(i)].IsEqual(zSource.Border[i]) then
+  if not (Source is TZBorder) then
     exit;
-
+  zSource := Source as TZBorder;
+  for i := bpLeft to bpDiagonalRight do
+    if not FBorder[Ord(i)].IsEqual(zSource.Border[i]) then
+      exit;
   Result := True;
 end;
 
@@ -2439,22 +2337,19 @@ end;
 
 constructor TZAlignment.Create();
 begin
-  FHorizontal := ZHAutomatic;
-  FIndent := 0;
-  FRotate := 0;
-  FShrinkToFit := false;
-  FVertical := ZVAutomatic;
+  FIndent       := 0;
+  FRotate       := 0;
+  FHorizontal   := ZHAutomatic;
+  FShrinkToFit  := false;
+  FVertical     := ZVAutomatic;
   FVerticalText := false;
-  FWrapText := false;
+  FWrapText     := false;
 end;
 
 procedure TZAlignment.Assign(Source: TPersistent);
-var
-  zSource: TZAlignment;
-
+var zSource: TZAlignment;
 begin
-  if (Source is TZAlignment) then
-  begin
+  if (Source is TZAlignment) then begin
     zSource := Source as TZAlignment;
     FHorizontal := zSource.Horizontal;
     FIndent := zSource.Indent;
@@ -2468,49 +2363,25 @@ begin
 end;
 
 function TZAlignment.IsEqual(Source: TPersistent): boolean;
-var
-  zSource: TZAlignment;
-
+var zSource: TZAlignment;
 begin
   result := true;
-  if (Source is TZAlignment) then
-  begin
+  if (Source is TZAlignment) then begin
     zSource := Source as TZAlignment;
     if Horizontal <> zSource.Horizontal then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
     if Indent <> zSource.Indent then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
     if Rotate <> zSource.Rotate then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
     if ShrinkToFit <> zSource.ShrinkToFit then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
     if Vertical <> zSource.Vertical then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
     if VerticalText <> zSource.VerticalText then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
     if WrapText <> zSource.WrapText then
-    begin
-      result := false;
-      exit;
-    end;
+      exit(false);
   end else
     result := false;
 end;
@@ -2554,19 +2425,19 @@ end;
 // about default font in Excel - http://support.microsoft.com/kb/214123
 constructor TZStyle.Create();
 begin
-  FFont  := TFont.Create();
-  FFont.Size := 10;
-  FFont.Name := 'Arial';
-  FFont.Color := ClBlack;
-  FBorder := TZBorder.Create();
-  FAlignment := TZAlignment.Create();
-  FBGColor := clWindow;
-  FPatternColor := clWindow;
-  FCellPattern := ZPNone;
-  FNumberFormat := ''; // '' = General
+  FFont           := TFont.Create();
+  FFont.Size      := 10;
+  FFont.Name      := 'Arial';
+  FFont.Color     := ClBlack;
+  FBorder         := TZBorder.Create();
+  FAlignment      := TZAlignment.Create();
+  FBGColor        := clWindow;
+  FPatternColor   := clWindow;
+  FCellPattern    := ZPNone;
+  FNumberFormat   := '';
   FNumberFormatId := -1;
-  FProtect := true;
-  FHideFormula := false;
+  FProtect        := true;
+  FHideFormula    := false;
 end;
 
 destructor TZStyle.Destroy();
@@ -2578,30 +2449,26 @@ begin
 end;
 
 procedure TZStyle.Assign(Source: TPersistent);
-var
-  zSource: TZStyle;
-
+var zSource: TZStyle;
 begin
-  if (Source is TZStyle) then
-  begin
+  if (Source is TZStyle) then begin
     zSource := Source as TZStyle;
     FFont.Assign(zSource.Font);
     FBorder.Assign(zSource.Border);
     FAlignment.Assign(zSource.Alignment);
-    FBGColor := zSource.BGColor;
-    FPatternColor := zSource.PatternColor;
-    FCellPattern := zSource.CellPattern;
-    FNumberFormat := zSource.NumberFormat;
+    FBGColor        := zSource.BGColor;
+    FPatternColor   := zSource.PatternColor;
+    FCellPattern    := zSource.CellPattern;
+    FNumberFormat   := zSource.NumberFormat;
     FNumberFormatId := zSource.NumberFormatId;
-    FProtect := zSource.Protect;
-    FHideFormula := zSource.HideFormula;
+    FProtect        := zSource.Protect;
+    FHideFormula    := zSource.HideFormula;
   end else
     inherited Assign(Source);
 end;
 
 function TZStyle.IsEqual(Source: TPersistent): boolean;
-var
-  zSource: TZStyle;
+var zSource: TZStyle;
 begin
   Result := False;
   if not (Source is TZStyle) then exit;
@@ -2609,28 +2476,22 @@ begin
 
   if not Border.IsEqual(zSource.Border) then
     exit;
-
   if not self.Alignment.IsEqual(zSource.Alignment) then
     exit;
-
   if BGColor <> zSource.BGColor then
     exit;
-
   if PatternColor <> zSource.PatternColor then
     exit;
-
   if CellPattern <> zSource.CellPattern then
     exit;
-
   if NumberFormat <> zSource.NumberFormat then
     exit;
-
+  if NumberFormatId <> zSource.NumberFormatId then
+    exit;
   if Protect <> zSource.Protect then
     exit;
-
   if HideFormula <> zSource.HideFormula then
     exit;
-
   Result := ZEIsFontsEquals(FFont, zSource.Font);
 end;
 
@@ -2679,9 +2540,7 @@ begin
 end;
 
 destructor TZStyles.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   FreeAndNil(FDefaultStyle);
   for i:= 0 to FCount - 1  do
@@ -2697,22 +2556,16 @@ end;
 //     -1          - совпадает со стилем по умолчанию
 //      0..Count-1 - номер стиля
 function TZStyles.Find(const Style: TZStyle): integer;
-var
-  i: integer;
-
+var i: integer;
 begin
   result := -2;
   if DefaultStyle.IsEqual(Style) then
-  begin
-    result := -1;
-    exit;
-  end;
+    exit(-1);
+
   for i := 0 to Count - 1 do
-  if Items[i].IsEqual(Style) then
-  begin
-    result := i;
-    break;
-  end;
+    if Items[i].IsEqual(Style) then begin
+      Exit(i);
+    end;
 end;
 
 //Добавляет стиль
@@ -2725,8 +2578,7 @@ begin
   result := -2;
   if CheckMatch then
      result := Find(Style);
-  if result = -2 then
-  begin
+  if result = -2 then begin
     Count := Count + 1;
     Items[Count - 1].Assign(Style);
     result := Count - 1;
@@ -2734,13 +2586,9 @@ begin
 end;
 
 procedure TZStyles.Assign(Source: TPersistent);
-var
-  zzz: TZStyles;
-  i: integer;
-
+var zzz: TZStyles; i: integer;
 begin
-  if (Source is TZStyles) then
-  begin
+  if (Source is TZStyles) then begin
     zzz := Source as TZStyles;
     FDefaultStyle.Assign(zzz.DefaultStyle);
     Count := zzz.Count;
@@ -2757,20 +2605,15 @@ begin
 end;
 
 procedure TZStyles.SetCount(const Value: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
-  if FCount < Value then
-  begin
+  if FCount < Value then begin
     SetLength(FStyles, Value);
-    for i := FCount to Value - 1 do
-    begin
+    for i := FCount to Value - 1 do begin
       FStyles[i] := TZStyle.Create;
       FStyles[i].Assign(FDefaultStyle);
     end;
-  end else
-  begin
+  end else begin
     for i:= Value to FCount - 1  do
       FreeAndNil(FStyles[i]);
     SetLength(FStyles, Value);
@@ -2802,8 +2645,7 @@ end;
 //      -1  - стиль не удалился
 function TZStyles.DeleteStyle(num: integer):integer;
 begin
-  if (num >= 0) and (num < Count) then
-  begin
+  if (num >= 0) and (num < Count) then begin
     FreeAndNil(FStyles[num]);
     System.Move(FStyles[num+1], FStyles[num], (Count - num - 1) * SizeOf(FStyles[num]));
     FStyles[Count - 1] := nil;
@@ -2816,9 +2658,7 @@ begin
 end;
 
 procedure TZStyles.Clear();
-var
-  i: integer;
-
+var i: integer;
 begin
   //очистка стилей
   for i:= 0 to FCount - 1 do
@@ -2831,36 +2671,31 @@ end;
 
 constructor TZCell.Create();
 begin
-  FFormula := '';
-  FData := '';
-  FHref := '';
-  FComment := '';
-  FCommentAuthor := '';
-  FHRefScreenTip := '';
-  FCellType := ZEString;
-  FCellStyle := -1; //по дефолту
+  FFormula           := '';
+  FData              := '';
+  FHref              := '';
+  FComment           := '';
+  FCommentAuthor     := '';
+  FHRefScreenTip     := '';
+  FCellType          := ZEString;
+  FCellStyle         := -1; //по дефолту
   FAlwaysShowComment := false;
-  FShowComment := false;
+  FShowComment       := false;
 end;
 
 function TZCell.GetDataAsDateTime(): TDateTime;
-var
-  b: boolean;
-
+var b: boolean;
 begin
   b := false;
   if (FData = '') then
     Result := 0
-  else
-    if (not TryZEStrToDateTime(FData, Result)) then
-    begin
-      //If cell type is number then try convert "float" to datetime
-      if (CellType = ZENumber) then
-        Result := AsDouble
-      else
-        b := true;
-    end;
-
+  else if (not TryZEStrToDateTime(FData, Result)) then begin
+    //If cell type is number then try convert "float" to datetime
+    if (CellType = ZENumber) then
+      Result := AsDouble
+    else
+      b := true;
+  end;
   if (b) then
     Raise EConvertError.Create('ZxCell: Cannot cast data to DateTime');;
 end;
@@ -2873,7 +2708,7 @@ begin
 end;
 
 function TZCell.GetDataAsDouble: double;
-Var err: integer; b: boolean; _dt: TDateTime;
+var err: integer; b: boolean; _dt: TDateTime;
 begin
   Val(FData, Result, err); // need old-school to ignore regional settings
   if (err > 0) then begin
@@ -2928,22 +2763,19 @@ begin
 end;
 
 procedure TZCell.Assign(Source: TPersistent);
-var
-  zSource: TZCell;
-
+var zSource: TZCell;
 begin
-  if (Source is TZCell) then
-  begin
+  if (Source is TZCell) then begin
     zSource := Source as TZCell;
-    FFormula := zSource.Formula;
-    FData := zSource.Data;
-    FHref := zSource.Href;
-    FComment := zSource.Comment;
-    FCommentAuthor := zSource.CommentAuthor;
-    FCellStyle := zSource.CellStyle;
-    FCellType := zSource.CellType;
+    FFormula           := zSource.Formula;
+    FData              := zSource.Data;
+    FHref              := zSource.Href;
+    FComment           := zSource.Comment;
+    FCommentAuthor     := zSource.CommentAuthor;
+    FCellStyle         := zSource.CellStyle;
+    FCellType          := zSource.CellType;
     FAlwaysShowComment := zSource.AlwaysShowComment;
-    FShowComment := zSource.ShowComment;
+    FShowComment       := zSource.ShowComment;
   end else
     inherited Assign(Source);
 end;
@@ -2951,16 +2783,16 @@ end;
 //Очистка ячейки
 procedure TZCell.Clear();
 begin
-  FFormula := '';
-  FData := '';
-  FHref := '';
-  FComment := '';
-  FCommentAuthor := '';
-  FHRefScreenTip := '';
-  FCellType := ZEString;
-  FCellStyle := -1;
+  FFormula           := '';
+  FData              := '';
+  FHref              := '';
+  FComment           := '';
+  FCommentAuthor     := '';
+  FHRefScreenTip     := '';
+  FCellType          := ZEString;
+  FCellStyle         := -1;
   FAlwaysShowComment := false;
-  FShowComment := false;
+  FShowComment       := false;
 end;
 
 ////::::::::::::: TZMergeCells :::::::::::::::::////
@@ -2987,8 +2819,7 @@ function TZMergeCells.GetItem(num: integer):TRect;
 begin
   if (num >= 0) and (num < Count) then
     Result := FMergeArea[num]
-  else
-  begin
+  else begin
     result.Left   := 0;
     result.Top    := 0;
     result.Right  := 0;
@@ -3009,9 +2840,7 @@ end;
 //      2 - указанный прямоуголник пересекается(входит) введённые ранее, ячейки не объединены
 //      3 - прямоугольник из одной ячейки не добавляет
 function TZMergeCells.AddRect(Rct:TRect): byte;
-var
-  i: integer;
-
+var i: integer;
 function usl(rct1, rct2: TRect): boolean;
 begin
   result := (((rct1.Left >= rct2.Left) and (rct1.Left <= rct2.Right)) or
@@ -3021,40 +2850,31 @@ begin
 end;
 
 begin
-  if Rct.Left > Rct.Right then
-  begin
+  if Rct.Left > Rct.Right then begin
     i := Rct.Left;
     Rct.Left := Rct.Right;
     Rct.Right := i;
   end;
-  if Rct.Top > Rct.Bottom then
-  begin
+  if Rct.Top > Rct.Bottom then begin
     i := Rct.Top;
     Rct.Top := Rct.Bottom;
     Rct.Bottom := i;
   end;
-  if (Rct.Left < 0) or (Rct.Top < 0) then
-  begin
+  if (Rct.Left < 0) or (Rct.Top < 0) then begin
     result := 1;
     exit;
   end;
-  if (Rct.Right - Rct.Left = 0) and (Rct.Bottom - Rct.Top = 0) then
-  begin
+  if (Rct.Right - Rct.Left = 0) and (Rct.Bottom - Rct.Top = 0) then begin
     result := 3;
     exit;
   end;
   for i := 0 to Count-1 do
-  {if (((FMergeArea[i].Left >= Rct.Left) and (FMergeArea[i].Left <= Rct.Right)) or
-      ((FMergeArea[i].right >= Rct.Left) and (FMergeArea[i].right <= Rct.Right))) and
-     (((FMergeArea[i].Top >= Rct.Top) and (FMergeArea[i].Top <= Rct.Bottom)) or
-      ((FMergeArea[i].Bottom >= Rct.Top) and (FMergeArea[i].Bottom <= Rct.Bottom))) then}
-  if usl(FMergeArea[i], Rct) or usl(rct, FMergeArea[i]) then  begin
-    result := 2;
-    exit;
-  end;
+    if usl(FMergeArea[i], Rct) or usl(rct, FMergeArea[i]) then  begin
+      result := 2;
+      exit;
+    end;
   //если надо, увеличиваем кол-во строк/столбцов в хранилище
-  if (FSheet <> nil) then
-  begin
+  if (FSheet <> nil) then begin
     if Rct.Right > FSheet.ColCount - 1 then FSheet.ColCount := Rct.Right {+ 1};
     if Rct.Bottom > FSheet.RowCount - 1 then FSheet.RowCount := Rct.Bottom {+ 1};  
   end;
@@ -3134,9 +2954,9 @@ end;
 function TZMergeCells.AddRectXY(x1,y1,x2,y2: integer): byte;
 var Rct: TRect;
 begin
-  Rct.left := x1;
-  Rct.Top := y1;
-  Rct.Right := x2;
+  Rct.left   := x1;
+  Rct.Top    := y1;
+  Rct.Right  := x2;
   Rct.Bottom := y2;
   result := AddRect(Rct);
 end;
@@ -3146,9 +2966,9 @@ end;
 constructor TZRowColOptions.Create(ASheet: TZSheet);
 begin
   inherited Create();
-  FSheet  := ASheet;
-  FHidden := false;
-  FAuto  := true;
+  FSheet   := ASheet;
+  FHidden  := false;
+  FAuto    := true;
   FStyleID := -1;
   FBreaked := false;
 end;
@@ -3156,10 +2976,10 @@ end;
 procedure TZRowColOptions.Assign(Source: TPersistent);
 begin
   if Source is TZRowColOptions then begin
-    Hidden := (Source as TZRowColOptions).Hidden;
-    StyleID := (Source as TZRowColOptions).StyleID;
-    FSize := (Source as TZRowColOptions).FSize;
-    FAuto := (Source as TZRowColOptions).FAuto;
+    Hidden   := (Source as TZRowColOptions).Hidden;
+    StyleID  := (Source as TZRowColOptions).StyleID;
+    FSize    := (Source as TZRowColOptions).FSize;
+    FAuto    := (Source as TZRowColOptions).FAuto;
     FBreaked := (Source as TZRowColOptions).Breaked;
   end else
     inherited Assign(Source);
@@ -3182,8 +3002,8 @@ end;
 
 procedure TZRowColOptions.SetSizePoint(Value: real);
 begin
-  if Value < 0 then  exit;
-  FSize := Value;
+  if Value >= 0 then
+    FSize := Value;
 end;
 
 function  TZRowColOptions.GetSizeMM(): real;
@@ -3205,9 +3025,7 @@ begin
 end;
 
 function TZRowOptions.GetSizePix(): integer;
-var
-  t :real;
-
+var t: real;
 begin
   t := 0.265;
   if FSheet <> nil then
@@ -3217,9 +3035,7 @@ begin
 end;
 
 procedure TZRowOptions.SetSizePix(Value: integer);
-var
-  t :real;
-
+var t: real;
 begin
   if Value < 0 then  exit;
   t := 0.265;
@@ -3238,9 +3054,7 @@ begin
 end;
 
 function TZColOptions.GetSizePix(): integer;
-var
-  t :real;
-
+var t: real;
 begin
   t := 0.265;
   if FSheet <> nil then
@@ -3250,9 +3064,7 @@ begin
 end;
 
 procedure TZColOptions.SetSizePix(Value: integer);
-var
-  t :real;
-
+var t: real;
 begin
   if Value < 0 then  exit;
   t := 0.265;
@@ -3274,32 +3086,25 @@ begin
 end;
 
 procedure TZHeaderFooterMargins.Assign(Source: TPersistent);
-var
-  t: TZHeaderFooterMargins;
-
+var t: TZHeaderFooterMargins;
 begin
-  if (Source is TZHeaderFooterMargins) then
-  begin
+  if (Source is TZHeaderFooterMargins) then begin
     t := Source as TZHeaderFooterMargins;
-    FMarginTopBottom := t.MarginTopBottom;
-    FMarginLeft := t.MarginLeft;
-    FMarginRight := t.MarginRight;
-    FHeight := t.Height;
+    FMarginTopBottom  := t.MarginTopBottom;
+    FMarginLeft       := t.MarginLeft;
+    FMarginRight      := t.MarginRight;
+    FHeight           := t.Height;
     FUseAutoFitHeight := t.UseAutoFitHeight;
-  end
-  else
+  end else
     inherited Assign(Source);
 end;
 
 function TZHeaderFooterMargins.IsEqual(Source: TPersistent): boolean;
-var
-  t: TZHeaderFooterMargins;
-
+var t: TZHeaderFooterMargins;
 begin
   result := false;
   if (Assigned(Source)) then
-    if (Source is TZHeaderFooterMargins) then
-    begin
+    if (Source is TZHeaderFooterMargins) then begin
       t := Source as TZHeaderFooterMargins;
       result := (FMarginTopBottom = t.MarginTopBottom) and
                 (FMarginLeft = t.MarginLeft) and
@@ -3383,12 +3188,9 @@ begin
 end;
 
 procedure TZSheetOptions.Assign(Source: TPersistent);
-var
-  t: TZSheetOptions;
-
+var t: TZSheetOptions;
 begin
-  if Source is TZSheetOptions then
-  begin
+  if Source is TZSheetOptions then begin
     t := Source as TZSheetOptions;
     ActiveCol := t.ActiveCol;
     ActiveRow := t.ActiveRow;
@@ -3428,9 +3230,7 @@ end;
 ////::::::::::::: TZSheet :::::::::::::::::////
 
 constructor TZSheet.Create(AStore: TZEXMLSS);
-var
- i, j: integer;
-
+var i, j: integer;
 begin
   FStore := AStore;
   FRowCount := 0;
@@ -3445,18 +3245,15 @@ begin
   FSelected := false;
   SetLength(FRows, FRowCount);
   SetLength(FColumns, FColCount);
-  for i := 0 to FColCount - 1 do
-  begin
+  for i := 0 to FColCount - 1 do begin
     setlength(FCells[i], FRowCount);
-    for j := 0 to FRowCount - 1 do
-    begin
+    for j := 0 to FRowCount - 1 do begin
       FCells[i,j] := TZCell.Create();
     end;
     FColumns[i] := TZColOptions.create(self);
     FColumns[i].Width := DefaultColWidth;
   end;
-  for i := 0 to FRowCount - 1 do
-  begin
+  for i := 0 to FRowCount - 1 do begin
     FRows[i] := TZRowOptions.create(self);
     FRows[i].Height := DefaultRowHeight;
   end;
@@ -3500,13 +3297,10 @@ begin
 end;
 
 procedure TZSheet.Assign(Source: TPersistent);
-var
-  zSource: TZSheet;
-  i, j: integer;
+var zSource: TZSheet; i, j: integer;
 
 begin
-  if (Source is TZSheet) then
-  begin
+  if (Source is TZSheet) then begin
     ZSource     := Source as TZSheet;
     ////////////////////////////////
     RowCount    := zSource.RowCount;
@@ -3525,15 +3319,13 @@ begin
     for i := 0 to RowCount - 1 do
       Rows[i] := ZSource.Rows[i];
 
-    for i := 0 to ColCount - 1 do
-    begin
+    for i := 0 to ColCount - 1 do begin
       Columns[i] := ZSource.Columns[i];
       for j := 0 to RowCount - 1 do
         Cell[i, j] := zSource.Cell[i, j];
     end;
 
     FSelected := zSource.Selected;
-
     SheetOptions.Assign(zSource.SheetOptions);
 
     //Объединённые ячейки
@@ -3541,8 +3333,7 @@ begin
     for i := 0 to ZSource.MergeCells.Count - 1 do
       MergeCells.AddRect(ZSource.MergeCells.GetItem(i));
 
-    {дописать что ещё нужно копировать}
-    {tut!}
+    // дописать что ещё нужно копировать
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     ConditionalFormatting.Assign(zSource.ConditionalFormatting);
@@ -3762,13 +3553,10 @@ begin
 end;
 
 procedure TZSheet.Clear();
-var
-  i, j: integer;
-
+var i, j: integer;
 begin
   //очистка ячеек
-  for i:= 0 to FColCount - 1 do
-  begin
+  for i:= 0 to FColCount - 1 do begin
     for j:= 0 to FRowCount - 1 do
       FreeAndNil(FCells[i][j]);
     SetLength(FCells[i], 0);
@@ -3813,15 +3601,12 @@ end;
 
 //установить кол-во столбцов
 procedure TZSheet.SetColCount(const Value: integer);
-var
-  i, j: integer;
-
+var i, j: integer;
 begin
-  if Value < 0 then exit;
-  if FColCount > Value then // todo Repeatable columns may be affected
-  begin
-    for i := Value to FColCount - 1 do
-    begin
+  if Value < 0 then
+    exit;
+  if FColCount > Value then begin // todo Repeatable columns may be affected
+    for i := Value to FColCount - 1 do begin
       for j := 0 to FRowCount - 1 do
         FreeAndNil(FCells[i][j]);
       setlength(FCells[i], 0);
@@ -3829,8 +3614,7 @@ begin
     end;
     setlength(FCells, Value);
     SetLength(FColumns, Value);
-  end else
-  begin
+  end else begin
     setlength(FCells, Value);
     SetLength(FColumns, Value);
     for i := FColCount to Value - 1 do
@@ -3853,15 +3637,12 @@ end;
 
 //установить кол-во строк
 procedure TZSheet.SetRowCount(const Value: integer);
-var
-  i, j: integer;
-
+var i, j: integer;
 begin
-  if Value < 0 then exit;
-  if FRowCount > Value then  // todo Repeatable rows may be affected
-  begin
-    for i := 0 to FColCount - 1 do
-    begin
+  if Value < 0 then
+    exit;
+  if FRowCount > Value then begin // todo Repeatable rows may be affected
+    for i := 0 to FColCount - 1 do begin
       for j := Value  to FRowCount - 1 do
         FreeAndNil(FCells[i][j]);
       setlength(FCells[i], Value);
@@ -3869,17 +3650,14 @@ begin
     for i := Value to FRowCount - 1 do
       FreeAndNil(FRows[i]);
     SetLength(FRows, Value);
-  end else
-  begin
-    for i := 0 to FColCount - 1 do
-    begin
+  end else begin
+    for i := 0 to FColCount - 1 do begin
       setlength(FCells[i], Value);
       for j := FRowCount to Value - 1 do
         FCells[i][j] := TZCell.Create();
     end;
     SetLength(FRows, Value);
-    for i := FRowCount to Value - 1 do
-    begin
+    for i := FRowCount to Value - 1 do begin
       FRows[i] := TZRowOptions.Create(self);
       FRows[i].Height := DefaultRowHeight;
     end;
@@ -3893,9 +3671,7 @@ begin
   result := FRowCount;
 end;
 
-
 ////::::::::::::: TZSheets :::::::::::::::::////
-
 constructor TZSheets.Create(AStore: TZEXMLSS);
 begin
   FStore := AStore;
@@ -3904,9 +3680,7 @@ begin
 end;
 
 destructor TZSheets.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to FCount - 1 do
     FreeAndNil(FSheets[i]);
@@ -3916,13 +3690,9 @@ begin
 end;
 
 procedure TZSheets.Assign(Source: TPersistent);
-var
-  t: TZSheets;
-  i: integer;
-
+var t: TZSheets; i: integer;
 begin
-  if (Source is TZSheets) then
-  begin
+  if (Source is TZSheets) then begin
     t := Source as TZSheets;
     Count := t.Count;
     for i := 0 to Count - 1 do
@@ -3932,17 +3702,13 @@ begin
 end; //Assign
 
 procedure TZSheets.SetSheetCount(const Value: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
-  if Count < Value then
-  begin
+  if Count < Value then begin
     SetLength(FSheets, Value);
     for i := Count to Value - 1 do
       FSheets[i] := TZSheet.Create(FStore);
-  end else
-  begin
+  end else begin
     for i:= Value to Count - 1  do
       FreeAndNil(FSheets[i]);
     SetLength(FSheets, Value);
@@ -3968,16 +3734,16 @@ end;
 
 constructor TZEXMLDocumentProperties.Create();
 begin
-  FAuthor := 'none';
-  FLastAuthor := 'none';
-  FCompany := 'none';
-  FVersion := '11.9999';
-  FCreated := date + time;
+  FAuthor       := 'none';
+  FLastAuthor   := 'none';
+  FCompany      := 'none';
+  FVersion      := '11.9999';
+  FCreated      := Now();
   FWindowHeight := 20000;
-  FWindowWidth := 20000;
-  FWindowTopX := 150;
-  FWindowTopY := 150;
-  FModeR1C1 := false;
+  FWindowWidth  := 20000;
+  FWindowTopX   := 150;
+  FWindowTopY   := 150;
+  FModeR1C1     := false;
 end;
 
 procedure TZEXMLDocumentProperties.SetAuthor(const Value: string);
@@ -4005,23 +3771,20 @@ begin
 end;
 
 procedure TZEXMLDocumentProperties.Assign(Source: TPersistent);
-var
-  zzz: TZEXMLDocumentProperties;
-
+var zzz: TZEXMLDocumentProperties;
 begin
-  if Source is TZEXMLDocumentProperties then
-  begin
+  if Source is TZEXMLDocumentProperties then begin
     zzz := Source as TZEXMLDocumentProperties;
-    Author := zzz.Author;
-    LastAuthor := zzz.LastAuthor;
-    Created := zzz.Created;
-    Company := zzz.Company;
-    Version := zzz.Version;
+    Author       := zzz.Author;
+    LastAuthor   := zzz.LastAuthor;
+    Created      := zzz.Created;
+    Company      := zzz.Company;
+    Version      := zzz.Version;
     WindowHeight := zzz.WindowHeight;
-    WindowWidth := zzz.WindowWidth;
-    WindowTopX := zzz.WindowTopX;
-    WindowTopY := zzz.WindowTopY;
-    ModeR1C1 := zzz.ModeR1C1;
+    WindowWidth  := zzz.WindowWidth;
+    WindowTopX   := zzz.WindowTopX;
+    WindowTopY   := zzz.WindowTopY;
+    ModeR1C1     := zzz.ModeR1C1;
   end else
     inherited Assign(Source);
 end;
@@ -4031,11 +3794,11 @@ end;
 constructor TZEXMLSS.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FDocumentProperties := TZEXMLDocumentProperties.Create;
-  FStyles := TZStyles.Create();
-  FSheets := TZSheets.Create(self);
-  FHorPixelSize := 0.265;
-  FVertPixelSize := 0.265;
+  FDocumentProperties  := TZEXMLDocumentProperties.Create;
+  FStyles              := TZStyles.Create();
+  FSheets              := TZSheets.Create(self);
+  FHorPixelSize        := 0.265;
+  FVertPixelSize       := 0.265;
   FDefaultSheetOptions := TZSheetOptions.Create();
 end;
 
@@ -4049,20 +3812,15 @@ begin
 end;
 
 procedure TZEXMLSS.Assign(Source: TPersistent);
-var
-  t: TZEXMLSS;
-
+var t: TZEXMLSS;
 begin
-  if (Source is TZEXMLSS) then
-  begin
+  if (Source is TZEXMLSS) then begin
     t := Source as TZEXMLSS;
     Styles.Assign(t.Styles);
     Sheets.Assign(t.Sheets);
-  end else
-  if (Source is TZStyles) then
+  end else if (Source is TZStyles) then
     Styles.Assign(Source as TZStyles)
-  else
-  if (Source is TZSheets) then
+  else if (Source is TZSheets) then
     Sheets.Assign(Source as TZSheets)
   else
     inherited Assign(Source);
@@ -4190,13 +3948,13 @@ end;
 procedure TZSheetPrintTitles.Assign(Source: TPersistent);
 var f, t: word;  a: boolean;
 begin
-  if Source is TZSheetPrintTitles then
-    begin
+  if Source is TZSheetPrintTitles then begin
       F   := TZSheetPrintTitles(Source).From;
       T   := TZSheetPrintTitles(Source).Till;
       A   := TZSheetPrintTitles(Source).Active;
 
-      if A then RequireValid(F, T);
+      if A then
+        RequireValid(F, T);
 
       FFrom   := F;
       FTill   := T;
@@ -4207,30 +3965,30 @@ end;
 
 constructor TZSheetPrintTitles.Create(const owner: TZSheet; const ForColumns: boolean);
 begin
-  if nil = owner then raise Exception.Create(Self.ClassName+' requires an existing worksheet for owners.');
-
+  if nil = owner then
+    raise Exception.Create(Self.ClassName+' requires an existing worksheet for owners.');
   Self.FOwner := owner;
   Self.FColumns := ForColumns;
 end;
 
 procedure TZSheetPrintTitles.SetActive(const Value: boolean);
 begin
-  if Value then RequireValid(FFrom, FTill);
-
+  if Value then
+    RequireValid(FFrom, FTill);
   FActive := Value
 end;
 
 procedure TZSheetPrintTitles.SetFrom(const Value: word);
 begin
-  if Active then RequireValid(Value, FTill);
-
+  if Active then
+    RequireValid(Value, FTill);
   FFrom := Value;
 end;
 
 procedure TZSheetPrintTitles.SetTill(const Value: word);
 begin
-  if Active then RequireValid(FFrom, Value);
-
+  if Active then
+    RequireValid(FFrom, Value);
   FTill := Value;
 end;
 
@@ -4254,14 +4012,16 @@ function TZSheetPrintTitles.Valid(const AFrom, ATill: word): boolean;
 var UpperLimit: word;
 begin
   Result := False;
-  if AFrom > ATill then exit;
-  //  if AFrom < 0 then exit; // if datatype would be changed to traditional integer, then unremark
+  if AFrom > ATill then
+    exit;
 
-  if FColumns
-     then UpperLimit := FOwner.ColCount
-     else UpperLimit := FOwner.RowCount;
+  if FColumns then
+    UpperLimit := FOwner.ColCount
+  else
+    UpperLimit := FOwner.RowCount;
 
-  If ATill >= UpperLimit then exit;
+  if ATill >= UpperLimit then
+    exit;
 
   Result := True;
 end;
@@ -4278,44 +4038,38 @@ end;
 
 procedure TZConditionalStyleItem.Clear();
 begin
-  FCondition := ZCFCellContentOperator;
-  FConditionOperator := ZCFOpEqual;
-  FApplyStyleID := -1;
-  FValue1 := '';
-  FValue2 := '';
-  FBaseCellPageIndex := -1;
-  FBaseCellRowIndex := 0;
+  FCondition           := ZCFCellContentOperator;
+  FConditionOperator   := ZCFOpEqual;
+  FApplyStyleID        := -1;
+  FValue1              := '';
+  FValue2              := '';
+  FBaseCellPageIndex   := -1;
+  FBaseCellRowIndex    := 0;
   FBaseCellColumnIndex := 0;
 end; //Clear
 
 procedure TZConditionalStyleItem.Assign(Source: TPersistent);
-var
-  t: TZConditionalStyleItem;
-
+var t: TZConditionalStyleItem;
 begin
-  if (Source is TZConditionalStyleItem) then
-  begin
+  if (Source is TZConditionalStyleItem) then begin
     t := (Source as TZConditionalStyleItem);
-    Condition := t.Condition;
-    ConditionOperator := t.ConditionOperator;
-    Value1 := t.Value1;
-    Value2 := t.Value2;
-    ApplyStyleID := t.ApplyStyleID;
+    Condition           := t.Condition;
+    ConditionOperator   := t.ConditionOperator;
+    Value1              := t.Value1;
+    Value2              := t.Value2;
+    ApplyStyleID        := t.ApplyStyleID;
     BaseCellColumnIndex := t.BaseCellColumnIndex;
-    BaseCellPageIndex := t.BaseCellPageIndex;
-    BaseCellRowIndex := t.BaseCellRowIndex;
+    BaseCellPageIndex   := t.BaseCellPageIndex;
+    BaseCellRowIndex    := t.BaseCellRowIndex;
   end else
     inherited Assign(Source);
 end; //Assign
 
 function TZConditionalStyleItem.IsEqual(Source: TPersistent): boolean;
-var
-  t: TZConditionalStyleItem;
-
+var t: TZConditionalStyleItem;
 begin
   result := false;
-  if (Source is TZConditionalStyleItem) then
-  begin
+  if (Source is TZConditionalStyleItem) then begin
     t := (Source as TZConditionalStyleItem);
     if (Condition  <> t.Condition) then
       exit;
@@ -4340,9 +4094,7 @@ end; //IsEqual
 ////::::::::::::: TZConditionalStyle :::::::::::::::::////
 
 constructor TZConditionalStyle.Create();
-var
-  i: integer;
-
+var i: integer;
 begin
   FCount := 0;
   FMaxCount := 3;
@@ -4353,9 +4105,7 @@ begin
 end; //Create
 
 destructor TZConditionalStyle.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to FMaxCount - 1 do
     if (Assigned(FConditions[i])) then
@@ -4367,13 +4117,9 @@ begin
 end; //Destroy
 
 procedure TZConditionalStyle.Assign(Source: TPersistent);
-var
-  t: TZConditionalStyle;
-  i: integer;
-
+var t: TZConditionalStyle; i: integer;
 begin
-  if (Source is TZConditionalStyle) then
-  begin
+  if (Source is TZConditionalStyle) then begin
     t := Source as TZConditionalStyle;
     Count := t.Count;
     FAreas.Assign(t.Areas);
@@ -4384,14 +4130,10 @@ begin
 end; //Assign
 
 function TZConditionalStyle.IsEqual(Source: TPersistent): boolean;
-var
-  t: TZConditionalStyle;
-  i: integer;
-
+var t: TZConditionalStyle; i: integer;
 begin
   result := false;
-  if (Source is TZConditionalStyle) then
-  begin
+  if (Source is TZConditionalStyle) then begin
     t := Source as TZConditionalStyle;
     if (Count <> t.Count) then
       exit;
@@ -4416,21 +4158,14 @@ begin
 end; //SetItem
 
 procedure TZConditionalStyle.SetCount(value: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
-  {tut}
   //TODO: нужно ли ограничение на максимальное кол-во?
-  if (value >= 0) then
-  begin
-    if (value < FCount) then
-    begin
+  if (value >= 0) then begin
+    if (value < FCount) then begin
       for i := value to FCount - 1 do
         FConditions[i].Clear();
-    end else
-    if (value > FMaxCount) then
-    begin
+    end else if (value > FMaxCount) then begin
       SetLength(FConditions, value);
       for i := FMaxCount to value - 1 do
         FConditions[i] := TZConditionalStyleItem.Create();
@@ -4460,13 +4195,9 @@ begin
 end; //Add
 
 procedure TZConditionalStyle.Delete(num: integer);
-var
-  i: integer;
-  t: TZConditionalStyleItem;
-
+var i: integer; t: TZConditionalStyleItem;
 begin
-  if (num >= 0) and (num < Count) then
-  begin
+  if (num >= 0) and (num < Count) then begin
     t := FConditions[num];
     for i := num to Count - 2 do
       FConditions[i] := FConditions[i + 1];
@@ -4482,13 +4213,9 @@ begin
 end; //Insert
 
 procedure TZConditionalStyle.Insert(num: integer; StyleItem: TZConditionalStyleItem);
-var
-  i: integer;
-  t: TZConditionalStyleItem;
-
+var i: integer; t: TZConditionalStyleItem;
 begin
-  if (num >= 0) and (num < Count) then
-  begin
+  if (num >= 0) and (num < Count) then begin
     Add();
     t := FConditions[Count - 1];
     for i := Count - 1 downto num + 1 do
@@ -4508,9 +4235,9 @@ end;
 
 constructor TZConditionalAreaItem.Create(ColumnNum, RowNum, AreaWidth, AreaHeight: integer);
 begin
-  Row := RowNum;
+  Row    := RowNum;
   Column := ColumnNum;
-  Width := AreaWidth;
+  Width  := AreaWidth;
   Height := AreaHeight;
 end;
 
@@ -4539,29 +4266,23 @@ begin
 end; //SetHeight
 
 procedure TZConditionalAreaItem.Assign(Source: TPersistent);
-var
-  t: TZConditionalAreaItem;
-
+var t: TZConditionalAreaItem;
 begin
-  if (Source is TZConditionalAreaItem) then
-  begin
+  if (Source is TZConditionalAreaItem) then begin
     t := Source as TZConditionalAreaItem;
-    Row := t.Row;
+    Row    := t.Row;
     Column := t.Column;
     Height := t.Height;
-    Width := t.Width;
+    Width  := t.Width;
   end else
     inherited Assign(Source);
 end; //Assign
 
 function TZConditionalAreaItem.IsEqual(Source: TPersistent): boolean;
-var
-  t: TZConditionalAreaItem;
-
+var t: TZConditionalAreaItem;
 begin
   result := false;
-  if (Source is TZConditionalAreaItem) then
-  begin
+  if (Source is TZConditionalAreaItem) then begin
     t := Source as TZConditionalAreaItem;
     if (FRow <> t.Row) then
       exit;
@@ -4571,7 +4292,6 @@ begin
       exit;
     if (FHeight <> t.Height) then
       exit;
-
     result := true;
   end;
 end; //IsEqual
@@ -4586,35 +4306,26 @@ begin
 end; //Create
 
 destructor TZConditionalAreas.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to FCount - 1 do
     if (Assigned(FItems[i])) then
       FreeAndNil(FItems[i]);
   Setlength(FItems, 0);
   FItems := nil;
-
   inherited;
 end; //Destroy
 
 procedure TZConditionalAreas.SetCount(Value: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
-  if ((Value >= 0) and (Value <> Count)) then
-  begin
-    if (Value < Count) then
-    begin
+  if ((Value >= 0) and (Value <> Count)) then begin
+    if (Value < Count) then begin
       for i := Value to Count - 1 do
         if (Assigned(FItems[i])) then
           FreeAndNil(FItems[i]);
       Setlength(FItems, Value);
-    end else
-    if (Value > Count) then
-    begin
+    end else if (Value > Count) then begin
       Setlength(FItems, Value);
       for i := Count to Value - 1 do
         FItems[i] := TZConditionalAreaItem.Create();
@@ -4645,21 +4356,17 @@ end; //Add
 
 function TZConditionalAreas.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalAreaItem;
 begin
-  Result := Add();
-  Result.Row := RowNum;
+  Result        := Add();
+  Result.Row    := RowNum;
   Result.Column := ColumnNum;
-  Result.Width := AreaWidth;
+  Result.Width  := AreaWidth;
   Result.Height := AreaHeight;
 end; //Add
 
 procedure TZConditionalAreas.Assign(Source: TPersistent);
-var
-  t: TZConditionalAreas;
-  i: integer;
-
+var t: TZConditionalAreas; i: integer;
 begin
-  if (Source is TZConditionalAreas) then
-  begin
+  if (Source is TZConditionalAreas) then begin
     t := Source as TZConditionalAreas;
     Count := t.Count;
     for i := 0 to Count - 1 do
@@ -4669,13 +4376,9 @@ begin
 end; //Assign
 
 procedure TZConditionalAreas.Delete(num: integer);
-var
-  t: TZConditionalAreaItem;
-  i: integer;
-
+var t: TZConditionalAreaItem; i: integer;
 begin
-  if ((num >= 0) and (num < Count)) then
-  begin
+  if ((num >= 0) and (num < Count)) then begin
     t := FItems[num];
     for i := num to Count - 2 do
       FItems[i] := FItems[i + 1];
@@ -4691,21 +4394,15 @@ end; //Delete
 //RETURN
 //      boolean - true - ячейка входит в область
 function TZConditionalAreas.IsCellInArea(ColumnNum, RowNum: integer): boolean;
-var
-  i: integer;
-  x, y, xx, yy: integer;
-
+var i, x, y, xx, yy: integer;
 begin
   result := false;
-  for i := 0 to Count - 1 do
-  begin
+  for i := 0 to Count - 1 do begin
     x := FItems[i].Column;
     y := FItems[i].Row;
     xx := x + FItems[i].Width;
     yy := y + FItems[i].Height;
-    if ((ColumnNum >= x) and (ColumnNum < xx) and
-        (RowNum >= y) and (RowNum < yy))  then
-    begin
+    if ((ColumnNum >= x) and (ColumnNum < xx) and (RowNum >= y) and (RowNum < yy)) then begin
       result := true;
       break;
     end;
@@ -4713,14 +4410,10 @@ begin
 end; //IsCellInArea
 
 function TZConditionalAreas.IsEqual(Source: TPersistent): boolean;
-var
-  t: TZConditionalAreas;
-  i: integer;
-
+var t: TZConditionalAreas; i: integer;
 begin
   result := false;
-  if (Source is TZConditionalAreas) then
-  begin
+  if (Source is TZConditionalAreas) then begin
     t := Source as TZConditionalAreas;
     if (Count <> t.Count) then
       exit;
@@ -4740,9 +4433,7 @@ begin
 end; //Create
 
 destructor TZConditionalFormatting.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to FCount - 1 do
     if (Assigned(FStyles[i])) then
@@ -4753,20 +4444,14 @@ begin
 end; //Destroy
 
 procedure TZConditionalFormatting.SetCount(Value: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
-  if (Value >= 0) then
-  begin
-    if (Value < FCount) then
-    begin
+  if (Value >= 0) then begin
+    if (Value < FCount) then begin
       for i := Value to FCount - 1 do
          FreeAndNil(FStyles[i]);
       SetLength(FStyles, Value);
-    end else
-    if (Value > FCount) then
-    begin
+    end else if (Value > FCount) then begin
       SetLength(FStyles, Value);
       for i := FCount to Value - 1 do
         FStyles[i] := TZConditionalStyle.Create();
@@ -4778,21 +4463,21 @@ end; //SetCount
 function TZConditionalFormatting.Add(): TZConditionalStyle;
 begin
   result := Add(nil);
-end; //Add
+end;
 
 function TZConditionalFormatting.GetItem(num: integer): TZConditionalStyle;
 begin
   result := nil;
   if ((num >= 0) and (num < Count)) then
     result := FStyles[num];
-end; //GetItem
+end;
 
 procedure TZConditionalFormatting.SetItem(num: integer; Value: TZConditionalStyle);
 begin
   if ((num >= 0) and (num < Count)) then
     if (Assigned(Value)) then
       FStyles[num].Assign(Value);
-end; //SetItem
+end;
 
 function TZConditionalFormatting.Add(Style: TZConditionalStyle): TZConditionalStyle;
 begin
@@ -4800,7 +4485,7 @@ begin
   result := FStyles[Count - 1];
   if (Assigned(Style)) then
     result.Assign(Style);
-end; //Add
+end;
 
 //Добавить условное форматирование с областью
 //INPUT
@@ -4811,22 +4496,20 @@ end; //Add
 //RETURN
 //      TZConditionalStyle - добавленный стиль
 function TZConditionalFormatting.Add(ColumnNum, RowNum, AreaWidth, AreaHeight: integer): TZConditionalStyle;
-var
-  t: TZConditionalAreaItem;
-
+var t: TZConditionalAreaItem;
 begin
-  result := Add(nil);
-  t := result.Areas[0];
-  t.Row := RowNum;
+  result   := Add(nil);
+  t        := result.Areas[0];
+  t.Row    := RowNum;
   t.Column := ColumnNum;
-  t.Width := AreaWidth;
+  t.Width  := AreaWidth;
   t.Height := AreaHeight;
-end; //add
+end;
 
 procedure TZConditionalFormatting.Clear();
 begin
   SetCount(0);
-end; //Clear
+end;
 
 //Delete condition formatting item
 //INPUT
@@ -4834,55 +4517,43 @@ end; //Clear
 //RETURN
 //      boolean - true - item deleted
 function TZConditionalFormatting.Delete(num: integer): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := false;
-  if (num >= 0) and (num < Count) then
-  begin
+  if (num >= 0) and (num < Count) then begin
     FreeAndNil(FStyles[num]);
     for i := num to FCount - 2 do
       FStyles[num] := FStyles[num + 1];
     Dec(FCount);
   end;
-end; //Delete
+end;
 
 procedure TZConditionalFormatting.Assign(Source: TPersistent);
-var
-  t: TZConditionalFormatting;
-  i: integer;
-
+var t: TZConditionalFormatting; i: integer;
 begin
-  if (Source is TZConditionalFormatting) then
-  begin
+  if (Source is TZConditionalFormatting) then begin
     t := Source as TZConditionalFormatting;
     FCount := t.Count;
     for i := 0 to FCount - 1 do
       FStyles[i].Assign(t.Items[i]);
   end else
     inherited Assign(Source);
-end; //Assign
+end;
 
 function TZConditionalFormatting.IsEqual(Source: TPersistent): boolean;
-var
-  t: TZConditionalFormatting;
-  i: integer;
-
+var t: TZConditionalFormatting; i: integer;
 begin
   result := false;
-  if (Source is TZConditionalFormatting) then
-  begin
+  if (Source is TZConditionalFormatting) then begin
     t := Source as TZConditionalFormatting;
     if (Count <> t.Count) then
       exit;
     for i := 0 to Count - 1 do
       if (not FStyles[i].IsEqual(t.Items[i])) then
         exit;
-
     result := true;
   end;
-end; //IsEqual
+end;
 
 {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
 
@@ -4891,18 +4562,18 @@ end; //IsEqual
 
 constructor TZECommonFrameAncestor.Create();
 begin
-  FX := 0;
-  FY := 0;
-  FWidth := 10;
+  FX      := 0;
+  FY      := 0;
+  FWidth  := 10;
   FHeight := 10;
   FTransform := TZETransform.Create();
 end;
 
 constructor TZECommonFrameAncestor.Create(AX, AY, AWidth, AHeight: integer);
 begin
-  FX := AX;
-  FY := AY;
-  FWidth := AWidth;
+  FX      := AX;
+  FY      := AY;
+  FWidth  := AWidth;
   FHeight := AHeight;
   FTransform := TZETransform.Create();
 end;
@@ -4914,44 +4585,36 @@ begin
 end;
 
 function TZECommonFrameAncestor.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZECommonFrameAncestor;
-
+var tmp: TZECommonFrameAncestor;
 begin
   Result := false;
   if (Assigned(Source)) then
-    if (Source is TZECommonFrameAncestor) then
-    begin
+    if (Source is TZECommonFrameAncestor) then begin
       tmp := Source as TZECommonFrameAncestor;
-      Result := (FX = tmp.X) and (FY = tmp.Y) and
-                (FWidth = tmp.Width) and (FHeight = tmp.Height);
+      Result := (FX = tmp.X) and (FY = tmp.Y) and (FWidth = tmp.Width) and (FHeight = tmp.Height);
       if (Result) then
         Result := FTransform.IsEqual(tmp.Transform);
     end;
-end; //IsEqual
+end;
 
 procedure TZECommonFrameAncestor.Assign(Source: TPersistent);
-var
-  b: boolean;
-  tmp: TZECommonFrameAncestor;
-
+var b: boolean; tmp: TZECommonFrameAncestor;
 begin
   b := Source <> nil;
   if (b) then
     b := Source is TZECommonFrameAncestor;
 
-  if (b) then
-  begin
+  if (b) then begin
     tmp := Source as TZECommonFrameAncestor;
-    FX := tmp.X;
-    FY := tmp.Y;
-    FWidth := tmp.Width;
+    FX      := tmp.X;
+    FY      := tmp.Y;
+    FWidth  := tmp.Width;
     FHeight := tmp.Height;
     FTransform.Assign(tmp.Transform);
   end
   else
     inherited Assign(Source);
-end; //Assign
+end;
 
 procedure TZECommonFrameAncestor.SetHeight(value: integer);
 begin
@@ -4987,52 +4650,44 @@ begin
 end;
 
 procedure TZETransform.Assign(Source: TPersistent);
-var
-  b: boolean;
-  tmp: TZETransform;
-
+var b: boolean; tmp: TZETransform;
 begin
   b := Assigned(Source);
   if (b) then
     b := Source is TZETransform;
 
-  if (b) then
-  begin
+  if (b) then begin
     tmp := Source as TZETransform;
-    FRotate := tmp.Rotate;
-    FScaleX := tmp.ScaleX;
-    FScaleY := tmp.ScaleY;
-    FSkewX := tmp.SkewX;
-    FSkewY := tmp.SkewY;
+    FRotate     := tmp.Rotate;
+    FScaleX     := tmp.ScaleX;
+    FScaleY     := tmp.ScaleY;
+    FSkewX      := tmp.SkewX;
+    FSkewY      := tmp.SkewY;
     FTranslateX := tmp.TranslateX;
     FTranslateY := tmp.TranslateY;
-  end
-  else
+  end else
     inherited Assign(Source);
-end; //Assign
+end;
 
 procedure TZETransform.Clear();
 begin
-  FRotate := 0;
-  FScaleX := 1;
-  FScaleY := 1;
-  FSkewX := 0;
-  FSkewY := 0;
+  FRotate     := 0;
+  FScaleX     := 1;
+  FScaleY     := 1;
+  FSkewX      := 0;
+  FSkewY      := 0;
   FTranslateX := 0;
   FTranslateY := 0;
-end; //Clear
+end;
 
 function TZETransform.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZETransform;
-
+var tmp: TZETransform;
 begin
   Result := Assigned(Source);
   if (Result) then
     Result := Source is TZETransform;
 
-  if (Result) then
-  begin
+  if (Result) then begin
     tmp := Source as TZETransform;
     Result := (FRotate = tmp.Rotate) and
               (FScaleX = tmp.ScaleX) and
@@ -5042,7 +4697,7 @@ begin
               (FTranslateX = tmp.TranslateX) and
               (FTranslateY = tmp.TranslateY);
   end;
-end; //IsEqual
+end;
 
 {$IFDEF ZUSE_CHARTS}
 
@@ -5051,39 +4706,34 @@ end; //IsEqual
 constructor TZEChartRangeItem.Create();
 begin
   FSheetNum := -1;
-  FRow := 0;
-  FCol := 0;
-  FWidth := 1;
-  FHeight := 1;
+  FRow      := 0;
+  FCol      := 0;
+  FWidth    := 1;
+  FHeight   := 1;
 end;
 
 constructor TZEChartRangeItem.Create(ASheetNum: integer; ACol, ARow, AWidth, AHeight: integer);
 begin
   FSheetNum := ASheetNum;
-  FRow := ARow;
-  FCol := ACol;
-  FWidth := AWidth;
-  FHeight := AHeight;
+  FRow      := ARow;
+  FCol      := ACol;
+  FWidth    := AWidth;
+  FHeight   := AHeight;
 end;
 
 procedure TZEChartRangeItem.Assign(Source: TPersistent);
-var
-  tmp: TZEChartRangeItem;
-  b: boolean;
-
+var tmp: TZEChartRangeItem; b: boolean;
 begin
   b := Assigned(Source);
-  if (b) then
-  begin
+  if (b) then begin
     b := Source is TZEChartRangeItem;
-    if (b) then
-    begin
+    if (b) then begin
       tmp := Source as TZEChartRangeItem;
       FSheetNum := tmp.SheetNum;
-      FRow := tmp.Row;
-      FCol := tmp.Col;
-      FWidth := tmp.Width;
-      FHeight := tmp.Height;
+      FRow      := tmp.Row;
+      FCol      := tmp.Col;
+      FWidth    := tmp.Width;
+      FHeight   := tmp.Height;
     end;
   end;
 
@@ -5092,17 +4742,12 @@ begin
 end;
 
 function TZEChartRangeItem.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartRangeItem;
-
+var tmp: TZEChartRangeItem;
 begin
   Result := Assigned(Source);
-
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := Source is TZEChartRangeItem;
-    if (Result) then
-    begin
+    if (Result) then begin
       tmp := Source as TZEChartRangeItem;
       Result := (FSheetNum = tmp.SheetNum) and
                 (FCol = tmp.Col) and
@@ -5155,13 +4800,10 @@ begin
 end;
 
 function TZEChartRange.Delete(num: integer): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := (num >= 0) and (num < FCount);
-  if (Result) then
-  begin
+  if (Result) then begin
     FreeAndNil(FItems[num]);
     for i := num to FCount - 2 do
       FItems[i] := FItems[i + 1];
@@ -5171,9 +4813,7 @@ begin
 end;
 
 procedure TZEChartRange.Clear();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to FCount - 1 do
     FreeAndNil(FItems[i]);
@@ -5182,30 +4822,19 @@ begin
 end;
 
 procedure TZEChartRange.Assign(Source: TPersistent);
-var
-  tmp: TZEChartRange;
-  b: boolean;
-  i: integer;
-
+var tmp: TZEChartRange; b: boolean; i: integer;
 begin
   b := Assigned(Source);
-  if (b) then
-  begin
+  if (b) then begin
     b := Source is TZEChartRange;
-    if (b) then
-    begin
+    if (b) then begin
       tmp := Source as TZEChartRange;
-
-      if (FCount > tmp.Count) then
-      begin
+      if (FCount > tmp.Count) then begin
         for i := tmp.Count to FCount - 1 do
           FreeAndNil(FItems[i]);
         FCount := tmp.Count;
         SetLength(FItems, FCount);
-      end
-      else
-      if (FCount < tmp.Count) then
-      begin
+      end else if (FCount < tmp.Count) then begin
         SetLength(FItems, tmp.Count);
         for i := FCount to tmp.Count - 1 do
           FItems[i] := TZEChartRangeItem.Create();
@@ -5223,23 +4852,17 @@ begin
 end;
 
 function TZEChartRange.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartRange;
-  i: integer;
-
+var tmp: TZEChartRange; i: integer;
 begin
   Result := Assigned(Source);
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := Source is TZEChartRange;
-    if (Result) then
-    begin
+    if (Result) then begin
       tmp := Source as TZEChartRange;
       Result := FCount = tmp.Count;
       if (Result) then
         for i := 0 to FCount - 1 do
-          if (not FItems[i].IsEqual(tmp.Items[i])) then
-          begin
+          if (not FItems[i].IsEqual(tmp.Items[i])) then begin
             Result := false;
             break;
           end;
@@ -5251,10 +4874,10 @@ end;
 
 constructor TZEChartTitleItem.Create();
 begin
-  FFont := TFont.Create();
-  FText := '';
+  FFont          := TFont.Create();
+  FText          := '';
   FRotationAngle := 0;
-  FIsDisplay := true;
+  FIsDisplay     := true;
 end;
 
 destructor TZEChartTitleItem.Destroy();
@@ -5264,24 +4887,18 @@ begin
 end;
 
 procedure TZEChartTitleItem.Assign(Source: TPersistent);
-var
-  tmp: TZEChartTitleItem;
-  b: boolean;
-
+var tmp: TZEChartTitleItem; b: boolean;
 begin
   b := Assigned(Source);
-
-  if (b) then
-  begin
+  if (b) then begin
     b := Source is TZEChartTitleItem;
-    if (b) then
-    begin
+    if (b) then begin
       tmp := Source as TZEChartTitleItem;
 
-      FText := tmp.Text;
       FFont.Assign(tmp.Font);
+      FText          := tmp.Text;
       FRotationAngle := tmp.RotationAngle;
-      FIsDisplay := tmp.IsDisplay;
+      FIsDisplay     := tmp.IsDisplay;
     end;
   end;
 
@@ -5290,19 +4907,14 @@ begin
 end;
 
 function TZEChartTitleItem.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartTitleItem;
-
+var tmp: TZEChartTitleItem;
 begin
   Result := Assigned(Source);
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := Source is TZEChartTitleItem;
-    if (Result) then
-    begin
+    if (Result) then begin
       tmp := Source as TZEChartTitleItem;
       Result := false;
-
       if (FIsDisplay = tmp.IsDisplay) then
         if (FRotationAngle = tmp.RotationAngle) then
           if (FText = tmp.Text) then
@@ -5327,33 +4939,24 @@ begin
 end;
 
 procedure TZEChartLegend.Assign(Source: TPersistent);
-var
-  tmp: TZEChartLegend;
-
+var tmp: TZEChartLegend;
 begin
   inherited Assign(Source);
 
-  if (Assigned(Source)) then
-    if (Source is TZEChartLegend) then
-    begin
-      tmp := Source as TZEChartLegend;
-      FAlign := tmp.Align;
-      FPosition := tmp.Position;
-    end;
+  if Assigned(Source) and (Source is TZEChartLegend) then begin
+    tmp := Source as TZEChartLegend;
+    FAlign    := tmp.Align;
+    FPosition := tmp.Position;
+  end;
 end; //Assign
 
 function TZEChartLegend.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartLegend;
-
+var tmp: TZEChartLegend;
 begin
   Result := inherited IsEqual(Source);
-
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := false;
-    if (Source is TZEChartLegend) then
-    begin
+    if (Source is TZEChartLegend) then begin
       tmp := Source as TZEChartLegend;
       Result := (FPosition = tmp.Position) and
                 (FAlign = tmp.Align);
@@ -5376,43 +4979,33 @@ begin
 end;
 
 procedure TZEChartAxis.Assign(Source: TPersistent);
-var
-  tmp: TZEChartAxis;
-
+var tmp: TZEChartAxis;
 begin
   inherited Assign(Source);
-
-  if (Source is TZEChartAxis) then
-  begin
+  if (Source is TZEChartAxis) then begin
     tmp := Source as TZEChartAxis;
-    FLogarithmic := tmp.Logarithmic;
+    FLogarithmic      := tmp.Logarithmic;
     FReverseDirection := tmp.ReverseDirection;
-    FScaleMin := tmp.ScaleMin;
-    FScaleMax := tmp.ScaleMax;
-    FAutoScaleMin := tmp.AutoScaleMin;
-    FAutoScaleMax := tmp.AutoScaleMax;
+    FScaleMin         := tmp.ScaleMin;
+    FScaleMax         := tmp.ScaleMax;
+    FAutoScaleMin     := tmp.AutoScaleMin;
+    FAutoScaleMax     := tmp.AutoScaleMax;
   end
 end;
 
 function TZEChartAxis.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartAxis;
-
+var tmp: TZEChartAxis;
 begin
   Result := inherited IsEqual(Source);
-
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := Source is TZEChartAxis;
-    if (Result) then
-    begin
+    if (Result) then begin
       tmp := Source as TZEChartAxis;
       Result := (FLogarithmic = tmp.FLogarithmic) and
                 (FReverseDirection = tmp.FReverseDirection) and
                 (FAutoScaleMin = tmp.AutoScaleMin) and
                 (FAutoScaleMax = tmp.AutoScaleMax);
-      if (Result) then
-      begin
+      if (Result) then begin
         //TODO: for comparsion double values need check observational errors?
         if (not FAutoScaleMin) then
           Result := FScaleMin <> tmp.ScaleMin;
@@ -5436,37 +5029,27 @@ begin
 end;
 
 procedure TZEChartSettings.Assign(Source: TPersistent);
-var
-  tmp: TZEChartSettings;
-  b: boolean;
-
+var tmp: TZEChartSettings; b: boolean;
 begin
   b := Source <> nil;
-  if (b) then
-  begin
+  if (b) then begin
     b := Source is TZEChartSettings;
-    if (b) then
-    begin
+    if (b) then begin
       tmp := Source as TZEChartSettings;
       FJapanCandle := tmp.JapanCandle;
     end;
   end;
-
   if (not b) then
     inherited Assign(Source);
 end;
 
 function TZEChartSettings.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartSettings;
-
+var tmp: TZEChartSettings;
 begin
   Result := Assigned(Source);
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := Source is TZEChartSettings;
-    if (Result) then
-    begin
+    if (Result) then begin
       tmp := Source as TZEChartSettings;
       Result := FJapanCandle = tmp.JapanCandle;
     end;
@@ -5492,24 +5075,19 @@ begin
 end;
 
 procedure TZEChartSeries.Assign(Source: TPersistent);
-var
-  tmp: TZEChartSeries;
-  b: boolean;
-
+var tmp: TZEChartSeries; b: boolean;
 begin
   b := Assigned(Source);
 
-  if (b) then
-  begin
+  if (b) then begin
     b := Source is TZEChartSeries;
-    if (b) then
-    begin
+    if (b) then begin
       tmp := TZEChartSeries.Create();
-      FChartType := tmp.ChartType;
-      FSeriesName := tmp.SeriesName;
+      FChartType       := tmp.ChartType;
+      FSeriesName      := tmp.SeriesName;
       FSeriesNameSheet := tmp.SeriesNameSheet;
-      FSeriesNameRow := tmp.SeriesNameRow;
-      FSeriesNameCol := tmp.SeriesNameCol;
+      FSeriesNameRow   := tmp.SeriesNameRow;
+      FSeriesNameCol   := tmp.SeriesNameCol;
       FRanges.Assign(tmp.Ranges);
     end;
   end;
@@ -5519,20 +5097,16 @@ begin
 end;
 
 function TZEChartSeries.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartSeries;
-
+var tmp: TZEChartSeries;
 begin
   Result := Source <> nil;
   if (Result) then
     Result := Source is TZEChartSeries;
-  if (Result) then
-  begin
+  if (Result) then begin
     tmp := TZEChartSeries.Create();
     Result := (FChartType = tmp.ChartType) and
               (FSeriesNameSheet = tmp.SeriesNameSheet);
-    if (Result) then
-    begin
+    if (Result) then begin
       if (((FSeriesNameRow < 0) or (FSeriesNameCol < 0)) and
            (tmp.SeriesNameRow < 0) or (tmp.SeriesNameCol < 0)) then
         Result := tmp.SeriesName = FSeriesName
@@ -5549,19 +5123,19 @@ end;
 
 procedure TZEChart.CommonInit();
 begin
-  FTitle := TZEChartTitleItem.Create();
-  FSubtitle := TZEChartTitleItem.Create();
-  FLegend := TZEChartLegend.Create();
-  FFooter := TZEChartTitleItem.Create();
-  FAxisX := TZEChartAxis.Create();
-  FAxisY := TZEChartAxis.Create();
-  FAxisZ := TZEChartAxis.Create();
-  FSecondaryAxisX := TZEChartAxis.Create();
-  FSecondaryAxisY := TZEChartAxis.Create();
-  FSecondaryAxisZ := TZEChartAxis.Create();
+  FTitle            := TZEChartTitleItem.Create();
+  FSubtitle         := TZEChartTitleItem.Create();
+  FLegend           := TZEChartLegend.Create();
+  FFooter           := TZEChartTitleItem.Create();
+  FAxisX            := TZEChartAxis.Create();
+  FAxisY            := TZEChartAxis.Create();
+  FAxisZ            := TZEChartAxis.Create();
+  FSecondaryAxisX   := TZEChartAxis.Create();
+  FSecondaryAxisY   := TZEChartAxis.Create();
+  FSecondaryAxisZ   := TZEChartAxis.Create();
   FDefaultChartType := ZEChartTypeBar;
-  FView3D := false;
-  FViewDeep := false;
+  FView3D           := false;
+  FViewDeep         := false;
 end;
 
 constructor TZEChart.Create(AX, AY, AWidth, AHeight: integer);
@@ -5570,7 +5144,7 @@ begin
   CommonInit();
   X := AX;
   Y := AY;
-  Width := AWidth;
+  Width  := AWidth;
   Height := AHeight;
 end;
 
@@ -5589,7 +5163,6 @@ begin
   FreeAndNil(FAxisX);
   FreeAndNil(FAxisY);
   FreeAndNil(FAxisZ);
-
   FreeAndNil(FSecondaryAxisX);
   FreeAndNil(FSecondaryAxisY);
   FreeAndNil(FSecondaryAxisZ);
@@ -5598,30 +5171,26 @@ begin
 end;
 
 function TZEChart.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChart;
-
+var tmp: TZEChart;
 begin
   Result := inherited IsEqual(Source);
-  if (Result) then
-    if (Source is TZEChart) then
-    begin
-      tmp := Source as TZEChart;
-      Result := inherited IsEqual(Source);
+  if Result and (Source is TZEChart) then begin
+    tmp := Source as TZEChart;
+    Result := inherited IsEqual(Source);
 
-      if (Result) then
-        Result := FSubtitle.IsEqual(tmp.Subtitle) and
-                  FTitle.IsEqual(tmp.Title) and
-                  FLegend.IsEqual(tmp.Legend) and
-                  FAxisX.IsEqual(tmp.AxisX) and
-                  FAxisY.IsEqual(tmp.AxisY) and
-                  FAxisZ.IsEqual(tmp.AxisZ) and
-                  FSecondaryAxisX.IsEqual(tmp.SecondaryAxisX) and
-                  FSecondaryAxisY.IsEqual(tmp.SecondaryAxisY) and
-                  FSecondaryAxisZ.IsEqual(tmp.SecondaryAxisZ) and
-                  (FView3D = tmp.View3D) and
-                  (FViewDeep = tmp.ViewDeep);
-    end;
+    if (Result) then
+      Result := FSubtitle.IsEqual(tmp.Subtitle) and
+                FTitle.IsEqual(tmp.Title) and
+                FLegend.IsEqual(tmp.Legend) and
+                FAxisX.IsEqual(tmp.AxisX) and
+                FAxisY.IsEqual(tmp.AxisY) and
+                FAxisZ.IsEqual(tmp.AxisZ) and
+                FSecondaryAxisX.IsEqual(tmp.SecondaryAxisX) and
+                FSecondaryAxisY.IsEqual(tmp.SecondaryAxisY) and
+                FSecondaryAxisZ.IsEqual(tmp.SecondaryAxisZ) and
+                (FView3D = tmp.View3D) and
+                (FViewDeep = tmp.ViewDeep);
+  end;
 end;
 
 procedure TZEChart.SetAxisX(const value: TZEChartAxis);
@@ -5685,27 +5254,23 @@ begin
 end;
 
 procedure TZEChart.Assign(Source: TPersistent);
-var
-  tmp: TZEChart;
-
+var tmp: TZEChart;
 begin
   inherited;
-  if (Assigned(Source)) then
-    if (Source is TZEChart) then
-    begin
-      tmp := Source as TZEChart;
-      FSubtitle.Assign(tmp.Subtitle);
-      FTitle.Assign(tmp.Title);
-      FLegend.Assign(tmp.Legend);
-      FAxisX.Assign(tmp.AxisX);
-      FAxisY.Assign(tmp.AxisY);
-      FAxisZ.Assign(tmp.AxisZ);
-      FSecondaryAxisX.Assign(tmp.SecondaryAxisX);
-      FSecondaryAxisY.Assign(tmp.SecondaryAxisY);
-      FSecondaryAxisZ.Assign(tmp.SecondaryAxisZ);
-      FView3D := tmp.View3D;
-      FViewDeep := tmp.ViewDeep;
-    end;
+  if Assigned(Source) and (Source is TZEChart) then begin
+    tmp := Source as TZEChart;
+    FSubtitle.Assign(tmp.Subtitle);
+    FTitle.Assign(tmp.Title);
+    FLegend.Assign(tmp.Legend);
+    FAxisX.Assign(tmp.AxisX);
+    FAxisY.Assign(tmp.AxisY);
+    FAxisZ.Assign(tmp.AxisZ);
+    FSecondaryAxisX.Assign(tmp.SecondaryAxisX);
+    FSecondaryAxisY.Assign(tmp.SecondaryAxisY);
+    FSecondaryAxisZ.Assign(tmp.SecondaryAxisZ);
+    FView3D := tmp.View3D;
+    FViewDeep := tmp.ViewDeep;
+  end;
 end;
 
 ////::::::::::::: TZEChartStore :::::::::::::::::////
@@ -5737,29 +5302,19 @@ begin
 end;
 
 procedure TZEChartStore.Assign(Source: TPersistent);
-var
-  tmp: TZEChartStore;
-  b: boolean;
-  i: integer;
-
+var tmp: TZEChartStore; b: boolean; i: integer;
 begin
   b := Assigned(Source);
-  if (b) then
-  begin
+  if (b) then begin
     b := Source is TZEChartStore;
-    if (b) then
-    begin
+    if (b) then begin
       tmp := Source as TZEChartStore;
 
-      if (FCount > tmp.Count) then
-      begin
+      if (FCount > tmp.Count) then begin
         for i := tmp.Count to FCount - 1 do
           FreeAndNil(FItems[i]);
         Setlength(FItems, tmp.Count);
-      end
-      else
-      if (FCount < tmp.Count) then
-      begin
+      end else if (FCount < tmp.Count) then begin
         Setlength(FItems, tmp.Count);
         for i := FCount to tmp.Count - 1 do
           FItems[i] := TZEChart.Create();
@@ -5776,13 +5331,10 @@ begin
 end;
 
 function TZEChartStore.Delete(num: integer): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := (num >= 0) and (num < FCount);
-  if (Result) then
-  begin
+  if (Result) then begin
     FreeAndNil(FItems[num]);
     for i := num to FCount - 2 do
       FItems[i] := FItems[i + 1];
@@ -5792,9 +5344,7 @@ begin
 end;
 
 procedure TZEChartStore.Clear();
-var
-  i: integer;
-
+var i: integer;
 begin
   for i := 0 to FCount - 1 do
     FreeAndNil(FItems[i]);
@@ -5816,23 +5366,17 @@ begin
 end;
 
 function TZEChartStore.IsEqual(const Source: TPersistent): boolean;
-var
-  tmp: TZEChartStore;
-  i: integer;
-
+var tmp: TZEChartStore; i: integer;
 begin
   Result := Assigned(Source);
-  if (Result) then
-  begin
+  if (Result) then begin
     Result := Source is TZEChartStore;
-    if (Result) then
-    begin
+    if (Result) then begin
       tmp := Source as TZEChartStore;
       Result := FCount = tmp.Count;
       if (Result) then
         for i := 0 to FCount - 1 do
-          if (not FItems[i].IsEqual(tmp[i])) then
-          begin
+          if (not FItems[i].IsEqual(tmp[i])) then begin
             Result := false;
             break;
           end;
