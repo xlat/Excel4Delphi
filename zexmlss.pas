@@ -3121,43 +3121,39 @@ begin
   inherited;
   FHeaderMargins := TZHeaderFooterMargins.Create();
   FFooterMargins := TZHeaderFooterMargins.Create();
-  FActiveCol := 0;
-  FActiveRow := 0;
-  FMarginBottom := 25;
-  FMarginLeft := 20;
-  FMarginTop := 25;
-  FMarginRight := 20;
+  FActiveCol           := 0;
+  FActiveRow           := 0;
+  FMarginBottom        := 25;
+  FMarginLeft          := 20;
+  FMarginTop           := 25;
+  FMarginRight         := 20;
   FPortraitOrientation := true;
-  FCenterHorizontal := false;
-  FCenterVertical := false;
-  FStartPageNumber := 1 ;
-  HeaderMargin := 13;
-  FooterMargin := 13;
-  FPaperSize := 9;
-  FFitToHeight:=-1;
-  FFitToWidth:=-1;
-
-  FDifferentFirst    := False;
-  FDifferentOddEven  := False;
-
-  FHeader := '';
-  FFooter := '';
-  FEvenHeader := '';
-  FEvenFooter := '';
-  FFirstPageHeader := '';
-  FFirstPageFooter := '';
-
-  FHeaderBGColor := clWindow;
-  FFooterBGColor := clWindow;
-
-  FSplitVerticalMode := ZSplitNone;
+  FCenterHorizontal    := false;
+  FCenterVertical      := false;
+  FStartPageNumber     := 1 ;
+  HeaderMargin         := 13;
+  FooterMargin         := 13;
+  FPaperSize           := 9;
+  FFitToHeight         :=-1;
+  FFitToWidth          :=-1;
+  FDifferentFirst      := False;
+  FDifferentOddEven    := False;
+  FHeader              := '';
+  FFooter              := '';
+  FEvenHeader          := '';
+  FEvenFooter          := '';
+  FFirstPageHeader     := '';
+  FFirstPageFooter     := '';
+  FHeaderBGColor       := clWindow;
+  FFooterBGColor       := clWindow;
+  FSplitVerticalMode   := ZSplitNone;
   FSplitHorizontalMode := ZSplitNone;
-  FSplitVerticalValue := 0;
-  FSplitHorizontalValue := 0;
-  FPaperWidth := 0;
-  FPaperHeight := 0;
-  FScaleToPercent := 100;
-  FScaleToPages := 1;
+  FSplitVerticalValue  := 0;
+  FSplitHorizontalValue:= 0;
+  FPaperWidth          := 0;
+  FPaperHeight         := 0;
+  FScaleToPercent      := 100;
+  FScaleToPages        := 1;
 end;
 
 destructor TZSheetOptions.Destroy();
@@ -3192,35 +3188,35 @@ var t: TZSheetOptions;
 begin
   if Source is TZSheetOptions then begin
     t := Source as TZSheetOptions;
-    ActiveCol := t.ActiveCol;
-    ActiveRow := t.ActiveRow;
-    MarginBottom := t.MarginBottom;
-    MarginLeft := t.MarginLeft;
-    MarginTop := t.MarginTop;
-    MarginRight := t.MarginRight;
-    PortraitOrientation := t.PortraitOrientation;
-    CenterHorizontal := t.CenterHorizontal;
-    CenterVertical := t.CenterVertical;
-    StartPageNumber := t.StartPageNumber;
-    PaperSize := t.PaperSize;
-    FitToHeight := t.FitToHeight;
-    FitToWidth := t.FitToWidth;
-    SplitVerticalMode := t.SplitVerticalMode;
-    SplitHorizontalMode := t.SplitHorizontalMode;
-    SplitVerticalValue := t.SplitVerticalValue;
+    ActiveCol            := t.ActiveCol;
+    ActiveRow            := t.ActiveRow;
+    MarginBottom         := t.MarginBottom;
+    MarginLeft           := t.MarginLeft;
+    MarginTop            := t.MarginTop;
+    MarginRight          := t.MarginRight;
+    PortraitOrientation  := t.PortraitOrientation;
+    CenterHorizontal     := t.CenterHorizontal;
+    CenterVertical       := t.CenterVertical;
+    StartPageNumber      := t.StartPageNumber;
+    PaperSize            := t.PaperSize;
+    FitToHeight          := t.FitToHeight;
+    FitToWidth           := t.FitToWidth;
+    SplitVerticalMode    := t.SplitVerticalMode;
+    SplitHorizontalMode  := t.SplitHorizontalMode;
+    SplitVerticalValue   := t.SplitVerticalValue;
     SplitHorizontalValue := t.SplitHorizontalValue;
-    Footer := t.Footer;
-    Header := t.Header;
-    EvenHeader := t.EvenHeader;
-    EvenFooter := t.EvenFooter;
-    FirstPageHeader := t.FirstPageHeader;
-    FirstPageFooter := t.FirstPageFooter;
-    HeaderBGColor := t.HeaderBGColor;
-    FooterBGColor := t.FooterBGColor;
-    IsDifferentFirst := t.IsDifferentFirst;
-    IsDifferentOddEven:= t.IsDifferentOddEven;
-    ScaleToPercent := t.ScaleToPercent;
-    ScaleToPages := t.ScaleToPages;
+    Footer               := t.Footer;
+    Header               := t.Header;
+    EvenHeader           := t.EvenHeader;
+    EvenFooter           := t.EvenFooter;
+    FirstPageHeader      := t.FirstPageHeader;
+    FirstPageFooter      := t.FirstPageFooter;
+    HeaderBGColor        := t.HeaderBGColor;
+    FooterBGColor        := t.FooterBGColor;
+    IsDifferentFirst     := t.IsDifferentFirst;
+    IsDifferentOddEven   := t.IsDifferentOddEven;
+    ScaleToPercent       := t.ScaleToPercent;
+    ScaleToPages         := t.ScaleToPages;
     HeaderMargins.Assign(t.HeaderMargins);
     FooterMargins.Assign(t.FooterMargins);
   end else
@@ -3582,16 +3578,15 @@ end;
 
 procedure TZSheet.SetCellRef(ACol: string; ARow: integer; const Value: TZCell);
 begin
-    SetCell(ZEGetColByA1(ACol), ARow, Value);
+  SetCell(ZEGetColByA1(ACol), ARow, Value);
 end;
 
 function TZSheet.GetCell(ACol, ARow: integer):TZCell;
 begin
+  result := nil;
   if (ACol >= 0) and (ACol < FColCount) and
      (ARow >= 0) and (ARow < FRowCount) then
-  result := FCells[ACol, ARow]
-    else
-  result := nil;
+    result := FCells[ACol, ARow];
 end;
 
 function TZSheet.GetCellRef(ACol: string; ARow: integer): TZCell;
@@ -3949,9 +3944,9 @@ procedure TZSheetPrintTitles.Assign(Source: TPersistent);
 var f, t: word;  a: boolean;
 begin
   if Source is TZSheetPrintTitles then begin
-      F   := TZSheetPrintTitles(Source).From;
-      T   := TZSheetPrintTitles(Source).Till;
-      A   := TZSheetPrintTitles(Source).Active;
+      F := TZSheetPrintTitles(Source).From;
+      T := TZSheetPrintTitles(Source).Till;
+      A := TZSheetPrintTitles(Source).Active;
 
       if A then
         RequireValid(F, T);
@@ -4005,7 +4000,7 @@ end;
 procedure TZSheetPrintTitles.RequireValid(const AFrom, ATill: word);
 begin
   if not Valid(AFrom, ATill) then
-     raise Exception.Create('Invalid printable titles for the worksheet.');
+    raise Exception.Create('Invalid printable titles for the worksheet.');
 end;
 
 function TZSheetPrintTitles.Valid(const AFrom, ATill: word): boolean;
