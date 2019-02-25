@@ -1898,15 +1898,20 @@ var
 
         if (_max > _min) then begin
           _delta := _max - _min;
-          CheckCol(_max);
-          for i := _min to _max - 1 do
-            _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
-          inc(num, _delta);
+          // защита от сплошного диапазона
+          // когда значение _мах = 16384
+          // но чтобы уж наверняка, проверим на 1000 колонок подряд.
+          if _delta < 1000 then begin
+            CheckCol(_max);
+            for i := _min to _max - 1 do
+              _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
+            inc(num, _delta);
+          end;
         end;
 
         inc(num);
       end; //if
-    end; //while    
+    end; //while
   end; //_ReadCols
 
   function _StrToMM(const st: string; var retFloat: real): boolean;
@@ -5095,14 +5100,8 @@ var _xml: TZsspXMLWriterH;    //писатель
       _xml.Attributes.Clear();
       _xml.Attributes.Add('collapsed', 'false', false);
       _xml.Attributes.Add('hidden', XLSXBoolToStr(_sheet.Columns[i].Hidden), false);
-      s := IntToStr(i + 1);
-      //Как там эти max / min считаются?
-      if (i = _sheet.ColCount - 1) then begin
-        if (i + 1 <= 1025) then
-          s := '1025';
-      end;
-      _xml.Attributes.Add('max', s, false); //??
-      _xml.Attributes.Add('min', IntToStr(i + 1), false); //??
+      _xml.Attributes.Add('max', IntToStr(i + 1), false);
+      _xml.Attributes.Add('min', IntToStr(i + 1), false);
       s := '0';
       ProcessedColumn := _sheet.Columns[i];
       if ((ProcessedColumn.StyleID >= -1) and (ProcessedColumn.StyleID < XMLSS.Styles.Count)) then
