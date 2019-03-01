@@ -217,7 +217,8 @@ type
 
   //Store link item
   type TZEXLSXHyperLinkItem = record
-    ID: integer;
+    RID: integer;
+    RelType: integer;
     CellRef: string;
     Target: string;
     ScreenTip: string;
@@ -233,6 +234,7 @@ type
     FMaxHyperLinksCount: integer;
     FCurrentRID: integer;                      //Current rID number (for HyperLinks/comments etc)
     FisHaveComments: boolean;                  //Is Need create comments*.xml?
+    FisHaveDrawings: boolean;                  //Is Need create drawings*.xml?
     FSheetHyperlinksArray: array of integer;
     FSheetHyperlinksCount: integer;
   protected
@@ -241,6 +243,7 @@ type
     constructor Create();
     destructor Destroy(); override;
     procedure AddHyperLink(const ACellRef, ATarget, AScreenTip, ATargetMode: string);
+    function AddDrawing(const ATarget: string): integer;
     procedure WriteHyperLinksTag(const xml: TZsspXMLWriterH);
     function CreateSheetRels(const Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
     procedure AddSheetHyperlink(PageNum: integer);
@@ -248,6 +251,7 @@ type
     procedure Clear();
     property HyperLinksCount: integer read FHyperLinksCount;
     property isHaveComments: boolean read FisHaveComments write FisHaveComments; //Is need create comments*.xml?
+    property isHaveDrawings: boolean read FisHaveDrawings write FisHaveDrawings; //Is need create drawings*.xml?
   end;
 
 
@@ -301,7 +305,10 @@ function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter
 function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
-
+{$IFDEF ZUSE_DRAWINGS}
+function ZEXLSXCreateDrawing(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+function ZEXLSXCreateDrawingRels(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+{$ENDIF}
 procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: integer; const Target: string; const TargetMode: string = '');
 
 implementation
@@ -321,6 +328,23 @@ const
   ZETag_formula                 = 'formula';
 {$ENDIF}
 
+const
+  SCHEMA_DOC         = 'http://schemas.openxmlformats.org/officeDocument/2006';
+  SCHEMA_DOC_REL     = SCHEMA_DOC + '/relationships';
+  SCHEMA_PACKAGE     = 'http://schemas.openxmlformats.org/package/2006';
+  SCHEMA_PACKAGE_REL = SCHEMA_PACKAGE + '/relationships';
+  SCHEMA_SHEET_MAIN  = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+
+  REL_TYPE_WORKSHEET   = 0;
+  REL_TYPE_STYLES      = 1;
+  REL_TYPE_SHARED_STR  = 2;
+  REL_TYPE_DOC         = 3;
+  REL_TYPE_CORE_PROP   = 4;
+  REL_TYPE_EXT_PROP    = 5;
+  REL_TYPE_HYPERLINK   = 6;
+  REL_TYPE_COMMENTS    = 7;
+  REL_TYPE_VML_DRAWING = 8;
+  REL_TYPE_DRAWING     = 9;
 
 type
   //шрифт
@@ -1156,11 +1180,36 @@ begin
     SetLength(FHyperLinks, FMaxHyperLinksCount);
   end;
 
-  FHyperLinks[num].ID := GenerateRID();
+  FHyperLinks[num].RID        := GenerateRID();
+  FHyperLinks[num].RelType    := REL_TYPE_HYPERLINK;
   FHyperLinks[num].TargetMode := ATargetMode;
-  FHyperLinks[num].CellRef := ACellRef;
+  FHyperLinks[num].CellRef    := ACellRef;
+  FHyperLinks[num].Target     := ATarget;
+  FHyperLinks[num].ScreenTip  := AScreenTip;
+end;
+
+//Add hyperlink
+//INPUT
+//     const ATarget: string     - drawing target (../drawings/drawing2.xml)
+function TZEXLSXWriteHelper.AddDrawing(const ATarget: string): integer;
+var num: integer;
+begin
+  num := FHyperLinksCount;
+  Inc(FHyperLinksCount);
+
+  if (FHyperLinksCount >= FMaxHyperLinksCount) then begin
+    Inc(FMaxHyperLinksCount, 20);
+    SetLength(FHyperLinks, FMaxHyperLinksCount);
+  end;
+
+  FHyperLinks[num].RID := GenerateRID();
+  FHyperLinks[num].RelType := REL_TYPE_DRAWING;
+  FHyperLinks[num].TargetMode := '';
+  FHyperLinks[num].CellRef := '';
   FHyperLinks[num].Target := ATarget;
-  FHyperLinks[num].ScreenTip := AScreenTip;
+  FHyperLinks[num].ScreenTip := '';
+  Result := FHyperLinks[num].RID;
+  FisHaveDrawings := True;
 end;
 
 //Writes tag <hyperlinks> .. </hyperlinks>
@@ -1175,7 +1224,7 @@ begin
     for i := 0 to FHyperLinksCount - 1 do begin
       xml.Attributes.Clear();
       xml.Attributes.Add('ref', FHyperLinks[i].CellRef);
-      xml.Attributes.Add('r:id', 'rId' + IntToStr(FHyperLinks[i].ID));
+      xml.Attributes.Add('r:id', 'rId' + IntToStr(FHyperLinks[i].RID));
 
       if (FHyperLinks[i].ScreenTip <> '') then
         xml.Attributes.Add('tooltip', FHyperLinks[i].ScreenTip);
@@ -1221,13 +1270,13 @@ begin
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/package/2006/relationships');
+    _xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     _xml.WriteTagNode('Relationships', true, true, false);
 
     for i := 0 to FHyperLinksCount - 1 do
       ZEAddRelsRelation(_xml,
-                        'rId' + IntToStr(FHyperLinks[i].ID),
-                        6,
+                        'rId' + IntToStr(FHyperLinks[i].RID),
+                        FHyperLinks[i].RelType,
                         FHyperLinks[i].Target,
                         FHyperLinks[i].TargetMode);
 
@@ -1271,24 +1320,26 @@ end;
 function ZEXLSXGetRelationNumber(const name: string): integer;
 begin
   result := -1;
-  if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet') then
+  if (name = SCHEMA_DOC_REL + '/worksheet') then
     result := 0
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles') then
+  else if (name = SCHEMA_DOC_REL + '/styles') then
     result := 1
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings') then
+  else if (name = SCHEMA_DOC_REL + '/sharedStrings') then
     result := 2
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument') then
+  else if (name = SCHEMA_DOC_REL + '/officeDocument') then
     result := 3
-  else if (name = 'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties') then
+  else if (name = SCHEMA_PACKAGE_REL + '/metadata/core-properties') then
     result := 4
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties') then
+  else if (name = SCHEMA_DOC_REL + '/extended-properties') then
     result := 5
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink') then
+  else if (name = SCHEMA_DOC_REL + '/hyperlink') then
     result := 6
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments') then
+  else if (name = SCHEMA_DOC_REL + '/comments') then
     result := 7
-  else if (name = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing') then
-    result := 8;        
+  else if (name = SCHEMA_DOC_REL + '/vmlDrawing') then
+    result := 8
+  else if (name = SCHEMA_DOC_REL + '/drawing') then
+    result := 9;
 end; //ZEXLSXGetRelationNumber
 
 //Возвращает текст Relations для rels
@@ -1300,15 +1351,16 @@ function ZEXLSXGetRelationName(num: integer): string;
 begin
   result := '';
   case num of
-    0: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet';
-    1: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles';
-    2: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings';
-    3: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument';
-    4: result := 'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties';
-    5: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties';
-    6: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink';
-    7: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
-    8: result := 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
+    0: result := SCHEMA_DOC_REL + '/worksheet';
+    1: result := SCHEMA_DOC_REL + '/styles';
+    2: result := SCHEMA_DOC_REL + '/sharedStrings';
+    3: result := SCHEMA_DOC_REL + '/officeDocument';
+    4: result := SCHEMA_PACKAGE_REL + '/metadata/core-properties';
+    5: result := SCHEMA_DOC_REL + '/extended-properties';
+    6: result := SCHEMA_DOC_REL + '/hyperlink';
+    7: result := SCHEMA_DOC_REL + '/comments';
+    8: result := SCHEMA_DOC_REL + '/vmlDrawing';
+    9: result := SCHEMA_DOC_REL + '/drawing';
   end;
 end; //ZEXLSXGetRelationName
 
@@ -1871,23 +1923,9 @@ var
         if (s > '') then
           _currSheet.Columns[num].AutoFitWidth := ZETryStrToBoolean(s);
 
-        //s := xml.Attributes.ItemsByName['collapsed'];
-        //s := xml.Attributes.ItemsByName['customWidth'];
         s := xml.Attributes.ItemsByName['hidden'];
         if (s > '') then
           _currSheet.Columns[num].Hidden := ZETryStrToBoolean(s);
-
-        _min := 0;
-        _max := 0;
-        s := xml.Attributes.ItemsByName['max'];
-        if (s > '') then
-          TryStrToInt(s, _max);
-        s := xml.Attributes.ItemsByName['min'];
-        if (s > '') then
-          TryStrToInt(s, _min);
-        //s := xml.Attributes.ItemsByName['outlineLevel'];
-        //s := xml.Attributes.ItemsByName['phonetic'];
-        s := xml.Attributes.ItemsByName['style'];
 
         s := xml.Attributes.ItemsByName['width'];
         if (s > '') then begin
@@ -1895,6 +1933,15 @@ var
           t := 10 * t / 5.14509803921569;
           _currSheet.Columns[num].WidthMM := t;
         end;
+
+        //s := xml.Attributes.ItemsByName['outlineLevel'];
+        //s := xml.Attributes.ItemsByName['phonetic'];
+        //s := xml.Attributes.ItemsByName['style'];
+        //s := xml.Attributes.ItemsByName['collapsed'];
+        //s := xml.Attributes.ItemsByName['customWidth'];
+
+        _min := StrToIntDef(xml.Attributes.ItemsByName['min'], 0);
+        _max := StrToIntDef(xml.Attributes.ItemsByName['max'], 0);
 
         if (_max > _min) then begin
           _delta := _max - _min;
@@ -4839,13 +4886,18 @@ var _xml: TZsspXMLWriterH; s: string;
       6: s := 'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml';
       7: s := 'application/vnd.openxmlformats-officedocument.vmlDrawing';
       8: s := 'application/vnd.openxmlformats-officedocument.extended-properties+xml';
+      9: s := 'application/vnd.openxmlformats-officedocument.drawing+xml';
     end;
     _xml.Attributes.Add('ContentType', s, false);
     _xml.WriteEmptyTag('Override', true);
   end; //_WriteOverride
 
   procedure _WriteTypes();
-  var i: integer;
+  var i, ii: integer;
+    {$IFDEF ZUSE_DRAWINGS}
+    _drawing: TZEDrawing;
+    _picture: TZEPicture;
+    {$ENDIF}
   begin
     _xml.Attributes.Clear();
     _xml.Attributes.Add('Extension', 'rels');
@@ -4855,6 +4907,19 @@ var _xml: TZsspXMLWriterH; s: string;
     _xml.Attributes.Add('Extension', 'xml');
     _xml.Attributes.Add('ContentType', 'application/xml', false);
     _xml.WriteEmptyTag('Default', true);
+
+    {$IFDEF ZUSE_DRAWINGS}
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('Extension', 'png');
+    _xml.Attributes.Add('ContentType', 'image/png', false);
+    _xml.WriteEmptyTag('Default', true);
+
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('Extension', 'jpeg');
+    _xml.Attributes.Add('ContentType', 'image/jpeg', false);
+    _xml.WriteEmptyTag('Default', true);
+    {$ENDIF}
+
     //Страницы
     //_WriteOverride('/_rels/.rels', 3);
     //_WriteOverride('/xl/_rels/workbook.xml.rels', 3);
@@ -4868,6 +4933,28 @@ var _xml: TZsspXMLWriterH; s: string;
       _WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(PagesComments[i] + 1) + '.xml.rels', 3);
       _WriteOverride('/xl/comments' + IntToStr(PagesComments[i] + 1) + '.xml', 6);
     end;
+
+    {$IFDEF ZUSE_DRAWINGS}
+    for i := 0 to XMLSS.DrawingCount - 1 do
+    begin
+      _drawing := XMLSS.GetDrawing(i);
+      if Assigned(_drawing) and (_drawing.PictureStore.Count > 0) then
+      begin
+        _WriteOverride('/xl/drawings/drawing' + IntToStr(_drawing.Id) + '.xml', 9);
+        _WriteOverride('/xl/drawings/_rels/drawing' + IntToStr(_drawing.Id) + '.xml.rels', 3);
+        for ii := 0 to _drawing.PictureStore.Count - 1 do
+        begin
+          _picture := _drawing.PictureStore.Items[ii];
+          // image/ override
+          _xml.Attributes.Clear();
+          _xml.Attributes.Add('PartName', '/xl/media/' + _picture.Name);
+          _xml.Attributes.Add('ContentType', 'image/' + Copy(ExtractFileExt(_picture.Name), 2, 99), false);
+          _xml.WriteEmptyTag('Override', true);
+        end;
+      end;
+    end;
+    {$ENDIF}
+
     _WriteOverride('/xl/workbook.xml', 2);
     _WriteOverride('/xl/styles.xml', 1);
     _WriteOverride('/xl/sharedStrings.xml', 4);
@@ -4890,7 +4977,7 @@ begin
 
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/package/2006/content-types');
+    _xml.Attributes.Add('xmlns', SCHEMA_PACKAGE + '/content-types');
     _xml.WriteTagNode('Types', true, true, true);
     _WriteTypes();
     _xml.WriteEndTagNode(); //Types
@@ -4899,6 +4986,259 @@ begin
       FreeAndNil(_xml);
   end;
 end; //ZEXLSXCreateContentTypes
+
+
+{$IFDEF ZUSE_DRAWINGS}
+
+function ZEXLSXCreateDrawing(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+var _xml: TZsspXMLWriterH;
+    SheetNum: integer;
+    pic: TZEPicture;
+
+  function PtToStr(Value: Real): string;
+  begin
+    Result := IntToStr(Trunc(Value * 1000));
+  end;
+
+  procedure _WriteCellForXY(PageNum: Integer; X, Y: Real);
+  var
+    sh: TZSheet;
+    n: Integer;
+    Total: Real;
+  begin
+    sh := XMLSS.Sheets.Sheet[PageNum];
+    if not Assigned(sh) then Exit;
+    _xml.Attributes.Clear();
+
+    // column
+    n := 0;
+    Total := 0;
+    while (n < sh.ColCount) and (Total < X) do begin
+      Total := Total + sh.ColWidths[n];
+      Inc(n);
+    end;
+    _xml.WriteTag('xdr:col', IntToStr(n), false, false);
+    _xml.WriteTag('xdr:colOff', PtToStr(Total), false, false);
+
+    // row
+    n := 0;
+    Total := 0;
+    while (n < sh.RowCount) and (Total < Y) do begin
+      Total := Total + sh.RowHeights[n];
+      Inc(n);
+    end;
+    _xml.WriteTag('xdr:row', IntToStr(n), false, false);
+    _xml.WriteTag('xdr:rowOff', PtToStr(Total), false, false);
+  end;
+
+  procedure _WriteCellForRowCol(PageNum, Row, Col: Integer; Width, Height: Real);
+  var sh: TZSheet;
+      n: Integer;
+      Total, X, Y: Real;
+  begin
+    sh := XMLSS.Sheets.Sheet[PageNum];
+    if not Assigned(sh) then Exit;
+    _xml.Attributes.Clear();
+
+    // column
+    n := 0;
+    Total := 0;
+    while (n < sh.ColCount) and (n < Col) do begin
+      Total := Total + sh.ColWidths[n];
+      Inc(n);
+    end;
+    // plus width
+    X := Total + Width - 0.1;
+    while (n < sh.ColCount) and (Total < X) do begin
+      Total := Total + sh.ColWidths[n];
+      Inc(n);
+    end;
+    _xml.WriteTag('xdr:col', IntToStr(n), false, false);
+    _xml.WriteTag('xdr:colOff', PtToStr(Total), false, false);
+
+    // row
+    n := 0;
+    Total := 0;
+    while (n < sh.RowCount) and (n < Row) do begin
+      Total := Total + sh.RowHeights[n];
+      Inc(n);
+    end;
+    // plus height
+    Y := Total + Height - 0.1;
+    while (n < sh.ColCount) and (Total < Y) do begin
+      Total := Total + sh.RowHeights[n];
+      Inc(n);
+    end;
+    _xml.WriteTag('xdr:row', IntToStr(n), false, false);
+    _xml.WriteTag('xdr:rowOff', PtToStr(Total), false, false);
+  end;
+
+var i: Integer;
+begin
+  result := 0;
+  _xml := nil;
+
+  if not Assigned(Drawing) then Exit;
+  SheetNum := XMLSS.GetDrawingSheetNum(Drawing);
+
+  _xml := TZsspXMLWriterH.Create();
+  try
+    _xml.TabLength := 1;
+    _xml.TextConverter := TextConverter;
+    _xml.TabSymbol := ' ';
+    _xml.NewLine := false;
+    if (not _xml.BeginSaveToStream(Stream)) then begin
+      result := 2;
+      exit;
+    end;
+
+    ZEWriteHeaderCommon(_xml, CodePageName, BOM);
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('xmlns:xdr', 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing');
+    _xml.Attributes.Add('xmlns:a', 'http://schemas.openxmlformats.org/drawingml/2006/main');
+    _xml.Attributes.Add('xmlns:r', SCHEMA_DOC_REL, false);
+    _xml.WriteTagNode('xdr:wsDr', false, false, false);
+
+    for i := 0 to Drawing.PictureStore.Count - 1 do begin
+      pic := Drawing.PictureStore.Items[i];
+      // cell anchor
+      _xml.Attributes.Clear();
+      if pic.CellAnchor = ZAAbsolute then
+        _xml.Attributes.Add('editAs', 'absolute')
+      else
+        _xml.Attributes.Add('editAs', 'oneCell');
+      _xml.WriteTagNode('xdr:twoCellAnchor', false, false, false);
+
+      // - xdr:from
+      _xml.Attributes.Clear();
+      _xml.WriteTagNode('xdr:from', false, false, false);
+      if (pic.CellAnchor = ZACell) then
+        _WriteCellForRowCol(SheetNum, pic.Row, pic.Col, 0, 0)
+      else
+        _WriteCellForXY(SheetNum, pic.X, pic.Y);
+      _xml.WriteEndTagNode(); // xdr:from
+      // - xdr:to
+      _xml.Attributes.Clear();
+      _xml.WriteTagNode('xdr:to', false, false, false);
+      if (pic.CellAnchor = ZACell) then
+        _WriteCellForRowCol(SheetNum, pic.Row, pic.Col, pic.Width, pic.Height)
+      else
+        _WriteCellForXY(SheetNum, (pic.X + pic.Width), (pic.Y + pic.Height));
+      _xml.Attributes.Clear();
+      _xml.WriteEndTagNode(); // xdr:from
+      // - xdr:pic
+      _xml.WriteTagNode('xdr:pic', false, false, false);
+      // -- xdr:nvPicPr
+      _xml.WriteTagNode('xdr:nvPicPr', false, false, false);
+      // --- xdr:cNvPr
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('descr', pic.Description);
+      _xml.Attributes.Add('name', pic.Name);
+      _xml.Attributes.Add('id', IntToStr(pic.RelId));  // 1
+      _xml.WriteEmptyTag('xdr:cNvPr', false);
+      // --- xdr:cNvPicPr
+      _xml.Attributes.Clear();
+      _xml.WriteEmptyTag('xdr:cNvPicPr', false);
+      _xml.WriteEndTagNode(); // -- xdr:nvPicPr
+
+      // -- xdr:blipFill
+      _xml.Attributes.Clear();
+      _xml.WriteTagNode('xdr:blipFill', false, false, false);
+      // --- a:blip
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('r:embed', pic.RelIdStr); // rId1
+      _xml.WriteEmptyTag('a:blip', false);
+      // --- a:stretch
+      _xml.Attributes.Clear();
+      _xml.WriteEmptyTag('a:stretch', false);
+      _xml.WriteEndTagNode(); // -- xdr:blipFill
+
+      // -- xdr:spPr
+      _xml.Attributes.Clear();
+      _xml.WriteTagNode('xdr:spPr', false, false, false);
+      // --- a:xfrm
+      _xml.WriteTagNode('a:xfrm', false, false, false);
+      // ----
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('x', PtToStr(pic.X));
+      _xml.Attributes.Add('y', PtToStr(pic.Y));
+      _xml.WriteEmptyTag('a:off', false);
+      // ----
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('cx', PtToStr(pic.X + pic.Width));
+      _xml.Attributes.Add('cy', PtToStr(pic.Y + pic.Height));
+      _xml.WriteEmptyTag('a:ext', false);
+      _xml.Attributes.Clear();
+      _xml.WriteEndTagNode(); // --- a:xfrm
+
+      // --- a:prstGeom
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('prst', 'rect');
+      _xml.WriteTagNode('a:prstGeom', false, false, false);
+      _xml.Attributes.Clear();
+      _xml.WriteEmptyTag('a:avLst', false);
+      _xml.WriteEndTagNode(); // --- a:prstGeom
+
+      // --- a:ln
+      _xml.WriteTagNode('a:ln', false, false, false);
+      _xml.WriteEmptyTag('a:noFill', false);
+      _xml.WriteEndTagNode(); // --- a:ln
+
+      _xml.WriteEndTagNode(); // -- xdr:spPr
+
+      _xml.WriteEndTagNode(); // - xdr:pic
+
+      _xml.WriteEmptyTag('xdr:clientData', false);
+
+      _xml.WriteEndTagNode(); // xdr:twoCellAnchor
+    end;
+    _xml.WriteEndTagNode(); // xdr:wsDr
+  finally
+    if (Assigned(_xml)) then
+      FreeAndNil(_xml);
+  end;
+end;
+
+function ZEXLSXCreateDrawingRels(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+var _xml: TZsspXMLWriterH;
+    pic: TZEPicture;
+    i: integer;
+begin
+  result := 0;
+  _xml := nil;
+
+  if not Assigned(Drawing) then Exit;
+
+  _xml := TZsspXMLWriterH.Create();
+  try
+    _xml.TabLength := 1;
+    _xml.TextConverter := TextConverter;
+    _xml.TabSymbol := ' ';
+    if (not _xml.BeginSaveToStream(Stream)) then begin
+      result := 2;
+      exit;
+    end;
+
+    ZEWriteHeaderCommon(_xml, CodePageName, BOM);
+    _xml.Attributes.Clear();
+    _xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL, false);
+    _xml.WriteTagNode('Relationships', false, false, false);
+
+    for i := 0 to Drawing.PictureStore.Count - 1 do begin
+      pic := Drawing.PictureStore[i];
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('Id', pic.RelIdStr);
+      _xml.Attributes.Add('Type', SCHEMA_DOC_REL + '/image');
+      _xml.Attributes.Add('Target', '../media/' + pic.Name);
+      _xml.WriteEmptyTag('Relationship', false, true);
+    end;
+    _xml.WriteEndTagNode(); // Relationships
+  finally
+    if (Assigned(_xml)) then
+      FreeAndNil(_xml);
+  end;
+end;
+{$ENDIF} // ZUSE_DRAWINGS
 
 //Создаёт лист документа (sheet*.xml)
 //INPUT
@@ -5328,6 +5668,20 @@ var _xml: TZsspXMLWriterH;    //писатель
     WriteBreakData('colBreaks', _sheet.ColBreaks, '1', '1048575');
   end; //WriteXLSXSheetFooter
 
+ {$IFDEF ZUSE_DRAWINGS}
+  procedure WriteXLSXSheetDrawings();
+  var rId: Integer;
+  begin
+    // drawings
+    if (not _sheet.Drawing.IsEmpty) then begin
+      // rels to helper
+      rId := WriteHelper.AddDrawing('../drawings/drawing' + IntToStr(_sheet.Drawing.Id) + '.xml');
+      _xml.Attributes.Clear();
+      _xml.Attributes.Add('r:id', 'rId' + IntToStr(rId));
+      _xml.WriteEmptyTag('drawing');
+    end;
+  end;
+  {$ENDIF} // ZUSE_DRAWINGS
 begin
   WriteHelper.Clear();
   result := 0;
@@ -5345,8 +5699,8 @@ begin
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-    _xml.Attributes.Add('xmlns:r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+    _xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN);
+    _xml.Attributes.Add('xmlns:r', SCHEMA_DOC_REL);
     _xml.WriteTagNode('worksheet', true, true, false);
 
     _sheet := XMLSS.Sheets[SheetNum];
@@ -5355,6 +5709,10 @@ begin
       WriteXLSXSheetCols();
     WriteXLSXSheetData();
     WriteXLSXSheetFooter();
+
+    {$IFDEF ZUSE_DRAWINGS}
+    WriteXLSXSheetDrawings();
+    {$ENDIF} // ZUSE_DRAWINGS
 
     _xml.WriteEndTagNode(); //worksheet
   finally
@@ -5413,8 +5771,8 @@ begin
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-    _xml.Attributes.Add('xmlns:r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', false);
+    _xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN);
+    _xml.Attributes.Add('xmlns:r', SCHEMA_DOC_REL, false);
     _xml.WriteTagNode('workbook', true, true, true);
 
     _xml.Attributes.Clear();
@@ -6156,7 +6514,7 @@ begin
     _StylesCount := XMLSS.Styles.Count;
 
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+    _xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN);
     _xml.WriteTagNode('styleSheet', true, true, true);
 
     WritenumFmts();
@@ -6227,7 +6585,7 @@ begin
 
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/package/2006/relationships');
+    _xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     _xml.WriteTagNode('Relationships', true, true, false);
 
     ZEAddRelsRelation(_xml, 'rId1', 3, 'xl/workbook.xml');
@@ -6269,7 +6627,7 @@ begin
 
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/package/2006/relationships');
+    _xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     _xml.WriteTagNode('Relationships', true, true, false);
 
     ZEAddRelsRelation(_xml, 'rId1', 1, 'styles.xml');
@@ -6315,7 +6673,7 @@ begin
     _xml.Attributes.Clear();
     _xml.Attributes.Add('count', '0');
     _xml.Attributes.Add('uniqueCount', '0', false);
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main', false);
+    _xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN, false);
     _xml.WriteTagNode('sst', true, true, false);
 
     //Пока не заполняется
@@ -6353,8 +6711,8 @@ begin
 
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns', 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties');
-    _xml.Attributes.Add('xmlns:vt', 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes', false);
+    _xml.Attributes.Add('xmlns',    SCHEMA_DOC + '/extended-properties');
+    _xml.Attributes.Add('xmlns:vt', SCHEMA_DOC + '/docPropsVTypes', false);
     _xml.WriteTagNode('Properties', true, true, false);
 
     _xml.Attributes.Clear();
@@ -6395,7 +6753,7 @@ begin
 
     ZEWriteHeaderCommon(_xml, CodePageName, BOM);
     _xml.Attributes.Clear();
-    _xml.Attributes.Add('xmlns:cp', 'http://schemas.openxmlformats.org/package/2006/metadata/core-properties');
+    _xml.Attributes.Add('xmlns:cp', SCHEMA_PACKAGE + '/metadata/core-properties');
     _xml.Attributes.Add('xmlns:dc', 'http://purl.org/dc/elements/1.1/', false);
     _xml.Attributes.Add('xmlns:dcmitype', 'http://purl.org/dc/dcmitype/', false);
     _xml.Attributes.Add('xmlns:dcterms', 'http://purl.org/dc/terms/', false);
@@ -6658,6 +7016,55 @@ begin
       end;
     end; //for i
 
+    {$IFDEF ZUSE_DRAWINGS}
+    //iDrawingsCount := XMLSS.DrawingCount();
+    if iDrawingsCount <> 0 then begin
+      path_draw := path_xl + PathDelim + 'drawings' + PathDelim;
+      if (not DirectoryExists(path_draw)) then
+        ForceDirectories(path_draw);
+
+      path_draw_rel := path_draw + '_rels' + PathDelim;
+      if (not DirectoryExists(path_draw_rel)) then
+        ForceDirectories(path_draw_rel);
+
+      path_media := path_xl + PathDelim + 'media' + PathDelim;
+      if (not DirectoryExists(path_media)) then
+        ForceDirectories(path_media);
+
+      for i := 0 to iDrawingsCount - 1 do begin
+        _drawing := XMLSS.GetDrawing(i);
+        // drawings/drawingN.xml
+        Stream := TFileStream.Create(path_draw + 'drawing' + IntToStr(_drawing.Id) + '.xml', fmCreate);
+        try
+          ZEXLSXCreateDrawing(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
+        finally
+          FreeAndNil(Stream);
+        end;
+
+        // drawings/_rels/drawingN.xml.rels
+        Stream := TFileStream.Create(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels', fmCreate);
+        try
+          ZEXLSXCreateDrawingRels(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
+        finally
+          FreeAndNil(Stream);
+        end;
+
+        // media/imageN.png
+        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
+          _pic := _drawing.PictureStore[ii];
+          if not Assigned(_pic.DataStream) then Continue;
+          Stream := TFileStream.Create(path_media + _pic.Name, fmCreate);
+          try
+            _pic.DataStream.Position := 0;
+            Stream.CopyFrom(_pic.DataStream, _pic.DataStream.Size);
+          finally
+            FreeAndNil(Stream);
+          end;
+        end;
+      end;
+    end;
+    {$ENDIF} // ZUSE_DRAWINGS
+
     //workbook.xml - list of shhets
     Stream := TFileStream.Create(path_xl + 'workbook.xml', fmCreate);
     ZEXLSXCreateWorkBook(XMLSS, Stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
@@ -6830,6 +7237,26 @@ begin
         // create file with comments
       end;
     end; //for i
+
+    {$IFDEF ZUSE_DRAWINGS}
+    iDrawingsCount := XMLSS.DrawingCount();
+    if iDrawingsCount <> 0 then begin
+      path_draw := path_xl + 'drawings/';
+      path_draw_rel := path_draw + '_rels/';
+
+      for i := 0 to iDrawingsCount - 1 do begin
+        // drawings/drawingN.xml
+        _AddStream();
+        ZEXLSXCreateDrawing(XMLSS, Stream[StreamCount - 1], XMLSS.GetDrawing(i), TextConverter, CodePageName, BOM);
+        _AddFile(path_draw + 'drawing' + IntToStr(i + 1) + '.xml');
+
+        // drawings/_rels/drawingN.xml.rels
+        _AddStream();
+        ZEXLSXCreateDrawingRels(XMLSS, Stream[StreamCount - 1], XMLSS.GetDrawing(i), TextConverter, CodePageName, BOM);
+        _AddFile(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels');
+      end;
+    end;
+    {$ENDIF} // ZUSE_DRAWINGS
 
     //workbook.xml - sheets count
     _AddStream();

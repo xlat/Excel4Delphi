@@ -1041,6 +1041,95 @@ type
 
   {$ENDIF} //ZUSE_CHARTS
 
+  {$IFDEF ZUSE_DRAWINGS}
+  TZCellAnchor = (ZACell, ZAAbsolute);
+
+  // Picture item
+  TZEPicture = class(TZECommonFrameAncestor)
+  private
+    FId: Integer;
+    FRelId: Integer;
+    FTitle: string;
+    FDescription: string;
+    FRow: Integer;
+    FCol: Integer;
+    FCellAnchor: TZCellAnchor;
+    FHidden: Boolean;
+    FFileName: string;
+    FDataStream: TStream;
+    function GetRelIdStr(): string;
+    function GetName(): string;
+  protected
+    procedure CommonInit();
+  public
+    constructor Create(); overload; override;
+    constructor Create(AX, AY, AWidth, AHeight: integer); overload; override;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; override;
+
+    procedure AssignFromFile(AFileName: string);
+    procedure AssignFromStream(AStream: TStream);
+  published
+    // through document
+    property Id: Integer read FId write FId;
+    // through worksheet
+    property RelId: Integer read FRelId write FRelId;
+    property RelIdStr: string read GetRelIdStr;
+    property Name: string read GetName;
+    property Title: string read FTitle write FTitle;
+    property Description: string read FDescription write FDescription;
+    property Row: Integer read FRow write FRow;
+    property Col: Integer read FCol write FCol;
+    property CellAnchor: TZCellAnchor read FCellAnchor write FCellAnchor;
+
+    property Hidden: Boolean read FHidden write FHidden;
+    property DataStream: TStream read FDataStream;
+  end;
+
+  // Store for pictures on a sheet
+  TZEPictureStore = class (TPersistent)
+  private
+    FItems: TList;
+    function GetCount: integer;
+  protected
+    function GetItem(num: integer): TZEPicture;
+    procedure SetItem(num: integer; const Value: TZEPicture);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    function Add(): TZEPicture; overload;
+    function Add(const ItemForClone: TZEPicture): TZEPicture; overload;
+    function Delete(num: integer): boolean;
+    procedure Clear();
+    procedure Assign(Source: TPersistent); override;
+    function IsEqual(const Source: TPersistent): boolean; virtual;
+    property Items[num: integer]: TZEPicture read GetItem write SetItem; default;
+  published
+    property Count: integer read GetCount;
+  end;
+
+  { Store pictures for worksheet }
+  TZEDrawing = class(TPersistent)
+  private
+    FId: Integer;
+    FPictureStore: TZEPictureStore;
+    function GetIsEmpty(): Boolean;
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+
+    function AddPictureStream(ARow, ACol: Integer; AStream: TStream): TZEPicture;
+    function AddPictureFile(ARow, ACol: Integer; AFileName: string): TZEPicture;
+
+    property Id: Integer read FId write FId;
+    property PictureStore: TZEPictureStore read FPictureStore;
+    property IsEmpty: Boolean read GetIsEmpty;
+  end;
+
+  {$ENDIF} // ZUSE_DRAWINGS
+
   TZRange = class;
 
   //лист документа
@@ -1067,6 +1156,10 @@ type
 
     {$IFDEF ZUSE_CHARTS}
     FCharts: TZEChartStore;
+    {$ENDIF}
+
+    {$IFDEF ZUSE_DRAWINGS}
+    FDrawing: TZEDrawing;
     {$ENDIF}
 
     FViewMode: TZViewMode;
@@ -1149,6 +1242,9 @@ type
 
     {$IFDEF ZUSE_CHARTS}
     property Charts: TZEChartStore read FCharts write SetCharts;
+    {$ENDIF}
+    {$IFDEF ZUSE_DRAWINGS}
+    property Drawing: TZEDrawing read FDrawing;
     {$ENDIF}
     property ViewMode: TZViewMode read FViewMode write FViewMode;
     property RowBreaks: TArray<integer> read FRowBreaks write FRowBreaks;
@@ -1285,6 +1381,12 @@ type
     //function SaveToFile(const FileName: ansistring; CodePage: byte = 0): integer; overload; virtual;
     //function SaveToStream(Stream: TStream; CodePage: byte = 0): integer; overload; virtual;
     property Sheets: TZSheets read FSheets write FSheets;
+    {$IFDEF ZUSE_DRAWINGS}
+    // Total not-empty drawings count from all sheets
+    function DrawingCount(): Integer;
+    function GetDrawing(num: Integer): TZEDrawing;
+    function GetDrawingSheetNum(Value: TZEDrawing): Integer;
+    {$ENDIF}
   published
     property Styles: TZStyles read FStyles write FStyles;
     property DefaultSheetOptions: TZSheetOptions read GetDefaultSheetOptions write SetDefaultSheetOptions;
@@ -2926,7 +3028,7 @@ begin
       ((Items[AID].Bottom >= AR1) and (Items[AID].Bottom <= AR2)));
 end;
 
-//удаляет облать num
+//удаляет область num
 //возвращает
 //      - TRUE - область удалена
 //      - FALSE - num>Count-1 или num<0
@@ -3267,6 +3369,9 @@ begin
   {$IFDEF ZUSE_CHARTS}
   FCharts := TZEChartStore.Create();
   {$ENDIF}
+  {$IFDEF ZUSE_DRAWINGS}
+  FDrawing := TZEDrawing.Create();
+  {$ENDIF}
 end;
 
 destructor TZSheet.Destroy();
@@ -3286,6 +3391,9 @@ begin
 
     {$IFDEF ZUSE_CHARTS}
     FreeAndNil(FCharts);
+    {$ENDIF}
+    {$IFDEF ZUSE_DRAWINGS}
+    FreeAndNil(FDrawing);
     {$ENDIF}
   finally
     inherited Destroy();
@@ -3333,6 +3441,11 @@ begin
 
     {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     ConditionalFormatting.Assign(zSource.ConditionalFormatting);
+    {$ENDIF}
+
+    {$IFDEF ZUSE_DRAWINGS}
+    FDrawing := TZEDrawing.Create();
+    FDrawing.Assign(zSource.FDrawing);
     {$ENDIF}
 
     RowsToRepeat.Assign(zSource.RowsToRepeat);
@@ -3854,6 +3967,56 @@ begin
    FDefaultSheetOptions.Assign(Value);
 end;
 
+{$IFDEF ZUSE_DRAWINGS}
+function TZEXMLSS.DrawingCount(): Integer;
+var i, ii, n: Integer;
+    tmp: TZEDrawing;
+begin
+  Result := 0;
+  n := 0;
+  for i := 0 to Sheets.Count - 1 do begin
+    tmp := Sheets[i].Drawing;
+    if (not tmp.IsEmpty) then begin
+      Inc(Result);
+      tmp.Id := Result;
+      // set id for pictures
+      for ii := 0 to tmp.PictureStore.Count - 1 do begin
+        Inc(n);
+        tmp.PictureStore[ii].Id := n;
+      end;
+    end else
+      tmp.Id := 0;
+  end;
+end;
+
+function TZEXMLSS.GetDrawing(num: Integer): TZEDrawing;
+var i, n: Integer;
+begin
+  Result := nil;
+  n := 0;
+  for i := 0 to Sheets.Count - 1 do begin
+    if not Sheets[i].Drawing.IsEmpty then begin
+      if n = num then begin
+        Result := Sheets[i].Drawing;
+        Exit;
+      end;
+      Inc(n);
+    end;
+  end;
+end;
+
+function TZEXMLSS.GetDrawingSheetNum(Value: TZEDrawing): Integer;
+var i: Integer;
+begin
+  Result := 0;
+  for i := 0 to Sheets.Count - 1 do begin
+    if Value = Sheets[i].Drawing then begin
+      Result := i;
+      Exit;
+    end;
+  end;
+end;
+{$ENDIF}
 
 //Сохраняет в файл FileName
 //      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
@@ -5380,6 +5543,280 @@ begin
 end;
 
 {$ENDIF} //ZUSE_CHARTS
+
+{$IFDEF ZUSE_DRAWINGS}
+
+////::::::::::::: TZEPicture :::::::::::::::::////
+
+procedure TZEPicture.Assign(Source: TPersistent);
+var tmp: TZEPicture;
+begin
+  inherited;
+  if Assigned(Source) and (Source is TZEPicture) then begin
+    tmp := Source as TZEPicture;
+    FId := tmp.Id;
+    FTitle := tmp.Title;
+    FDescription := tmp.Description;
+    FRow := tmp.Row;
+    FCol := tmp.Col;
+    if Assigned(tmp.DataStream) then
+      AssignFromStream(tmp.DataStream);
+  end;
+end;
+
+procedure TZEPicture.AssignFromFile(AFileName: string);
+begin
+  if Assigned(FDataStream) then
+    FreeAndNil(FDataStream);
+  FFileName := AFileName;
+end;
+
+procedure TZEPicture.AssignFromStream(AStream: TStream);
+var fcc: LongWord;
+begin
+  if Assigned(FDataStream) then
+    FreeAndNil(FDataStream);
+  FFileName := '';
+  FDataStream := TMemoryStream.Create();
+  AStream.Position := 0;
+  // detect file type
+  AStream.Read(fcc, SizeOf(fcc));
+  if fcc = $474E5089 then
+    FFileName := '.png'
+  else if fcc = $E0FFD8FF then
+    FFileName := '.jpeg';
+  AStream.Position := 0;
+  FDataStream.CopyFrom(AStream, AStream.Size);
+end;
+
+procedure TZEPicture.CommonInit();
+begin
+  FId := 0;
+  FRelId := 0;
+  FTitle := '';
+  FDescription := '';
+  FRow := 0;
+  FCol := 0;
+  FCellAnchor := ZACell;
+end;
+
+constructor TZEPicture.Create(AX, AY, AWidth, AHeight: integer);
+begin
+  inherited;
+  CommonInit();
+  X := AX;
+  Y := AY;
+  Width := AWidth;
+  Height := AHeight;
+end;
+
+constructor TZEPicture.Create();
+begin
+  inherited;
+  CommonInit();
+end;
+
+destructor TZEPicture.Destroy;
+begin
+  if Assigned(FDataStream) then
+    FreeAndNil(FDataStream);
+  inherited;
+end;
+
+function TZEPicture.GetName(): string;
+begin
+  if Pos('.', FFileName) > 0 then
+    Result := 'image' + IntToStr(Id) + ExtractFileExt(FFileName)
+  else
+    Result := 'image' + IntToStr(Id) + '.png';
+end;
+
+function TZEPicture.GetRelIdStr(): string;
+begin
+  Result := 'rId' + IntToStr(RelId);
+end;
+
+function TZEPicture.IsEqual(const Source: TPersistent): boolean;
+var tmp: TZEPicture;
+begin
+  Result := inherited IsEqual(Source);
+  if (Result) and (Source is TZEPicture) then begin
+    tmp := Source as TZEPicture;
+    Result := (FId = tmp.Id)
+          and (FTitle = tmp.Title)
+          and (FDescription = tmp.Description)
+          and (FHidden = tmp.Hidden);
+          // TODO: compare filename/streams
+  end;
+end;
+
+{ TZEPictureStore }
+
+function TZEPictureStore.Add(const ItemForClone: TZEPicture): TZEPicture;
+begin
+  Result := Add();
+  Result.Assign(ItemForClone);
+end;
+
+function TZEPictureStore.Add(): TZEPicture;
+begin
+  Result := TZEPicture.Create();
+  FItems.Add(Result);
+end;
+
+procedure TZEPictureStore.Assign(Source: TPersistent);
+var tmp: TZEPictureStore;
+    b: boolean;
+    i: integer;
+begin
+  b := Assigned(Source);
+  if (b) then begin
+    b := Source is TZEPictureStore;
+    if (b) then begin
+      tmp := Source as TZEPictureStore;
+
+      if (Count > tmp.Count) then begin
+        for i := Count - 1 downto tmp.Count do
+          Delete(i);
+      end else if (Count < tmp.Count) then begin
+        for i := Count to tmp.Count - 1 do
+          Add();
+      end;
+
+      for i := 0 to Count - 1 do
+        Items[i].Assign(tmp[i]);
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+procedure TZEPictureStore.Clear();
+var i: integer;
+begin
+  for i := Count - 1 downto 0 do
+    Delete(i);
+end;
+
+constructor TZEPictureStore.Create();
+begin
+  FItems := TList.Create();
+end;
+
+function TZEPictureStore.Delete(num: integer): boolean;
+begin
+  Result := (num >= 0) and (num < Count);
+  if (Result) then begin
+    TZEPicture(FItems[num]).Free();
+    FItems.Delete(num);
+  end;
+end;
+
+destructor TZEPictureStore.Destroy();
+begin
+  Clear();
+  FreeAndNil(FItems);
+  inherited;
+end;
+
+function TZEPictureStore.GetCount: integer;
+begin
+  Result := FItems.Count;
+end;
+
+function TZEPictureStore.GetItem(num: integer): TZEPicture;
+begin
+  Result := nil;
+  if ((num >= 0) and (num < Count)) then
+    Result := FItems[num];
+end;
+
+function TZEPictureStore.IsEqual(const Source: TPersistent): boolean;
+var tmp: TZEPictureStore;
+    i: integer;
+begin
+  Result := False;
+  if Assigned(Source) and (Source is TZEPictureStore) then begin
+    tmp := Source as TZEPictureStore;
+    Result := (Count = tmp.Count);
+    if (Result) then begin
+      for i := 0 to Count - 1 do begin
+        if (not Items[i].IsEqual(tmp[i])) then begin
+          Result := False;
+          break;
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TZEPictureStore.SetItem(num: integer; const Value: TZEPicture);
+begin
+  if ((num >= 0) and (num < FItems.Count)) then
+    TZEPicture(FItems[num]).Assign(Value);
+end;
+
+{ TZEDrawing }
+
+constructor TZEDrawing.Create();
+begin
+  inherited;
+  FPictureStore := TZEPictureStore.Create();
+end;
+
+destructor TZEDrawing.Destroy();
+begin
+  FreeAndNil(FPictureStore);
+  inherited;
+end;
+
+procedure TZEDrawing.Assign(Source: TPersistent);
+var tmp: TZEDrawing;
+    b: boolean;
+begin
+  b := Assigned(Source);
+  if (b) then begin
+    b := Source is TZEDrawing;
+    if (b) then begin
+      tmp := Source as TZEDrawing;
+
+      self.FId := tmp.FId;
+      self.FPictureStore := TZEPictureStore.Create();
+      self.FPictureStore.Assign(tmp.FPictureStore);
+    end;
+  end;
+
+  if (not b) then
+    inherited Assign(Source);
+end;
+
+function TZEDrawing.AddPictureFile(ARow, ACol: Integer; AFileName: string): TZEPicture;
+begin
+  Result := PictureStore.Add();
+  Result.AssignFromFile(AFileName);
+  Result.RelId := PictureStore.Count;
+  Result.Row := ARow;
+  Result.Col := ACol;
+  Result.CellAnchor := ZACell;
+end;
+
+function TZEDrawing.AddPictureStream(ARow, ACol: Integer; AStream: TStream): TZEPicture;
+begin
+  Result := PictureStore.Add();
+  Result.AssignFromStream(AStream);
+  Result.RelId := PictureStore.Count;
+  Result.Row := ARow;
+  Result.Col := ACol;
+  Result.CellAnchor := ZACell;
+end;
+
+function TZEDrawing.GetIsEmpty(): Boolean;
+begin
+  Result := (PictureStore.Count = 0);
+end;
+
+{$ENDIF} // ZUSE_DRAWINGS
 
 {$IFDEF FPC}
 initialization
