@@ -46,7 +46,7 @@ interface
 
 uses
   SysUtils, Classes, Types, Graphics, UITypes,
-  zeformula, zsspxml, zexmlss, zesavecommon, zeZippy
+  zeformula, zsspxml, zexmlss, zesavecommon, zeZippy , Zip
   {$IFNDEF FPC}
   ,windows
   {$ELSE}
@@ -58,6 +58,7 @@ uses
 type
   TZXLSXFileItem = record
     name: string;     //путь к файлу
+    nameArx: string;
     original: string; //исходная строка
     ftype: integer;   //тип контента
   end;
@@ -254,9 +255,18 @@ type
     property isHaveDrawings: boolean read FisHaveDrawings write FisHaveDrawings; //Is need create drawings*.xml?
   end;
 
+  TZEXMLSSHelper = class helper for TZEXMLSS
+    public
+    procedure LoadFromStream(stream: TStream);
+    procedure LoadFromFile(fileName: string);
+    procedure SaveToStream(stream: TStream);
+    procedure SaveToFile(fileName: string);
+  end;
+
 
 function ReadXSLXPath(var XMLSS: TZEXMLSS; DirName: string): integer; deprecated {$IFDEF FPC}'Use ReadXLSXPath!'{$ENDIF};
 function ReadXLSXPath(var XMLSS: TZEXMLSS; DirName: string): integer;
+function ReadXLSXFile(var XMLSS: TZEXMLSS; zipStream: TStream): integer;
 
 {$IFDEF FPC}
 function ReadXSLX(var XMLSS: TZEXMLSS; FileName: string): integer; deprecated {$IFDEF FPC}'Use ReadXLSX!'{$ENDIF};
@@ -269,13 +279,8 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
                              const SheetsNames: array of string): integer; overload;
 function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; overload;
 
-{$IFDEF FPC}
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer; overload;
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string): integer; overload;
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
-{$ENDIF}
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; zipStream: TStream; const SheetsNumbers: array of integer;
+                         const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 
 function ExportXmlssToXLSX(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string;
@@ -4610,6 +4615,312 @@ begin
   end;
 end; //ReadXLSXPath
 
+function ReadXLSXFile(var XMLSS: TZEXMLSS; zipStream: TStream): integer;
+var
+  stream: TStream;
+  FileArray: TZXLSXFileArray;
+  FilesCount: integer;
+  StrArray: TStringDynArray;
+  StrCount: integer;
+  RelationsArray: array of TZXLSXRelationsArray;
+  RelationsCounts: array of integer;
+  SheetRelations: TZXLSXRelationsArray;
+  SheetRelationsCount: integer;
+  RelationsCount: integer;
+  ThemaColor: TIntegerDynArray;
+  ThemaColorCount: integer;
+  SheetRelationNumber: integer;
+  i, j, k: integer;
+  s: string;
+  b: boolean;
+  _no_sheets: boolean;
+  RH: TZEXLSXReadHelper;
+  zip: TZipFile;
+  zipHdr: TZipHeader;
+  zfiles: TArray<string>;
+
+  function _CheckSheetRelations(const fname: string): boolean;
+  var _rstream: TStream;
+    s: string;
+    i, num: integer;
+    b: boolean;
+  begin
+    result := false;
+    _rstream := nil;
+    SheetRelationsCount := 0;
+    num := -1;
+    b := false;
+    s := '';
+    for i := length(fname) downto 1 do
+    if (fname[i] = PathDelim) then
+    begin
+      num := i;
+      s := fname;
+      insert('_rels' + PathDelim, s, num + 1);
+      s := s + '.rels';
+      if (not FileExists(s)) then
+        num := -1;
+      break;
+    end;
+
+    if (num > 0) then
+    try
+      _rstream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
+      result := ZE_XSLXReadRelationships(_rstream, SheetRelations, SheetRelationsCount, b, false);
+    finally
+      if (Assigned(_rstream)) then
+        FreeAndNil(_rstream);
+    end;
+  end; //_CheckSheetRelations
+
+  //Прочитать примечания
+  procedure _ReadComments();
+  var i, l: integer;
+    s: string;
+    b: boolean;
+    _stream: TStream;
+  begin
+    b := false;
+    s := '';
+    _stream := nil;
+    for i := 0 to SheetRelationsCount - 1 do
+    if (SheetRelations[i].ftype = 7) then
+    begin
+      s := SheetRelations[i].target;
+      b := true;
+      break;
+    end;
+
+    //Если найдены примечания
+    if (b) then
+    begin
+      l := length(s);
+      if (l >= 3) then
+        if ((s[1] = '.') and (s[2] = '.')) then
+          delete(s, 1, 3);
+      b := false;
+      for i := 0 to FilesCount - 1 do
+        if (FileArray[i].ftype = 7) then
+          if (pos(s, FileArray[i].name) <> 0) then
+            if (FileExists(FileArray[i].name)) then
+            begin
+              s := FileArray[i].name;
+              b := true;
+              break;
+            end;
+      //Если файл не найден
+      if (not b) then begin
+        s := 'xl' + PathDelim + s;
+        if (FileExists(s)) then
+          b := true;
+      end;
+
+      //Файл с примечаниями таки присутствует!
+      if (b) then
+      try
+        _stream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
+        ZEXSLXReadComments(XMLSS, _stream);
+      finally
+        if (Assigned(_stream)) then
+          FreeAndNil(_stream);
+      end;
+    end;
+  end; //_ReadComments
+
+begin
+  result := 0;
+  FilesCount := 0;
+  FileArray := nil;
+  zip := TZipFile.Create();
+
+  XMLSS.Styles.Clear();
+  XMLSS.Sheets.Count := 0;
+  stream := nil;
+  RelationsCount := 0;
+  ThemaColorCount := 0;
+  SheetRelationsCount := 0;
+  ThemaColor := nil;
+  RH := nil;
+  stream := TStream.Create();
+  try
+    zip.Open(zipStream, zmRead);
+    try
+      zip.Read('[Content_Types].xml', stream, zipHdr);
+      if (not ZEXSLXReadContentTypes(stream,  FileArray, FilesCount)) then begin
+        result := 3;
+        exit;
+      end;
+
+      FreeAndNil(stream);
+
+      ZE_XSLXReplaceDelimiter(FileArray, FilesCount);
+      SheetRelationNumber := -1;
+
+      b := false;
+      for i := 0 to FilesCount - 1 do
+      if (FileArray[i].ftype = 3) then begin
+        b := true;
+        break;
+      end;
+
+      RH := TZEXLSXReadHelper.Create();
+
+      if (not b) then begin
+        s := '/_rels/.rels';
+        if zip.IndexOf(s.Substring(1)) > -1 then begin
+          SetLength(FileArray, FilesCount + 1);
+          FileArray[FilesCount].original := s;
+          FileArray[FilesCount].name := s;
+          FileArray[FilesCount].ftype := 3;
+          inc(FilesCount);
+        end;
+
+        s := '/xl/_rels/workbook.xml.rels';
+        if zip.IndexOf(s.Substring(1)) > -1 then begin
+          SetLength(FileArray, FilesCount + 1);
+          FileArray[FilesCount].original := s;
+          FileArray[FilesCount].name := s;
+          FileArray[FilesCount].ftype := 3;
+          inc(FilesCount);
+        end;
+
+        ZE_XSLXReplaceDelimiter(FileArray, FilesCount);
+      end;
+
+      for i := 0 to FilesCount - 1 do
+      if (FileArray[i].ftype = 3) then begin
+        SetLength(RelationsArray, RelationsCount + 1);
+        SetLength(RelationsCounts, RelationsCount + 1);
+        zfiles := zip.FileNames;
+        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+        if (not ZE_XSLXReadRelationships(stream, RelationsArray[RelationsCount], RelationsCounts[RelationsCount], b, true)) then
+        begin
+          result := 4;
+          exit;
+        end;
+        if (b) then begin
+          SheetRelationNumber := RelationsCount;
+          for j := 0 to RelationsCounts[RelationsCount] - 1 do
+          if (RelationsArray[RelationsCount][j].ftype = 0) then
+            for k := 0 to FilesCount - 1 do
+            if (RelationsArray[RelationsCount][j].fileid < 0) then
+              if ((pos(RelationsArray[RelationsCount][j].target, FileArray[k].original)) > 0) then
+              begin
+                RelationsArray[RelationsCount][j].fileid := k;
+                break;
+              end;
+        end; //if
+        FreeAndNil(stream);
+        inc(RelationsCount);
+      end;
+
+      //sharedStrings.xml
+      for i:= 0 to FilesCount - 1 do
+      if (FileArray[i].ftype = 4) then begin
+        FreeAndNil(stream);
+        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+        if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then begin
+          result := 3;
+          exit;
+        end;
+        break;
+      end;
+
+      //тема (если есть)
+      for i := 0 to FilesCount - 1 do
+      if (FileArray[i].ftype = 8) then begin
+        FreeAndNil(stream);
+        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+        if (not ZEXSLXReadTheme(stream, ThemaColor, ThemaColorCount)) then
+        begin
+          result := 6;
+          exit;
+        end;
+        break;
+      end;
+
+      //стили (styles.xml)
+      for i := 0 to FilesCount - 1 do
+      if (FileArray[i].ftype = 1) then begin
+        FreeAndNil(stream);
+        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+        if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
+          result := 5;
+          exit;
+        end else
+          b := true;
+      end;
+
+      //чтение страниц
+      _no_sheets := true;
+      if (SheetRelationNumber > 0) then begin
+        for i := 0 to FilesCount - 1 do
+        if (FileArray[i].ftype = 2) then begin
+          FreeAndNil(stream);
+          zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+          if (not ZEXSLXReadWorkBook(XMLSS, stream, RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber])) then
+          begin
+            result := 3;
+            exit;
+          end;
+          break;
+        end; //if
+
+        //for i := 1 to RelationsCounts[SheetRelationNumber] do
+        XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
+        for j := 0 to RelationsCounts[SheetRelationNumber] - 1 do
+          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then begin
+            b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
+            FreeAndNil(stream);
+            zip.Read(FileArray[RelationsArray[SheetRelationNumber][j].fileid].original.Substring(1), stream, zipHdr);
+            if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+              result := result or 4;
+            if (b) then
+              _ReadComments();
+            _no_sheets := false;
+          end; //if
+      end;
+      //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
+      if (_no_sheets) then
+      for i := 0 to FilesCount - 1 do
+      if (FileArray[i].ftype = 0) then begin
+        b := _CheckSheetRelations(FileArray[i].name);
+        FreeAndNil(stream);
+        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+        if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+          result := result or 4;
+        if (b) then
+            _ReadComments();
+      end;
+    except
+      result := 2;
+    end;
+  finally
+    zip.Free();
+    if (Assigned(stream)) then
+      FreeAndNil(stream);
+
+    SetLength(FileArray, 0);
+    FileArray := nil;
+    SetLength(StrArray, 0);
+    StrArray := nil;
+    for i := 0 to RelationsCount - 1 do begin
+      Setlength(RelationsArray[i], 0);
+      RelationsArray[i] := nil;
+    end;
+    SetLength(RelationsCounts, 0);
+    RelationsCounts := nil;
+    SetLength(RelationsArray, 0);
+    RelationsArray := nil;
+    SetLength(ThemaColor, 0);
+    ThemaColor := nil;
+    SetLength(SheetRelations, 0);
+    SheetRelations := nil;
+    if (Assigned(RH)) then
+      FreeAndNil(RH);
+  end;
+end; //ReadXLSXPath
+
 {$IFDEF FPC}
 //Читает xlsx
 //INPUT
@@ -4620,7 +4931,7 @@ end; //ReadXLSXPath
 function ReadXLSX(var XMLSS: TZEXMLSS; FileName: string): integer;
 var
   i, j: integer;
-  u_zip: TUnZipper;
+  u_zip: TZipFile;
   lst: TStringList;
   ZH: TXSLXZipHelper;
   _no_sheets: boolean;
@@ -4703,12 +5014,14 @@ begin
   XMLSS.Styles.Clear();
   XMLSS.Sheets.Count := 0;
 
-  u_zip := nil;
+  u_zip := TZipFile.Create();
   lst := nil;
   ZH := nil;
 
   try
+    u_zip.Open(FileName, zmRead);
     try
+      u_zip.Read('[Content_Types].xml', );
       lst := TStringList.Create();
       lst.Clear();
       lst.Add('[Content_Types].xml'); //список файлов
@@ -4717,9 +5030,9 @@ begin
       u_zip := TUnZipper.Create();
       u_zip.FileName := FileName;
 
-      u_zip.Examine();
-      for i := 0 to u_zip.Entries.Count - 1 do
-        ZH.AddArchFile(u_zip.Entries[i].ArchiveFileName);
+//      u_zip.Examine();
+//      for i := 0 to u_zip.Entries.Count - 1 do
+//        ZH.AddArchFile(u_zip.Entries[i].ArchiveFileName);
 
       u_zip.OnCreateStream := @ZH.DoCreateOutZipStream;
       u_zip.OnDoneStream := @ZH.DoDoneOutZipStream;
@@ -4849,6 +5162,7 @@ begin
        FreeAndNil(ZH);
   end;
 end; //ReadXLSX
+
 {$ENDIF}
 
 /////////////////////////////////////////////////////////////////////////////
@@ -6933,12 +7247,18 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
-  kol, i: integer;
+  kol, i, ii: integer;
   Stream: TStream;
   _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
   s: string;
+  {$IFDEF ZUSE_DRAWINGS}
+  iDrawingsCount: Integer;
+  path_draw, path_draw_rel, path_media: string;
+  _drawing: TZEDrawing;
+  _pic: TZEPicture;
+  {$ENDIF} // ZUSE_DRAWINGS
 begin
   Result := 0;
   Stream := nil;
@@ -6992,6 +7312,10 @@ begin
       ForceDirectories(path_sheets);
 
     SetLength(_commentArray, kol);
+
+    {$IFDEF ZUSE_DRAWINGS}
+    iDrawingsCount := XMLSS.DrawingCount();
+    {$ENDIF} // ZUSE_DRAWINGS
 
     // sheets of workbook
     for i := 0 to kol - 1 do begin
@@ -7109,9 +7433,7 @@ end; //SaveXmlssToXLSXPath
 //                                          (количество элементов в двух массивах должны совпадать)
 //RETURN
 //      integer
-function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer;
-                             const SheetsNames: array of string): integer; overload;
-
+function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const SheetsNumbers: array of integer; const SheetsNames: array of string): integer; overload;
 begin
   result := SaveXmlssToXLSXPath(XMLSS, PathName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
 end; //SaveXmlssToXLSXPath
@@ -7128,7 +7450,7 @@ begin
   result := SaveXmlssToXLSXPath(XMLSS, PathName, [], []);
 end; //SaveXmlssToXLSXPath
 
-{$IFDEF FPC}
+
 //Сохраняет документ в формате Open Office XML (xlsx)
 //INPUT
 //  var XMLSS: TZEXMLSS                   - хранилище
@@ -7141,24 +7463,28 @@ end; //SaveXmlssToXLSXPath
 //      BOM: ansistring                   - Byte Order Mark
 //RETURN
 //      integer
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers:array of integer;
+function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; zipStream: TStream; const SheetsNumbers: array of integer;
                          const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 var
   _pages: TIntegerDynArray; // numbers of sheets
   _names: TStringDynArray;  // names of sheets
   kol, i: integer;
-  zip: TZipper;
+  zip: TZipFile;// TZipper;
   Stream: array of TStream;
   StreamCount: integer;
   MaxStreamCount: integer;
   _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   _commentArray: TIntegerDynArray;
+  {$IFDEF ZUSE_DRAWINGS}
+  iDrawingsCount: Integer;
+  path_draw, path_draw_rel: string;
+  {$ENDIF} // ZUSE_DRAWINGS
 
   procedure _AddFile(const _fname: string);
   begin
     Stream[StreamCount - 1].Position := 0;
-    zip.Entries.AddFileEntry(Stream[StreamCount - 1], _fname);
+    zip.Add(Stream[StreamCount - 1], _fname);
   end;
 
   procedure _AddStream();
@@ -7179,6 +7505,7 @@ begin
   StreamCount := 0;
   MaxStreamCount := -1;
   _WriteHelper := nil;
+  zip := TZipFile.Create();
   try
 
     if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then begin
@@ -7188,8 +7515,7 @@ begin
 
     _WriteHelper := TZEXLSXWriteHelper.Create();
 
-    zip := TZipper.Create();
-    zip.FileName := FileName;
+    zip.Open(zipStream, zmReadWrite);
 
     path_xl := 'xl/';
 
@@ -7279,7 +7605,7 @@ begin
     ZEXLSXCreateDocPropsCore(XMLSS, Stream[StreamCount - 1], TextConverter, CodePageName, BOM);
     _AddFile(path_docprops + 'core.xml');
 
-    zip.ZipAllFiles();
+    //zip. ZipAllFiles();
   finally
     ZESClearArrays(_pages, _names);
     if (Assigned(zip)) then
@@ -7294,37 +7620,10 @@ begin
     SetLength(Stream, 0);
     Stream := nil;
     FreeAndNil(_WriteHelper);
+    zip.Free();
   end;
   Result := 0;
 end; //SaveXmlssToXSLX
-
-//Сохраняет документ в формате Open Office XML (xlsx)
-//INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      FileName: string                  - имя файла для сохранения
-//  const SheetsNumbers:array of integer  - массив номеров страниц в нужной последовательности
-//  const SheetsNames: array of string    - массив названий страниц
-//                                          (количество элементов в двух массивах должны совпадать)
-//RETURN
-//      integer
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string; const SheetsNumbers: array of integer;
-                         const SheetsNames: array of string): integer; overload;
-begin
-  result := SaveXmlssToXLSX(XMLSS, FileName, SheetsNumbers, SheetsNames, ZEGetDefaultUTF8Converter(), 'UTF-8', '');
-end; //SaveXmlssToXLSX
-
-//Сохраняет документ в формате Open Office XML (xlsx)
-//INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//      FileName: string                  - имя файла для сохранения
-//RETURN
-//      integer
-function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; FileName: string): integer; overload;
-begin
-  result := SaveXmlssToXLSX(XMLSS, FileName, [], []);
-end; //SaveXmlssToXLSX
-
-{$ENDIF}
 
 //Перепутал малость названия ^_^
 
@@ -7333,11 +7632,38 @@ begin
   result := ReadXLSXPath(XMLSS, DirName);
 end;
 
-{$IFDEF FPC}
-function ReadXSLX(var XMLSS: TZEXMLSS; FileName: string): integer; //deprecated 'Use ReadXLSX!';
+{ TZEXMLSSHelper }
+
+procedure TZEXMLSSHelper.LoadFromFile(fileName: string);
+var stream: TFileStream;
 begin
-  result := ReadXLSX(XMLSS, FileName);
+    stream := TFileStream.Create(fileName, fmOpenRead or fmShareDenyNone);
+    try
+        LoadFromStream(stream);
+    finally
+        stream.Free();
+    end;
 end;
-{$ENDIF}
+
+procedure TZEXMLSSHelper.LoadFromStream(stream: TStream);
+begin
+    ReadXLSXFile(self, stream);
+end;
+
+procedure TZEXMLSSHelper.SaveToFile(fileName: string);
+var stream: TFileStream;
+begin
+    stream := TFileStream.Create(fileName, fmCreate or fmOpenReadWrite);
+    try
+        SaveToStream(stream);
+    finally
+        stream.Free();
+    end;
+end;
+
+procedure TZEXMLSSHelper.SaveToStream(stream: TStream);
+begin
+    SaveXmlssToXLSX(self, stream, [], [], nil, 'UTF-8');
+end;
 
 end.
