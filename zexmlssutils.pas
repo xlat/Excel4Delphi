@@ -1,35 +1,10 @@
-﻿//****************************************************************
-// zexmlssutils  (Z Excel XML SpreadSheet Utils)
-// Различные дополнительные утилитки для ZEXMLSS
-// Накалякано в Мозыре в 2009 году
-// Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
-// e-mail: avemey(мяу)tut(точка)by
-// URL:    http://avemey.com
-// Ver:    0.0.11
-// Лицензия: zlib
-// Last update: 2016.09.10
-//----------------------------------------------------------------
-// This software is provided "as-is", without any express or implied warranty.
-// In no event will the authors be held liable for any damages arising from the
-// use of this software.
-//****************************************************************
-unit zexmlssutils;
+﻿unit zexmlssutils;
 
 interface
 
-{$I zexml.inc}
-{$I compver.inc}
-
-{$IFDEF FPC}
-  {$mode objfpc}{$H+}
-{$ENDIF}
-
 uses
-  {$IFNDEF FPC}
-  Windows,
-  {$ENDIF}
-  SysUtils, UITypes, Types, Classes, Grids, Math, zexmlss, zsspxml, zesavecommon,
-  graphics;
+  Windows, SysUtils, UITypes, Types, Classes, Grids, Math, Graphics,
+  zexmlss, zsspxml, zesavecommon;
 
 /// <summary>
 /// Сохраняет страницу TZEXMLSS в поток в формате HTML

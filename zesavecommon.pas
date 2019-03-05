@@ -1,25 +1,6 @@
-﻿//****************************************************************
-// Common routines for saving and loading data
-// Author:  Ruslan V. Neborak
-// e-mail:  avemey@tut.by
-// URL:     http://avemey.com
-// License: zlib
-// Last update: 2016.09.10
-//----------------------------------------------------------------
-// This software is provided "as-is", without any express or implied warranty.
-// In no event will the authors be held liable for any damages arising from the
-// use of this software.
-
-unit zesavecommon;
+﻿unit zesavecommon;
 
 interface
-
-{$I zexml.inc}
-{$I compver.inc}
-
-{$IFDEF FPC}
-  {$mode objfpc}{$H+}
-{$ENDIF}
 
 uses
   SysUtils, Types, zexmlss, zsspxml;
@@ -52,9 +33,6 @@ procedure ZESClearArrays(var _pages: TIntegerDynArray;  var _names: TStringDynAr
 //Переводит строку в boolean
 function ZEStrToBoolean(const val: string): boolean;
 
-//Проверяет, есть ли папка такая. Если путь не заканчивается на разделитель директории - добавляет в конец.
-function ZE_CheckDirExist(var DirName: string): boolean;
-
 //Заменяет в строке последовательности на спецсимволы
 function ZEReplaceEntity(const st: string): string;
 
@@ -69,37 +47,10 @@ function ZENormalizeAngle90(const value: TZCellTextRotate): integer;
 /// </summary>
 function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 
-/// <summary>
-/// Trying to convert string like "n%" to integer
-/// </summary>
-function TryStrToIntPercent(s: string; out Value: integer): boolean;
-
-//Get DateTime from XML scheme 2 duration string
-//see https://www.w3.org/TR/xmlschema-2/#duration
-//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
-//INPUT
-//     const APTTime: string - string in PT format
-//RETURN
-//      TDateTime - calculated datetime
-function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
-
-//Get XML schema 2 duration string from TDateTime
-//see https://www.w3.org/TR/xmlschema-2/#duration
-//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
-//INPUT
-//     const ADateTime: TDateTime - datetime
-//RETURN
-//      string
-function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
-
-const ZELibraryVersion = '0.0.15';
-      ZELibraryFork = '';//'Arioch';  // or empty str   // URL ?
-
 implementation
 
 uses
-  dateutils //IncHour etc
-  ;
+  DateUtils;
 
 // despite formal angle datatype declaration in default "range check off" mode
 //    it can be anywhere -32K to +32K
@@ -215,29 +166,6 @@ begin
   end;
 end; //ZEReplaceEntity
 
-
-//Проверяет, есть ли папка такая. Если путь не заканчивается на разделитель директории - добавляет в конец.
-//INPUT
-//  var DirName: string - путь
-//RETURN
-//      boolean - true - OK
-function ZE_CheckDirExist(var DirName: string): boolean;
-var
-  n: integer;
-
-begin
-  result := true;
-  n := length(DirName);
-  if (n > 0) then
-  begin
-    if (DirName[n] <> PathDelim) then
-      DirName := DirName + PathDelim;
-  end;
-
-  if (not DirectoryExists(DirName)) then
-    result := false;
-end; //__CheckDirExist
-
 //Переводит строку в boolean
 //INPUT
 //  const val: string - переводимая строка
@@ -257,15 +185,9 @@ begin
   result := valueIfError;
   if (st > '') then
   begin
-    {$IFDEF DELPHI_UNICODE}
     if (CharInSet(st[1], ['T', 't', '1', '-'])) then
       result := true
     else if (CharInSet(st[1], ['F', 'f', '0'])) then
-    {$ELSE}
-    if (st[1] in ['T', 't', '1', '-']) then
-      result := true
-    else if (st[1] in ['F', 'f', '0']) then
-    {$ENDIF}
       result := false
     else
       result := valueIfError;
@@ -294,16 +216,8 @@ begin
   begin
     s := '';
     for i := 1 to length(st) do
-      {$IFDEF DELPHI_UNICODE}
       if (CharInSet(st[i], ['.', ','])) then
-      {$ELSE}
-      if (st[i] in ['.', ',']) then
-      {$ENDIF}
-        {$IFDEF Z_USE_FORMAT_SETTINGS}
         s := s + FormatSettings.DecimalSeparator
-        {$ELSE}
-        s := s + DecimalSeparator
-        {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];
 
@@ -324,16 +238,8 @@ begin
   if (trim(st) <> '') then begin
     s := '';
     for i := 1 to length(st) do
-      {$IFDEF DELPHI_UNICODE}
       if (CharInSet(st[i], ['.', ','])) then
-      {$ELSE}
-      if (st[i] in ['.', ',']) then
-      {$ENDIF}
-        {$IFDEF Z_USE_FORMAT_SETTINGS}
         s := s + FormatSettings.DecimalSeparator
-        {$ELSE}
-        s := s + DecimalSeparator
-        {$ENDIF}
       else if (st[i] <> ' ') then
         s := s + st[i];
       try
@@ -543,148 +449,5 @@ begin
   ZECorrectTitles(_names);
   result := true;
 end; //ZECheckTablesTitle
-
-//Trying to convert string like "n%" to integer
-//INPUT
-//      s: string     - input string
-//  out Value: integer  - returned value
-//RETURN
-//      boolean - true - Ok
-function TryStrToIntPercent(s: string; out Value: integer): boolean;
-var l: integer;
-begin
-  l := length(s);
-  if (l > 1) then
-    if (s[l] = '%') then
-      Delete(s, l, 1);
-  result := TryStrToInt(s, Value);
-end; //TryStrToIntPercent
-
-//Get XML schema 2 duration string from TDateTime
-//see https://www.w3.org/TR/xmlschema-2/#duration
-//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
-//INPUT
-//     const ADateTime: TDateTime - datetime
-//RETURN
-//      string
-function ZEDateTimeToPTDurationStr(const ADateTime: TDateTime): string;
-var
-  _t: TDateTime;
-  _h: integer;
-  _min: integer;
-  _sec: integer;
-  _msec: integer;
-begin
-  _h := HoursBetween(ADateTime, 0);
-  _t := IncHour(0, _h);
-
-  _min := MinutesBetween(ADateTime, _t);
-  _t := IncMinute(_t, _min);
-
-  _sec := SecondsBetween(ADateTime, _t);
-  _t := IncSecond(_t, _sec);
-
-  _msec := MilliSecondsBetween(ADateTime, _t);
-
-  Result := 'PT' + IntToStr(_h) + 'H' +
-            IntToStr(_min) + 'M' +
-            ZEFloatSeparator(FloatToStr(_sec + _msec / 1000)) + 'S'
-            ;
-end; //ZEDateTimeToPTDurationStr
-
-//Get DateTime from XML schema 2 duration string
-//see https://www.w3.org/TR/xmlschema-2/#duration
-//  example: PT537199H55M05.123000219S = 1961.04.12 7:55:05.123
-//INPUT
-//     const APTTime: string - string in PT format
-//RETURN
-//      TDateTime - calculated datetime
-function ZEPTDateDurationToDateTime(const APTTime: string): TDateTime;
-var
-  i: integer;
-  l: integer;
-  s: string;
-  _y: integer;
-  _m: integer;
-  _d: integer;
-  _h: integer;
-  _min: integer;
-  _sec: integer;
-  _msec: integer;
-  _t: double;
-  _ch: char;
-  _isTime: boolean;
-
-  procedure _CheckSeconds();
-  begin
-    _t := ZETryStrToFloat(s, 0);
-    _sec := trunc(_t);
-    _msec := Round(frac(_t) * 1000);
-    s := '';
-  end; //_CheckSeconds
-
-  function _GetIntPart(): integer;
-  begin
-    if (not TryStrToInt(s, Result)) then
-      Result := 0;
-    s := '';
-  end; //_GetIntPart
-
-begin
-  Result := 0;
-  _y := 0;
-  _m := 0;
-  _d := 0;
-  _h := 0;
-  _min := 0;
-  _sec := 0;
-  _msec := 0;
-  s := '';
-  _isTime := false;
-
-  l := length(APTTime);
-  for i := 1 to l do
-  begin
-    _ch := APTTime[i];
-    case (_ch) of
-      'P', 'p': s := '';
-      'Y', 'y':
-           _y := _GetIntPart();
-      'D', 'd':
-           _d := _GetIntPart();
-      'T', 't':
-          begin
-            _isTime := true;
-            s := '';
-          end;
-      'H', 'h':
-           _h := _GetIntPart();
-      'M', 'm':
-          if (_isTime) then
-            _min := _GetIntPart()
-          else
-            _m := _GetIntPart();
-      'S', 's':
-          _checkSeconds();
-      else
-        s := s + _ch;
-    end; //case
-  end; // for i
-
-  if (_y <> 0) then
-    Result := IncYear(Result, _y);
-  if (_m <> 0) then
-    Result := IncMonth(Result, _m);
-  if (_d <> 0) then
-    Result := IncDay(Result, _d);
-  if (_h <> 0) then
-    Result := IncHour(Result, _h);
-  if (_min <> 0) then
-    Result := IncMinute(Result, _min);
-  if (_sec <> 0) then
-    Result := IncSecond(Result, _sec);
-  if (_msec <> 0) then
-    Result := IncMilliSecond(Result, _msec);
-end; //ZEPTDateDurationToDateTime
 
 end.

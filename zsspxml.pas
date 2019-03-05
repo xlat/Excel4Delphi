@@ -1,35 +1,9 @@
-﻿//****************************************************************
-// zsspxml: XML reader
-// Накалякано в Мозыре в 2009 году
-// Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
-// e-mail: avemey(мяу)tut(точка)by
-// URL:    http://avemey.com
-// Ver:    0.0.7
-// Лицензия: zlib
-// Last update: 2014.07.20
-//----------------------------------------------------------------
-// This software is provided "as-is", without any express or implied warranty.
-// In no event will the authors be held liable for any damages arising from the
-// use of this software.
-//****************************************************************
-unit zsspxml;
+﻿unit zsspxml;
 
 interface
 
-{$I zexml.inc}
-{$I compver.inc}
-
-{$IFDEF FPC}
-  {$mode objfpc}{$H+}
-{$ENDIF}
-
-
 uses
-  SysUtils, classes
-  {$IFDEF VER130}, sysd7 {$ENDIF}
-  {$IFDEF USELCONVENCODING}
-  , LConvEncoding
-  {$ENDIF};
+  SysUtils, classes;
 
 const
   BOMUTF8    = #239#187#191; // EF BB BF
@@ -73,17 +47,17 @@ type
     destructor Destroy(); override;
     procedure Add(const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
     procedure Add(const Attr: TZAttrArray; TestMatch: boolean = true); overload;
-    procedure Add(Att: array of TZAttrArray; TestMatch: boolean {$IFDEF VER130} {$ELSE}= true {$ENDIF}); overload;
+    procedure Add(Att: array of TZAttrArray; TestMatch: boolean = true); overload;
     procedure Assign(Source: TPersistent); override;
     procedure Clear();
     procedure DeleteItem(Index: integer);
     procedure Insert(Index: integer; const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
     procedure Insert(Index: integer; const Attr: TZAttrArray; TestMatch: boolean = true); overload;
-    function ToString(quote: ansichar; CheckEntity: boolean; addempty: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
-    function ToString(quote: ansichar; CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
-    function ToString(quote: ansichar): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
-    function ToString(CheckEntity: boolean): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload; virtual;
-    function ToString(): ansistring; {$IFDEF DELPHI_UNICODE} reintroduce; {$ENDIF} overload;  {$IFDEF Z_FPC_USE_TOSTRING} override; {$ELSE} virtual; {$ENDIF}
+    function ToString(quote: ansichar; CheckEntity: boolean; addempty: boolean): ansistring; reintroduce; overload; virtual;
+    function ToString(quote: ansichar; CheckEntity: boolean): ansistring; reintroduce; overload; virtual;
+    function ToString(quote: ansichar): ansistring; reintroduce; overload; virtual;
+    function ToString(CheckEntity: boolean): ansistring; reintroduce; overload; virtual;
+    function ToString(): ansistring; reintroduce; overload; virtual;
     function IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
     property Count: integer read FCount;
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
@@ -160,7 +134,7 @@ type
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray); overload;
     procedure WriteTag(const TagName: ansistring; const Text: ansistring); overload;
     procedure WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
-    procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean {$IFDEF VER130}{$ELSE} = true{$ENDIF}); overload;
+    procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
     procedure WriteTagNode(const TagName: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
     procedure WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes); overload;
     procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray); overload;
@@ -291,7 +265,6 @@ type
   end;
 
 //для Delphi >=2009
-  {$IFDEF DELPHI_UNICODE}
   TZAttrArrayH = array [0..1] of string;
   //Класс-обёртка-костыль для атрибутов над TZAttributes
   TZAttributesH = class(TPersistent)
@@ -455,12 +428,6 @@ type
     property QuotesEqual: boolean read GetQuotesEqual write SetQuotesEqual;
   end;
 
-  {$ELSE}
-  TZAttrArrayH = TZAttrArray;
-  TZAttributesH = TZAttributes;
-  TZsspXMLWriterH = TZsspXMLWriter;
-  TZsspXMLReaderH = TZsspXMLReader;
-  {$ENDIF}
 //конец для Delphi >=2009
 
 //Читатали
@@ -480,25 +447,18 @@ function conv_WIN1251ToLocal(const Text: ansistring): ansistring;
 function conv_CP866ToLocal(const Text: ansistring): ansistring;
 
 //заменяет в строке спецсимволы
-function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistring; {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
-{$IFDEF DELPHI_UNICODE}
+function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistring; overload;
 function CheckStrEntity(const st: string; checkamp: boolean = true): string; overload;
-{$ENDIF}
-
 function ClenuapXmlTagValue(const str: string): string;
 
 //проверяем на корректность сущность (не факт, что валидную), в случае
 //чего заменяем '&' на '&amp;'
-procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring); {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
-{$IFDEF DELPHI_UNICODE}
+procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring); overload;
 procedure Correct_Entity(const _St: string; num: integer; var _result: string); overload;
-{$ENDIF}
 
 //Добавляет аттрибут
-function ToAttribute(const AttrName: ansistring; const Value: ansistring): TZAttrArray; {$IFDEF DELPHI_UNICODE} overload; {$ENDIF}
-{$IFDEF DELPHI_UNICODE}
+function ToAttribute(const AttrName: ansistring; const Value: ansistring): TZAttrArray; overload;
 function ToAttribute(const AttrName: string; const Value: string): TZAttrArrayH; overload;
-{$ENDIF}
 
 
 //Распознаёт кодировку XML и HTML текста
@@ -510,17 +470,39 @@ function RecognizeBOM(var txt: ansistring): integer;
 //Распознаёт кодировку XML и HTML текста вместе с BOM
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
-//Получить дефолтный UTF8 конвертер
-function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
-
 implementation
 
-{$IFDEF DELPHI_UNICODE}
-uses
-  duansistr;
-{$ENDIF}
-
 //// читатели
+
+function DUAnsiPos(const Substr: ansistring; const S: ansistring): integer;
+var
+  i, j: integer;
+  kol_str: integer;
+  kol_sub: integer;
+  b: boolean;
+begin
+  kol_str := Length(s);
+  kol_sub := Length(substr);
+  result := 0;
+  if (kol_sub = 0) then
+    exit;
+  for i := 1 to kol_str - kol_sub + 1 do
+    if (s[i] = Substr[1]) then
+    begin
+      b := true;
+      for j := 2 to kol_sub do
+        if (s[i + j - 1] <> Substr[j]) then
+        begin
+          b := false;
+          break;
+        end;
+      if (b) then
+      begin
+        result := i;
+        break;
+      end;
+    end;
+end;
 
 procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 var
@@ -682,43 +664,16 @@ begin
   end;
 end;
 
-{$IFDEF FPC}
-//конвертеры для FPC (работает с UTF-8)
-
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
 begin
   result := Text;
 end;
-
-{$IFDEF USELCONVENCODING}
-function conv_UTF16LEToLocal(const Text: ansistring): ansistring;
-begin
-  result := UCS2LEToUTF8(Text)
-end;
-
-function conv_UTF16BEToLocal(const Text: ansistring): ansistring;
-begin
-  result := UCS2BEToUTF8(Text);
-end;
-
-function conv_WIN1251ToLocal(const Text: ansistring): ansistring;
-begin
-  result := CP1251ToUTF8(Text);
-end;
-
-function conv_CP866ToLocal(const Text: ansistring): ansistring;
-begin
-  result := CP866ToUTF8(Text);
-end;
-
-{$ELSE}
 
 function conv_UTF16LEToLocal(const Text: ansistring): ansistring;
 var
   ws: WideString;
   w: word;
   i, l: integer;
-
 begin
   ws := '';
   i := 2;
@@ -731,7 +686,7 @@ begin
     ws := ws +  WideChar(w);
     inc(i, 2);
   end;
-  result := utf8encode(WS);
+  result := UTF8Encode(PWideChar(WS));
 end;
 
 function conv_UTF16BEToLocal(const Text: ansistring): ansistring;
@@ -752,93 +707,7 @@ begin
     ws := ws +  WideChar(w);
     inc(i, 2);
   end;
-  result := utf8encode(WS);
-end;
-
-function conv_WIN1251ToLocal(const Text: ansistring): ansistring;
-begin
-  {tut} //не забыть переделать!
-  result := AnsiToUtf8(Text);
-end;
-
-function conv_CP866ToLocal(const Text: ansistring): ansistring;
-begin
-  result := conv_WIN1251ToLocal(CP866ToWin1251(Text));
-end;
-
-{$ENDIF}
-
-function conv_UTF32LEToLocal(const Text: ansistring): ansistring;
-begin
-  result := Text;
-end;
-
-function conv_UTF32BEToLocal(const Text: ansistring): ansistring;
-begin
-  result := Text;
-end;
-
-
-{$ELSE}
-//Для  Delphi
-
-function conv_UTF8ToLocal(const Text: ansistring): ansistring;
-begin
-  {$IFNDEF DELPHI_UNICODE}
-  result := Utf8ToAnsi(Text);
-  {$ELSE}
-  result := Text;
-  {$ENDIF}
-end;
-
-function conv_UTF16LEToLocal(const Text: ansistring): ansistring;
-var
-  ws: WideString;
-  w: word;
-  i, l: integer;
-
-begin
-  ws := '';
-  i := 2;
-  {tut}// что делать, если длина не кратна 2?
-  l := length(Text);
-  while i <= l do
-  begin
-    w := ord(Text[i]) shl 8;
-    w := w + ord(Text[i - 1]);
-    ws := ws +  WideChar(w);
-    inc(i, 2);
-  end;
-  {$IFNDEF DELPHI_UNICODE}
-  result := WideCharToString(PwideChar(WS));
-  {$ELSE}
   result := UTF8Encode(PWideChar(WS));
-  {$ENDIF}
-end;
-
-function conv_UTF16BEToLocal(const Text: ansistring): ansistring;
-var
-  ws: WideString;
-  w: word;
-  i, l: integer;
-
-begin
-  ws := '';
-  i := 2;
-  {tut}// что делать, если длина не кратна 2?
-  l := length(Text);
-  while i <= l do
-  begin
-    w := ord(Text[i - 1]) shl 8;
-    w := w + ord(Text[i]);
-    ws := ws +  WideChar(w);
-    inc(i, 2);
-  end;
-  {$IFNDEF DELPHI_UNICODE}
-  result := WideCharToString(PwideChar(WS));
-  {$ELSE}
-  result := UTF8Encode(PWideChar(WS));
-  {$ENDIF}
 end;
 
 function conv_UTF32LEToLocal(const Text: ansistring): ansistring;
@@ -860,7 +729,6 @@ function conv_CP866ToLocal(const Text: ansistring): ansistring;
 begin
   result := CP866ToWin1251(Text);
 end;
-{$ENDIF}
 ///////////////////////////
 
 //Добавляет аттрибут
@@ -870,13 +738,11 @@ begin
   result[1] := Value;
 end;
 
-{$IFDEF DELPHI_UNICODE}
 function ToAttribute(const AttrName: string; const Value: string): TZAttrArrayH;
 begin
   result[0] := AttrName;
   result[1] := Value;
 end;
-{$ENDIF}
 
 //проверяем на корректность сущность (не факт, что валидную), в случае
 //чего заменяем '&' на '&amp;'
@@ -905,7 +771,6 @@ begin
     _result := _result + '&amp;';
 end;
 
-{$IFDEF DELPHI_UNICODE}
 procedure Correct_Entity(const _St: string; num: integer; var _result: string);
 var
   b: boolean;
@@ -930,7 +795,6 @@ begin
   else
     _result := _result + '&amp;';
 end;
-{$ENDIF}
 
 //заменяет в строке спецсимволы
 //INPUT
@@ -976,7 +840,6 @@ begin
     ;
 end;
 
-{$IFDEF DELPHI_UNICODE}
 //заменяет в строке спецсимволы
 //INPUT
 //      St: string - исходная строка
@@ -1009,21 +872,6 @@ begin
     end;
   end;
 end; //CheckStrEntity
-{$ENDIF}
-
-//Получить дефолтный UTF8 конвертер
-function ZEGetDefaultUTF8Converter(): TAnsiToCPConverter;
-begin
-  {$IFDEF FPC}
-  result := nil;
-  {$ELSE}
-    {$IFDEF DELPHI_UNICODE}
-  result := nil;
-    {$ELSE}
-  result := @AnsiToUtf8;
-    {$ENDIF}
-  {$ENDIF}
-end; //ZEGetDefaultUTF8Converter
 
 //Возвращает номер кодировки по его названию (UPCASE не забываем!)
 //INPUT
@@ -1182,19 +1030,11 @@ begin
       s := s + UpCase(txt[i]);
   //XML?
   //todo: надо как-то определить, не php-ли это
-  {$IFDEF DELPHI_UNICODE}
   _l := DUAnsiPos(UTF8Encode('?>'), s);
-  {$ELSE}
-  _l := ansipos('?>', s);
-  {$ENDIF}
   if _l <> 0 then
   begin
     ftype := 1;
-    {$IFDEF DELPHI_UNICODE}
     _f := DUAnsiPos(UTF8Encode('ENCODING'), s);
-    {$ELSE}
-    _f := pos('ENCODING', s);
-    {$ENDIF}
     if (_f < _l) and (_f > 0) then
     begin
       _kol := 0;
@@ -1219,26 +1059,14 @@ begin
   //HTML?
   if ftype = 0 then
   begin
-    {$IFDEF DELPHI_UNICODE}
     _f := DUAnsiPos(UTF8Encode('CHARSET'), s);
-    {$ELSE}
-    _f := pos('CHARSET', s);
-    {$ENDIF}
     if _f > 0 then
     begin
-      {$IFDEF DELPHI_UNICODE}
       _l := DUAnsiPos(UTF8Encode('>'), s); //tut
-      {$ELSE}
-      _l := pos('>', s); //tut
-      {$ENDIF}
       while (_l < _f) and (_l > 0) do
       begin
         s[_l] := '"';
-        {$IFDEF DELPHI_UNICODE}
         _l := DUAnsiPos(UTF8Encode('>'), s);
-        {$ELSE}
-        _l := pos('>', s);
-        {$ENDIF}
       end;
       //наверное это HTML
       if (_l > _f) then
@@ -1551,7 +1379,7 @@ end;
 //           AttrArray: array of TZAttrArray  - масссив атрибутов
 //           TestMatch: boolean - если true, проверяет на AttrName на совпадение с ранее
 //                                введёнными, если совпадает, меняет значение, иначе добавляет
-procedure TZAttributes.Add(Att: array of TZAttrArray; TestMatch: boolean {$IFDEF VER130} {$ELSE}= true {$ENDIF});
+procedure TZAttributes.Add(Att: array of TZAttrArray; TestMatch: boolean = true);
 var
   i: integer;
 
@@ -1797,7 +1625,6 @@ var
 begin
   if CorrectCDATA then
   begin
-    {$IFDEF DELPHI_UNICODE}
     p := DUAnsiPos(']]>', CDATA);
     while p <> 0 do
     begin
@@ -1805,15 +1632,6 @@ begin
       insert(']]&gt;', CDATA, p);
       p := DUAnsiPos(']]>', CDATA);
     end;
-    {$ELSE}
-    p := pos(']]>', CDATA);
-    while p <> 0 do
-    begin
-      delete(CDATA, p, 3);
-      insert(']]&gt;', CDATA, p);
-      p := pos(']]>', CDATA);
-    end;
-    {$ENDIF}
   end;
   _AddTag('<![CDATA[', CDATA, ']]>', StartNewLine);
 end;
@@ -2137,7 +1955,7 @@ end;
 //           CloseTagNewLine: boolean   - начинать закрывающий тэг с новой строки
 //                                        игнорируется, если NewLine = false)
 //           CheckEntity: boolean       - проверять и корректировать спецсимволы
-procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean{$IFDEF VER130}{$ELSE} = true{$ENDIF} );
+procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 var
   t: TZAttributes;
 
@@ -2734,11 +2552,7 @@ begin
       1:
         begin
           FCharReader := @ReadCharUTF8;
-          {$IFDEF FPC}
-          FCharConverter := nil; 
-          {$ELSE}
           FCharConverter := @conv_UTF8ToLocal;
-          {$ENDIF}
           if BOM = 1 then self.FPFirst := 4;
         end;
       2:
@@ -2806,8 +2620,8 @@ begin
 end;
 
 //Читает тэг
-//return:       true - какие-то замечания при чтении (подробнее - ErrorCode)
-//              false - всё нормально
+//return: true - какие-то замечания при чтении (подробнее - ErrorCode)
+//        false - всё нормально
 function TZsspXMLReader.ReadTag(): boolean;
 var
   Ch: ansistring;
@@ -2822,7 +2636,7 @@ var
   procedure _get_char();
   begin
     if assigned(FCharReader) then
-      FCharReader({$IFDEF FPC}@{$ENDIF}GetOneChar, Ch,  err)
+      FCharReader(GetOneChar, Ch,  err)
     else
       GetOneChar(Ch, err);
     if err then exit;
@@ -3040,11 +2854,7 @@ var
                     _type_comment := 1;
                     FValue := FValue + ss;
                   end else
-                    {$IFDEF DELPHI_UNICODE}
                     s := s + UTF8Encode(UpperCase(UTF8ToString(AnsiString(ss[1]))));
-                    {$ELSE}
-                    s := s + UpperCase(ss[1]);
-                    {$ENDIF}
                 end else
                 if _tmp = 7 then
                 begin
@@ -3061,11 +2871,7 @@ var
                   //FValue := FValue + ss;
                 end else
                 begin
-                  {$IFDEF DELPHI_UNICODE}
                   s := s + UTF8Encode(UpperCase(UTF8ToString(AnsiString(ss[1]))));
-                  {$ELSE}
-                  s := s + UpperCase(ss[1]);
-                  {$ENDIF}
                   sl := sl + ss[1];
                 end;
               end;
@@ -3323,11 +3129,7 @@ begin
   end;
   if IgnoreCase then
   begin
-    {$IFDEF DELPHI_UNICODE}
     if (AnsiUpperCase(UTF8ToString(TagName)) = AnsiUpperCase(UTF8ToString(Tags[TagCount - 1]))) then
-    {$ELSE}
-    if (AnsiUpperCase(TagName) = AnsiUpperCase(Tags[TagCount - 1])) then
-    {$ENDIF}
       b := true;
   end else
   begin
@@ -3343,9 +3145,6 @@ end;
 ////////////////////////////////////////////////////////////////////////////////
 /////                   тут начинются костыли                              /////                              
 ////////////////////////////////////////////////////////////////////////////////
-
-//для Delphi >=2009
-{$IFDEF DELPHI_UNICODE}
 
 ////////////////////////////////////////////////////////////////////////////////
 //// TZAttributesH - атрибуты для тэгов (почему постфикс H? Потому, что Helper
@@ -4012,8 +3811,6 @@ function TZsspXMLReaderH.Eof(): boolean;
 begin
   result := FXMLReader.Eof();
 end;
-
-{$ENDIF}
 
 ////////////////////////////////////////////////////////////////////////////////
 /////                   тут костыли заканчиваются                          /////

@@ -1,42 +1,10 @@
-﻿//****************************************************************
-// ZEXMLSS  (Z Excel XML SpreadSheet) - невизуальный компонент,
-// предназначенный для сохранения данных в формате excel xml.
-// Накалякано в Мозыре в 2009 году
-// Автор:  Неборак Руслан Владимирович (Ruslan V. Neborak)
-// e-mail: avemey(мяу)tut(точка)by
-// URL:    http://avemey.com
-// Ver:    0.0.8
-// Лицензия: zlib
-// Last update: 2015.01.24
-//----------------------------------------------------------------
-// This software is provided "as-is", without any express or implied warranty.
-// In no event will the authors be held liable for any damages arising from the
-// use of this software.
-//****************************************************************
-unit zexmlss;
-
-{$I zexml.inc}
-{$I compver.inc}
-
-{$IFDEF FPC}
-  {$mode objfpc}{$H+}
-{$ENDIF}
+﻿unit zexmlss;
 
 interface
 
-// т.к. в Delphi 5 нету таких полезных функций как AnsiToUtf8 и Utf8ToAnsi
-// подключаем sysd7.
-// VER130 - Borland Delphi 5.0
 uses
-  classes, Sysutils, graphics, UITypes, Math,
-  {$IFNDEF FPC}
-  windows,
-  {$ELSE}
-  LCLType,
-  LResources,
-  {$ENDIF}
-  zsspxml
-  ;
+  Classes, Sysutils, Graphics, UITypes, Math, Windows,
+  zsspxml;
 
 var ZE_XLSX_APPLICATION: string;
 
@@ -45,7 +13,6 @@ const _PointToMM: real = 0.3528;  // 1 типографский пункт = 0.3
 type
   //тип данных ячейки
   TZCellType = (ZENumber, ZEDateTime, ZEBoolean, ZEString, ZEError, ZEGeneral);
-      const ZEAnsiString = ZEString deprecated {$IFDEF USE_DEPRECATED_STRING}'use ZEString'{$ENDIF}; // backward compatibility
 type
   //Стиль начертания линий рамки ячейки
   TZBorderType = (ZENone, ZEContinuous, ZEHair, ZEDot, ZEDash, ZEDashDot, ZEDashDotDot, ZESlantDashDot, ZEDouble);
@@ -389,12 +356,7 @@ type
   public
     procedure Assign(Source: TPersistent); override;
     constructor Create(const owner: TZSheet; const ForColumns: boolean);
-
-    function ToString: string;
-    {$IfDef Delphi_Unicode} override; {$EndIf}
-    {$IFDEF Z_FPC_USE_TOSTRING} override; {$ENDIF}
-// introduced in D2009 according to http://blog.marcocantu.com/blog/6hidden_delphi2009.html
-// introduced don't know when in FPC
+    function ToString: string; override;
   published
 
     property From: word read FFrom write SetFrom;
@@ -518,8 +480,6 @@ type
     property SplitVerticalValue: integer read FSplitVerticalValue write FSplitVerticalValue;
     property SplitHorizontalValue: integer read FSplitHorizontalValue write FSplitHorizontalValue;
   end;
-
-  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 
   //Условие
   TZCondition = (ZCFIsTrueFormula,
@@ -683,8 +643,6 @@ type
     property Items[num: integer]: TZConditionalStyle read GetItem write SetItem; default;
   end;
 
-  {$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
-
   //Transformations that can applied to a chart/image.
   TZETransform = class (TPersistent)
   private
@@ -738,8 +696,6 @@ type
     property Height: integer read FHeight write SetHeight default 10;
     property Transform: TZETransform read FTransform write SetTransform;
   end;
-
-  {$IFDEF ZUSE_CHARTS}
 
   //Possible chart types
   TZEChartType = (
@@ -1039,9 +995,6 @@ type
     property Count: integer read FCount;
   end;
 
-  {$ENDIF} //ZUSE_CHARTS
-
-  {$IFDEF ZUSE_DRAWINGS}
   TZCellAnchor = (ZACell, ZAAbsolute);
 
   // Picture item
@@ -1128,8 +1081,6 @@ type
     property IsEmpty: Boolean read GetIsEmpty;
   end;
 
-  {$ENDIF} // ZUSE_DRAWINGS
-
   TZRange = class;
 
   //лист документа
@@ -1154,26 +1105,15 @@ type
     FSelected: boolean;
     FPrintRows, FPrintCols: TZSheetPrintTitles;
 
-    {$IFDEF ZUSE_CHARTS}
     FCharts: TZEChartStore;
-    {$ENDIF}
-
-    {$IFDEF ZUSE_DRAWINGS}
     FDrawing: TZEDrawing;
-    {$ENDIF}
 
     FViewMode: TZViewMode;
     FRowBreaks:TArray<integer>;
     FColBreaks:TArray<integer>;
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FConditionalFormatting: TZConditionalFormatting;
     procedure SetConditionalFormatting(Value: TZConditionalFormatting);
-    {$ENDIF}
-
-    {$IFDEF ZUSE_CHARTS}
     procedure SetCharts(const Value: TZEChartStore);
-    {$ENDIF}
-
     procedure SetColumn(num: integer; const Value:TZColOptions);
     function  GetColumn(num: integer): TZColOptions;
     procedure SetRow(num: integer; const Value:TZRowOptions);
@@ -1232,20 +1172,11 @@ type
     property SheetOptions: TZSheetOptions read GetSheetOptions write SetSheetOptions;
     property Selected: boolean read FSelected write FSelected;
     property WorkBook: TZEXMLSS read FStore;
-
     property RowsToRepeat: TZSheetPrintTitles read FPrintRows write SetPrintRows;
     property ColsToRepeat: TZSheetPrintTitles read FPrintCols write SetPrintCols;
-
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     property ConditionalFormatting: TZConditionalFormatting read FConditionalFormatting write SetConditionalFormatting;
-    {$ENDIF}
-
-    {$IFDEF ZUSE_CHARTS}
     property Charts: TZEChartStore read FCharts write SetCharts;
-    {$ENDIF}
-    {$IFDEF ZUSE_DRAWINGS}
     property Drawing: TZEDrawing read FDrawing;
-    {$ENDIF}
     property ViewMode: TZViewMode read FViewMode write FViewMode;
     property RowBreaks: TArray<integer> read FRowBreaks write FRowBreaks;
     property ColBreaks: TArray<integer> read FColBreaks write FColBreaks;
@@ -1373,20 +1304,11 @@ type
     destructor Destroy();override;
     procedure Assign(Source: TPersistent); override;
     procedure GetPixelSize(hdc: HWND);  // получает HorPixelSize и VertPixelSize
-    //ИМХО, лучще сделать функции сохранения/загрузки в другом модуле
-    //function SaveToFile(const FileName: ansistring; const SheetsNumbers: array of integer; const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer; overload; virtual;
-    //function SaveToStream(Stream: TStream; const SheetsNumbers: array of integer; const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer; overload; virtual;
-    //function SaveToFile(const FileName: ansistring; const SheetsNumbers: array of integer; CodePage: byte = 0): integer; overload; virtual;
-    //function SaveToStream(Stream: TStream; const SheetsNumbers: array of integer; CodePage: byte = 0): integer; overload; virtual;
-    //function SaveToFile(const FileName: ansistring; CodePage: byte = 0): integer; overload; virtual;
-    //function SaveToStream(Stream: TStream; CodePage: byte = 0): integer; overload; virtual;
     property Sheets: TZSheets read FSheets write FSheets;
-    {$IFDEF ZUSE_DRAWINGS}
     // Total not-empty drawings count from all sheets
     function DrawingCount(): Integer;
     function GetDrawing(num: Integer): TZEDrawing;
     function GetDrawingSheetNum(Value: TZEDrawing): Integer;
-    {$ENDIF}
   published
     property Styles: TZStyles read FStyles write FStyles;
     property DefaultSheetOptions: TZSheetOptions read GetDefaultSheetOptions write SetDefaultSheetOptions;
@@ -1394,11 +1316,6 @@ type
     property HorPixelSize: real read FHorPixelSize write SetHorPixelSize;  //размер пикселя по горизонтали
     property VertPixelSize: real read FVertPixelSize write SetVertPixelSize;  //размер пикселя по вертикали
   end;
-
-procedure Register();
-
-//Проверяет строку на правильность, если что-то не правильно - правит
-procedure CorrectStrForXML(const St: string; var Corrected: string; var UseXMLNS: boolean);
 
 //переводит TColor в Hex RGB
 function ColorToHTMLHex(Color: TColor): string;
@@ -1420,38 +1337,10 @@ function PointToMM(inPoint: real): real;
 //Перевести мм в типографский пункт (point)
 function MMToPoint(inMM: real): real;
 
-//HorizontalAligment to Str
-function HAlToStr(HA: TZHorizontalAlignment): string;
-
-//Vertical Aligment to Str
-function VAlToStr(VA: TZVerticalAlignment): string;
-
-function ZBorderTypeToStr(ZB: TZBorderType): string;
-
-function ZCellPatternToStr(pp: TZCellPattern): string;
-
-function ZCellTypeToStr(pp: TZCellType): string;
-
-//Str to HorizontalAligment
-function StrToHal(Value: string): TZHorizontalAlignment;
-
-//Str to Vertical Aligment
-function StrToVAl(Value: string): TZVerticalAlignment;
-
-function StrToZBorderType(Value: string): TZBorderType;
-
-function StrToZCellPattern(Value: string): TZCellPattern;
-
-function StrToZCellType(Value: string): TZCellType;
-
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 
 //Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
 function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
-
-function ZEDateToStr(ADate: TDateTime): string;
-
-function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 
 //YYYY-MM-DDTHH:MM:SS[.mmm] to DateTime
 function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
@@ -1496,29 +1385,6 @@ begin
   result := IntToStrN(HH, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(SS, 2) + 'T';
   DecodeTime(ATime, HH, MM, SS, MS);
   result := result + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
-  if (Addmms) then
-    Result := Result + '.' + IntToStrN(MS, 3);
-end;
-
-//Convert Date to string like "YYYY-MM-DD"
-//INPUT
-//      ADate: TDateTime - date
-function ZEDateToStr(ADate: TDateTime): string;
-var YY, MM, DD: word;
-begin
-  DecodeDate(ADate, YY, MM, DD);
-  result := IntToStrN(YY, 4) + '-' + IntToStrN(MM, 2) + '-' + IntToStrN(DD, 2);
-end;
-
-//Convert time to string (THH:MM:SS[.mmm])
-//INPUT
-//      ATime: TDateTime - time
-//      Addmms: boolean  - need add ms to result
-function ZETimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
-var HH, MM, SS, MS: word;
-begin
-  DecodeTime(ATime, HH, MM, SS, MS);
-  result := 'T' + IntToStrN(HH, 2) + ':' + IntToStrN(MM, 2) + ':' + IntToStrN(SS, 2);
   if (Addmms) then
     Result := Result + '.' + IntToStrN(MS, 3);
 end;
@@ -1763,254 +1629,6 @@ begin
   end;
 end; //ZEIsFontsEquals
 
-//Проверяет строку на правильность, если что-то не правильно - правит
-//Input
-//      St: string - исходная строка
-//      var Corrected: string - исправленная строка
-//      var UseXMLNS: boolean - есть ли в строке правильные парные тэги
-//                              true - есть
-procedure CorrectStrForXML(const St: string; var Corrected: string; var UseXMLNS: boolean);
-type StackData = record
-    TextBeforeTag: string;
-    TagName: string;
-    RawTag: string;
-    isBad: boolean;
-    isClose: boolean;
-  end;
-
-var i, kol, _length, t: integer;
-  s: string;
-  Stack: array of StackData;
-  //проверка тэга
-  procedure _CheckTag(var _num: integer; const _s: string; var D: StackData);
-  var i, l, f, t: integer;
-    s: string;
-    _param: string;
-    _Start: boolean;
-    _zz: string;
-  begin
-    l := length(_s);
-    f := 0;
-    s := '';
-    _Start := false;
-    _param := '';
-    _zz := '';
-    for i := _num + 1 to length(_s) do
-      if _s[i] = '>' then begin
-        f := i;
-        break;
-      end;
-    //убитый тэг
-    if f = 0 then begin
-      D.isBad := true;
-      D.RawTag := copy(_s, _num, l - _num + 1);
-      _num := l;
-    end else begin
-      for i := _num + 1 to f do begin
-        case _s[i] of
-          '>':
-             begin
-               if (_zz > '') or (_param <> '') then
-                 D.isBad := true;
-               if s > '' then begin
-                 if not _start then begin
-                   if s > '' then
-                     D.TagName := s;
-                   D.RawTag := D.RawTag + s;
-                 end else
-                   D.isBad := true;
-               end;
-               D.RawTag := D.RawTag + _s[i];
-             end;
-          '"', '''':
-             begin
-               if _zz = '' then begin
-                 D.isBad := true;
-               end else begin
-                 t := length(_zz);
-                 if _zz[t] = '=' then begin
-                   _zz := _zz + _s[i];
-                   if s > '' then
-                     D.isBad := true;
-                   D.RawTag := D.RawTag + _s[i];
-                   s := '';
-                 end else begin
-                   D.RawTag := D.RawTag + s + _s[i];
-                   s := '';
-                   _zz := '';
-                   _param := '';
-                 end;
-               end;
-             end;
-          ' ', #13, #10, #9:
-              begin
-                if not _Start then begin
-                  if s > '' then begin
-                    _Start := true;
-                    D.RawTag := D.RawTag + s +_s[i];
-                    D.TagName := s;
-                    s := '';
-                  end else
-                    D.isBad := true;
-                end else begin
-                  if s <> '' then begin
-                    if _param = '' then begin
-                      _param := s;
-                      D.RawTag := D.RawTag + s;
-                      s := '';
-                    end else begin
-                      if _zz = '' then
-                        D.isBad := true;
-                    end;
-                  end;
-                  D.RawTag := D.RawTag +_s[i];
-                end;
-              end;
-          '<':
-             begin
-               if length(_zz) <> 2 then
-                 D.isBad := true
-               else
-                 s := s + '&lt;';
-             end;
-          '&':
-             begin
-               if length(_zz) <> 2 then
-                 D.isBad := true
-               else
-                 Correct_Entity(_S, i, s);
-             end;
-          '/':
-             begin
-               if not _Start then begin
-                 D.RawTag := D.RawTag + '/';
-                 if s = '' then begin
-                   D.isClose := true;
-                 end else begin
-                   D.RawTag := D.RawTag + s;
-                   D.isBad := true;
-                   s := '';
-                 end;
-               end else
-                 s := s + '/';
-             end;
-          '=':
-             begin
-               if _zz > '' then
-                 D.isBad := true
-               else begin
-                  if (s > '') and (_param > '') then
-                    D.isBad := true;
-                 _zz := '=';
-                 D.RawTag := D.RawTag + s + '=';
-                 s := '';
-               end;
-             end;
-          else
-            s := s + _s[i];
-        end;
-        // если тэг запорчен
-        if D.isBad then begin
-          D.RawTag := copy(_s, _num,  f - _num + 1);
-          break;
-        end;
-      end;
-      _num := f;
-    end;
-  end;
-
-  procedure _BadTag(var s: string; var Stt: StackData);
-  begin
-    s := Stt.TextBeforeTag + CheckStrEntity(Stt.RawTag);
-    SetLength(Stack, kol);
-  end;
-
-begin
-  s := '';
-  kol := 0;
-  Corrected := '';
-  UseXMLNS := false;
-  _length := length(St);
-  t := 0;
-  i := 0;
-  while i < _length do begin
-    inc(i);
-    case St[i] of
-      '<':
-         begin
-           SetLength(Stack, kol + 1);
-           Stack[kol].isBad := false;
-           Stack[kol].isClose := false;
-           Stack[kol].TagName := '';
-           Stack[kol].RawTag := '<';
-           Stack[kol].TextBeforeTag := s;
-           s := '';
-           _CheckTag(i, St, Stack[kol]);
-           if Stack[kol].isBad then
-             _BadTag(s, Stack[kol])
-           else begin
-             inc(t);
-             if Stack[kol].isClose then begin
-               if kol > 0 then begin
-                 if Stack[kol].TagName = Stack[kol-1].TagName then begin
-                   dec(t);
-                   if t <> 1 then begin
-                     Stack[kol-2].TextBeforeTag := Corrected + Stack[kol-2].TextBeforeTag;
-                     Stack[kol-2].RawTag := Stack[kol-2].RawTag + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
-                                            Stack[kol].TextBeforeTag + Stack[kol].RawTag ;
-                     Corrected := '';
-                   end else
-                     Corrected := Corrected + Stack[kol-1].TextBeforeTag + Stack[kol-1].RawTag +
-                                  Stack[kol].TextBeforeTag + Stack[kol].RawTag;
-                   dec(t);
-                   UseXMLNS := true;
-                   dec(kol);
-                   SetLength(Stack, kol);
-                 end else
-                  _BadTag(s, Stack[kol]);
-               end else
-                 _BadTag(s, Stack[kol]);
-             end else
-               inc(kol);
-           end;
-         end;
-      '>': s := s + '&gt;';
-      #13, #10:
-         begin
-           if St[i] = #13 then begin
-             if i < _length then begin
-               if St[i+1] = #10 then
-                 s := s + '&#10;'
-               else
-                 s := s + St[i];
-             end else
-               s := s + St[i];
-           end else begin
-             if i > 1 then begin
-               if St[i-1] <> #13 then
-                 s := s + '&#10;'
-               {else
-                 s := s + St[i];}
-             end else
-               s := s + '&#10;';
-           end;
-         end;
-      '&':  Correct_Entity(St, i, s);
-      '"':  s := s + '&quot;';
-      '''': s := s + '&apos;';
-      else
-        s := s + St[i];
-    end;
-  end;
-
-  for i := 0 to kol - 1 do
-    Corrected := Corrected + Stack[i].TextBeforeTag + CheckStrEntity(Stack[i].RawTag);
-
-  Corrected := Corrected + s;
-  SetLength(Stack, 0);
-  Stack := nil;
-end;
-
 //переводит TColor в Hex RGB
 function ColorToHTMLHex(Color: TColor): string;
 var _RGB: integer;
@@ -2078,7 +1696,7 @@ begin
   end;
 end;
 
-//Перевести пиксели в типографский пункт (point)
+//Перевести пиксели в типографский пункт (point) ###
 //Input
 //      inPixel: integer          - размер в пикселях
 //      PixelSizeMM: real = 0.265 - размер пикселя
@@ -2089,7 +1707,7 @@ begin
   result := round(result * 100) / 100;
 end;
 
-//Перевести типографский пункт (point) в пиксели
+//Перевести типографский пункт (point) в пиксели ###
 //Input
 //      inPoint: integer          - размер в пикселях
 //      PixelSizeMM: real = 0.265 - размер пикселя
@@ -2098,7 +1716,7 @@ begin
   result := round(inPoint * _PointToMM / PixelSizeMM);
 end;
 
-//Перевести типографский пункт (point) в мм
+//Перевести типографский пункт (point) в мм  ###
 //Input
 //      inPoint: integer - размер в пунктах
 function PointToMM(inPoint: real): real;
@@ -2106,220 +1724,12 @@ begin
   result := round(inPoint * _PointToMM * 100) / 100;
 end;
 
-//Перевести мм в типографский пункт (point)
+//Перевести мм в типографский пункт (point)###
 //Input
 //      inMM: integer - размер в пунктах
 function MMToPoint(inMM: real): real;
 begin
   result := round(inMM / _PointToMM * 100) / 100;
-end;
-
-//HorizontalAligment to Str
-function HAlToStr(HA: TZHorizontalAlignment): string;
-begin
-  case HA of
-    ZHAutomatic:              result := 'Automatic';
-    ZHLeft:                   result := 'Left';
-    ZHCenter:                 result := 'Center';
-    ZHRight:                  result := 'Right';
-    ZHFill:                   result := 'Fill';
-    ZHJustify:                result := 'Justify';
-    ZHCenterAcrossSelection:  result := 'CenterAcrossSelection';
-    ZHDistributed:            result := 'Distributed';
-    ZHJustifyDistributed:     result := 'JustifyDistributed';
-  end;
-end;
-
-//Vertical Aligment to Str
-function VAlToStr(VA: TZVerticalAlignment): string;
-begin
-  case VA of
-    ZVAutomatic:          result := 'Automatic';
-    ZVTop:                result := 'Top';
-    ZVBottom:             result := 'Bottom';
-    ZVCenter:             result := 'Center';
-    ZVJustify:            result := 'Justify';
-    ZVDistributed:        result := 'Distributed';
-    ZVJustifyDistributed: result := 'JustifyDistributed';
-  end;
-end;
-
-function ZBorderTypeToStr(ZB: TZBorderType): string;
-begin
-  case ZB of
-    ZENone:         result := 'None';
-    ZEContinuous:   result := 'Continuous';
-    ZEHair:         result := 'Hair';
-    ZEDot:          result := 'Dot';
-    ZEDash:         result := 'Dash';
-    ZEDashDot:      result := 'DashDot';
-    ZEDashDotDot:   result := 'DashDotDot';
-    ZESlantDashDot: result := 'SlantDashDot';
-    ZEDouble:       result := 'Double';
-  end;
-end;
-
-function ZCellPatternToStr(pp: TZCellPattern): string;
-begin
-  case pp of
-    ZPNone:           result := 'None';
-    ZPSolid:          result := 'Solid';
-    ZPGray75:         result := 'Gray75';
-    ZPGray50:         result := 'Gray50';
-    ZPGray25:         result := 'Gray25';
-    ZPGray125:        result := 'Gray125';
-    ZPGray0625:       result := 'Gray0625';
-    ZPHorzStripe:     result := 'HorzStripe';
-    ZPVertStripe:     result := 'VertStripe';
-    ZPReverseDiagStripe: result := 'ReverseDiagStripe';
-    ZPDiagStripe:     result := 'DiagStripe';
-    ZPDiagCross:      result := 'DiagCross';
-    ZPThickDiagCross: result := 'ThickDiagCross';
-    ZPThinHorzStripe: result := 'ThinHorzStripe';
-    ZPThinVertStripe: result := 'ThinVertStripe';
-    ZPThinReverseDiagStripe: result := 'ThinReverseDiagStripe';
-    ZPThinDiagStripe: result := 'ThinDiagStripe';
-    ZPThinHorzCross:  result := 'ThinHorzCross';
-    ZPThinDiagCross:  result := 'ThinDiagCross';
-  end;
-end;
-
-function ZCellTypeToStr(pp: TZCellType): string;
-begin
-  case pp of
-    ZENumber:            result := 'Number';
-    ZEDateTime:          result := 'DateTime';
-    ZEBoolean:           result := 'Boolean';
-    ZEString, ZEGeneral: result := 'String';
-    ZEError:             result := 'Error';
-  end;
-end;
-
-//Str to HorizontalAligment
-function StrToHal(Value: string): TZHorizontalAlignment;
-begin
-  Value := UpperCase(Value);
-  if Value = 'LEFT' then
-    result := ZHLeft
-  else if Value = 'CENTER' then
-    result := ZHCenter
-  else if Value = 'RIGHT' then
-    result := ZHRight
-  else if Value = 'FILL' then
-    result := ZHFill
-  else if Value = 'JUSTIFY' then
-    result := ZHJustify
-  else if Value = 'CENTERACROSSSELECTION' then
-    result := ZHCenterAcrossSelection
-  else if Value = 'DISTRIBUTED' then
-    result := ZHDistributed
-  else if Value = 'JUSTIFYDISTRIBUTED' then
-    result := ZHJustifyDistributed
-  else
-    result := ZHAutomatic;
-end;
-
-//Str to Vertical Aligment
-function StrToVAl(Value: string): TZVerticalAlignment;
-begin
-  Value := UpperCase(Value);
-  if Value = 'CENTER' then
-    result := ZVCenter
-  else if Value = 'TOP' then
-    result := ZVTop
-  else if Value = 'BOTTOM' then
-    result := ZVBottom
-  else if Value = 'JUSTIFY' then
-    result := ZVJustify
-  else if Value = 'DISTRIBUTED' then
-    result := ZVDistributed
-  else if Value = 'JUSTIFYDISTRIBUTED' then
-    result := ZVJustifyDistributed
-  else
-    result := ZVAutomatic;
-end;
-
-function StrToZBorderType(Value: string): TZBorderType;
-begin
-  Value := UpperCase(Value);
-  if Value = 'CONTINUOUS' then
-    result := ZEContinuous
-  else if Value = 'HAIR' then
-    result := ZEHair
-  else if Value = 'DOT' then
-    result := ZEDot
-  else if Value = 'DASH' then
-    result := ZEDash
-  else if Value = 'DASHDOT' then
-    result := ZEDashDot
-  else if Value = 'DASHDOTDOT' then
-    result := ZEDashDotDot
-  else if Value = 'SLANTDASHDOT' then
-    result := ZESlantDashDot
-  else if Value = 'DOUBLE' then
-    result := ZEDouble
-  else
-    result := ZENone;
-end;
-
-function StrToZCellPattern(Value: string): TZCellPattern;
-begin
-  Value := UpperCase(Value);
-  if Value = 'SOLID' then
-    result := ZPSolid
-  else if Value = 'GRAY75' then
-    result := ZPGray75
-  else if Value = 'GRAY50' then
-    result := ZPGray50
-  else if Value = 'GRAY25' then
-    result := ZPGray25
-  else if Value = 'GRAY125' then
-    result := ZPGray125
-  else if Value = 'GRAY0625' then
-    result := ZPGray0625
-  else if Value = 'HORZSTRIPE' then
-    result := ZPHorzStripe
-  else if Value = 'VERTSTRIPE' then
-    result := ZPVertStripe
-  else if Value = 'REVERSEDIAGSTRIPE' then
-    result := ZPReverseDiagStripe
-  else if Value = 'DIAGSTRIPE' then
-    result := ZPDiagStripe
-  else if Value = 'DIAGCROSS' then
-    result := ZPDiagCross
-  else if Value = 'THICKDIAGCROSS' then
-    result := ZPThickDiagCross
-  else if Value = 'THINHORZSTRIPE' then
-    result := ZPThinHorzStripe
-  else if Value = 'THINVERTSTRIPE' then
-    result := ZPThinVertStripe
-  else if Value = 'THINREVERSEDIAGSTRIPE' then
-    result := ZPThinReverseDiagStripe
-  else if Value = 'THINDIAGSTRIPE' then
-    result := ZPThinDiagStripe
-  else if Value = 'THINHORZCROSS' then
-    result := ZPThinHorzCross
-  else if Value = 'THINDIAGCROSS' then
-    result := ZPThinDiagCross
-  else
-    result := ZPNone;
-end;
-
-function StrToZCellType(Value: string): TZCellType;
-begin
-  Value := UpperCase(Value);
-  if Value = '' then
-    result := ZEGeneral
-  else if Value = 'NUMBER' then
-    result := ZENumber
-  else if Value = 'DATETIME' then
-    result := ZEDateTime
-  else if Value = 'BOOLEAN' then
-    result := ZEBoolean
-  else if Value = 'ERROR' then
-    result := ZEError
-  else
-    result := ZEString;
 end;
 
 ////::::::::::::: TZBorderStyle :::::::::::::::::////
@@ -3362,16 +2772,9 @@ begin
 
   FPrintRows := TZSheetPrintTitles.Create(Self, false);
   FPrintCols := TZSheetPrintTitles.Create(Self, true);
-  {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
   FConditionalFormatting := TZConditionalFormatting.Create();
-  {$ENDIF}
-
-  {$IFDEF ZUSE_CHARTS}
   FCharts := TZEChartStore.Create();
-  {$ENDIF}
-  {$IFDEF ZUSE_DRAWINGS}
   FDrawing := TZEDrawing.Create();
-  {$ENDIF}
 end;
 
 destructor TZSheet.Destroy();
@@ -3385,16 +2788,9 @@ begin
     FCells := nil;
     FRows := nil;
     FColumns := nil;
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     FreeAndNil(FConditionalFormatting);
-    {$ENDIF}
-
-    {$IFDEF ZUSE_CHARTS}
     FreeAndNil(FCharts);
-    {$ENDIF}
-    {$IFDEF ZUSE_DRAWINGS}
     FreeAndNil(FDrawing);
-    {$ENDIF}
   finally
     inherited Destroy();
   end;
@@ -3439,36 +2835,26 @@ begin
 
     // дописать что ещё нужно копировать
 
-    {$IFDEF ZUSE_CONDITIONAL_FORMATTING}
     ConditionalFormatting.Assign(zSource.ConditionalFormatting);
-    {$ENDIF}
-
-    {$IFDEF ZUSE_DRAWINGS}
     FDrawing := TZEDrawing.Create();
     FDrawing.Assign(zSource.FDrawing);
-    {$ENDIF}
-
     RowsToRepeat.Assign(zSource.RowsToRepeat);
     ColsToRepeat.Assign(zSource.ColsToRepeat);
   end else
     inherited Assign(Source);
 end;
 
-{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
 procedure TZSheet.SetConditionalFormatting(Value: TZConditionalFormatting);
 begin
   if (Assigned(Value)) then
     FConditionalFormatting.Assign(Value);
 end; //SetConditionalFormatting
-{$ENDIF}
 
-{$IFDEF ZUSE_CHARTS}
 procedure TZSheet.SetCharts(const Value: TZEChartStore);
 begin
   if (Assigned(Value)) then
     FCharts.Assign(Value);
 end;
-{$ENDIF}
 
 function TZSheet.GetSheetIndex: integer;
 var i: Integer;
@@ -3949,11 +3335,8 @@ end;
 //Получить HorPixelSize и VertPixelSize устройства hdc
 procedure TZEXMLSS.GetPixelSize(hdc: HWND);
 begin
-  {$IFDEF FPC}
-  {$ELSE}
   HorPixelSize  := GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //горизонтальный размер пикселя в миллиметрах
   VertPixelSize := GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикальный размер пикселя в миллиметрах
-  {$ENDIF}
 end;
 
 function TZEXMLSS.GetDefaultSheetOptions(): TZSheetOptions;
@@ -3967,7 +3350,6 @@ begin
    FDefaultSheetOptions.Assign(Value);
 end;
 
-{$IFDEF ZUSE_DRAWINGS}
 function TZEXMLSS.DrawingCount(): Integer;
 var i, ii, n: Integer;
     tmp: TZEDrawing;
@@ -4015,90 +3397,6 @@ begin
       Exit;
     end;
   end;
-end;
-{$ENDIF}
-
-//Сохраняет в файл FileName
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of ansistring     - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
-//      CodePage: byte                   - кодировка:
-//                                         0 - UTF-8
-//                                         1 - windows-1251
-//function TZEXMLSS.SaveToFile(const FileName: ansistring; const SheetsNumbers:array of integer;const SheetsNames: array of ansistring; CodePage: byte{$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer;
-{var
-  Stream: TStream;
-
-begin
-  result := 0;
-  try
-    try
-      Stream := TFileStream.Create(FileName, fmCreate);
-    except
-      result := 1;
-    end;
-    if result = 0 then
-      result := SaveToStream(Stream, SheetsNumbers, SheetsNames, CodePage);
-  finally
-    if Stream <> nil then
-      Stream.Free;
-  end;
-end;
-}
-
-//Сохраняет в поток
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      SheetsNames: array of ansistring     - массив названий страниц
-//              количество элементов в двух массивах должны совпадать
-//      CodePage: byte                   - кодировка:
-//                                         0 - UTF-8
-//                                         1 - windows-1251
-//function TZEXMLSS.SaveToStream(Stream: TStream; const SheetsNumbers:array of integer;const SheetsNames: array of ansistring; CodePage: byte {$IFDEF VER130}{$ELSE} = 0{$ENDIF}): integer;
-{begin
-end;}
-
-//Сохраняет в файл FileName
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      CodePage: byte                   - кодировка:
-//                                         0 - UTF-8
-//                                         1 - windows-1251
-{function TZEXMLSS.SaveToFile(const FileName: ansistring; const SheetsNumbers:array of integer; CodePage: byte = 0): integer;
-begin
-  result := SaveToFile(FileName, SheetsNumbers, [], CodePage);
-end;}
-
-//Сохраняет в поток
-//      SheetsNumbers: array of integer  - массив номеров страниц в нужной последовательности
-//      CodePage: byte                   - кодировка:
-//                                         0 - UTF-8
-//                                         1 - windows-1251
-{function TZEXMLSS.SaveToStream(Stream: TStream; const SheetsNumbers:array of integer; CodePage: byte = 0): integer;
-begin
-  result := SaveToStream(Stream, SheetsNumbers, [], CodePage);
-end;}
-
-//Сохраняет в файл FileName
-//      CodePage: byte                   - кодировка:
-//                                         0 - UTF-8
-//                                         1 - windows-1251
-{function TZEXMLSS.SaveToFile(const FileName: ansistring; CodePage: byte = 0): integer;
-begin
-  result := SaveToFile(FileName, [], [], CodePage);
-end;}
-
-//Сохраняет в поток
-//      CodePage: byte                   - кодировка:
-//                                         0 - UTF-8
-//                                         1 - windows-1251
-{function TZEXMLSS.SaveToStream(Stream: TStream; CodePage: byte = 0): integer;
-begin
-  result := SaveToStream(Stream, [], [], CodePage);
-end;}
-
-//регистрируем компонент
-procedure Register();
-begin
-  RegisterComponents('ZColor', [TZEXMLSS]);
 end;
 
 { TZSheetPrintTitles }
@@ -4185,8 +3483,6 @@ begin
 end;
 
 //Условное форматирование
-{$IFDEF ZUSE_CONDITIONAL_FORMATTING}
-
 ////::::::::::::: TZConditionalStyleItem :::::::::::::::::////
 
 constructor TZConditionalStyleItem.Create();
@@ -4713,9 +4009,6 @@ begin
   end;
 end;
 
-{$ENDIF} //ZUSE_CONDITIONAL_FORMATTING
-
-
 ////::::::::::::: TZECommonFrameAncestor :::::::::::::::::////
 
 constructor TZECommonFrameAncestor.Create();
@@ -4856,8 +4149,6 @@ begin
               (FTranslateY = tmp.TranslateY);
   end;
 end;
-
-{$IFDEF ZUSE_CHARTS}
 
 ////::::::::::::: TZEChartRangeItem :::::::::::::::::////
 
@@ -5542,10 +4833,6 @@ begin
   end;
 end;
 
-{$ENDIF} //ZUSE_CHARTS
-
-{$IFDEF ZUSE_DRAWINGS}
-
 ////::::::::::::: TZEPicture :::::::::::::::::////
 
 procedure TZEPicture.Assign(Source: TPersistent);
@@ -5815,13 +5102,6 @@ function TZEDrawing.GetIsEmpty(): Boolean;
 begin
   Result := (PictureStore.Count = 0);
 end;
-
-{$ENDIF} // ZUSE_DRAWINGS
-
-{$IFDEF FPC}
-initialization
-  {$I zexmlss.lrs}
-{$ENDIF}
 
 {
 GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES); //горизонтальный размер пикселя в миллиметрах
