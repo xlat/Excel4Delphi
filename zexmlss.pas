@@ -3,7 +3,7 @@
 interface
 
 uses
-  Classes, Sysutils, Graphics, UITypes, Math, Windows,
+  Classes, Sysutils, Graphics, UITypes, Math, Windows, RegularExpressions, Generics.Collections,
   zsspxml;
 
 var ZE_XLSX_APPLICATION: string;
@@ -1142,6 +1142,8 @@ type
     function  GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange; virtual;
     //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
     function GetSheetIndex(): integer;
+
+    procedure SetCorrectTitle(const Value: string);
   public
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor Destroy(); override;
@@ -2937,6 +2939,44 @@ procedure TZSheet.SetSheetOptions(Value: TZSheetOptions);
 begin
   if Value <> nil then
    FSheetOptions.Assign(Value);
+end;
+
+procedure TZSheet.SetCorrectTitle(const Value: string);
+var
+  i: integer;
+  suffix, newTitle: string;
+  sheetNames: TDictionary<string, string>;
+  regEx: TRegEx;
+begin
+  newTitle := trim(Value);
+  if newTitle.Length > 31 then
+    newTitle := newTitle.Substring(0, 31);
+  regEx := TRegEx.Create('[\\/\*\[\]\?:]');
+  newTitle := regEx.Replace(newTitle, ' ');
+  if newTitle.Trim.IsEmpty then
+    newTitle := 'Лист1';
+  if assigned(workbook) then
+  begin
+    sheetNames := TDictionary<string, string>.Create;
+    try
+      for i := 0 to self.workbook.Sheets.Count - 1 do
+        if self <> workbook.Sheets[i] then
+          sheetNames.AddOrSetValue(self.workbook.Sheets[i].Title.ToLower, '');
+      i := 1;
+      suffix := '';
+      repeat
+        if i > 1 then
+          suffix := ' (' + IntToStr(i) + ')';
+        if newTitle.Length + suffix.Length > 31 then
+          newTitle := newTitle.Substring(0, 31 - suffix.Length);
+        Inc(i);
+      until not sheetNames.ContainsKey(newTitle.ToLower + suffix);
+      newTitle := newTitle + suffix;
+    finally
+      sheetNames.Free;
+    end;
+  end;
+  self.FTitle := newTitle;
 end;
 
 procedure TZSheet.SetColumn(num: integer; const Value:TZColOptions);
