@@ -2815,6 +2815,7 @@ begin
     FViewMode  := zSource.FViewMode;
     FRowBreaks := zSource.FRowBreaks;
     FColBreaks := zSource.FColBreaks;
+    FViewMode  := zSource.FViewMode;
 
     for i := 0 to RowCount - 1 do
       Rows[i] := ZSource.Rows[i];

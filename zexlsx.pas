@@ -1239,9 +1239,11 @@ var
     _num: integer;
     _type: string;
     _cr, _cc: integer;
+    maxCol: integer;
   begin
     _cr := 0;
     _cc := 0;
+    maxCol := 0;
     CheckRow(1);
     CheckCol(1);
     while (not ((xml.TagName = 'sheetData') and (xml.TagType = 6))) do begin
@@ -1326,6 +1328,8 @@ var
         _currCell.Data := ZEReplaceEntity(v);
         inc(_currCol);
         CheckCol(_currCol + 1);
+        if _currCol > maxCol then
+           maxCol := _currCol;
       end else
       //строка
       if ((xml.TagName = 'row') and (xml.TagType in [4, 5])) then begin
@@ -1373,6 +1377,7 @@ var
         CheckRow(_currRow + 1);
       end;
     end; //while
+    _currSheet.ColCount := maxCol;
   end; //_ReadSheetData
 
   //Чтение диапазона ячеек с автофильтром
@@ -1500,11 +1505,11 @@ var
         _max := StrToIntDef(xml.Attributes.ItemsByName['max'], 0);
 
         if (_max > _min) then begin
-          _delta := _max - _min;
+          _delta := min(_max - _min, 1000);
           // защита от сплошного диапазона
           // когда значение _мах = 16384
           // но чтобы уж наверняка, проверим на 1000 колонок подряд.
-          if _delta < 1000 then begin
+          if _delta < 1001 then begin
             CheckCol(_max);
             for i := _min to _max - 1 do
               _currSheet.Columns[i].Assign(_currSheet.Columns[num]);
@@ -1649,9 +1654,13 @@ var
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'sheetView')) then begin
+      if ((xml.TagName = 'sheetView') and (xml.TagType = 4)) then begin
         s := xml.Attributes.ItemsByName['tabSelected'];
         _currSheet.Selected := s = '1';
+
+        _currSheet.ViewMode := zvmNormal;
+        if xml.Attributes.ItemsByName['view'] = 'pageBreakPreview' then
+            _currSheet.ViewMode := zvmPageBreakPreview;
       end;
 
       if ((xml.TagName = 'pane') and (xml.TagType = 5)) then begin
@@ -1667,10 +1676,6 @@ var
         s := xml.Attributes.ItemsByName['ySplit'];
         if (not TryStrToInt(s, hValue)) then
           hValue := 0;
-
-        _currSheet.ViewMode := zvmNormal;
-        if xml.Attributes.ItemsByName['view'] = 'pageBreakPreview' then
-            _currSheet.ViewMode := zvmPageBreakPreview;
 
         _currSheet.SheetOptions.SplitVerticalValue := vValue;
         _currSheet.SheetOptions.SplitHorizontalValue := hValue;
@@ -3332,15 +3337,16 @@ var
       end;
     end;
 
-    if (XLSXStyle.applyBorder) then begin
+    if XLSXStyle.applyBorder then begin
       n := XLSXStyle.borderId;
-      if ((n >= 0) and (n < BorderCount)) then
-        for b := bpLeft to bpDiagonalRight do
-        if (BorderArray[n][Ord(b)].isEnabled) then begin
-          XMLSSStyle.Border[b].LineStyle := BorderArray[n][Ord(b)].style;
-          XMLSSStyle.Border[b].Weight := BorderArray[n][Ord(b)].Weight;
-          if (BorderArray[n][Ord(b)].isColor) then
-            XMLSSStyle.Border[b].Color := BorderArray[n][Ord(b)].color;
+      if (n >= 0) and (n < BorderCount) then
+        for b := bpLeft to bpDiagonalRight do begin
+          if (BorderArray[n][Ord(b)].isEnabled) then begin
+            XMLSSStyle.Border[b].LineStyle := BorderArray[n][Ord(b)].style;
+            XMLSSStyle.Border[b].Weight := BorderArray[n][Ord(b)].Weight;
+            if (BorderArray[n][Ord(b)].isColor) then
+              XMLSSStyle.Border[b].Color := BorderArray[n][Ord(b)].color;
+          end;
         end;
     end;
 
@@ -3533,7 +3539,8 @@ begin
       _Style := XMLSS.Styles[i];
       if ((t >= 0) and (t < CellStyleCount)) then
         _ApplyStyle(_Style, CellStyleArray[t]);
-      _ApplyStyle(_Style, CellXfsArray[i]);
+      //else
+        _ApplyStyle(_Style, CellXfsArray[i]);
     end;
 
     //Применение цветов к DF
@@ -5067,8 +5074,6 @@ var _xml: TZsspXMLWriterH;    //писатель
     b: boolean;
     s: string;
     _r: TRect;
-    k1, k2, k: integer;
-    _in_merge_not_top: boolean; //if cell in merge area, but not top left
   begin
     _xml.Attributes.Clear();
     _xml.WriteTagNode('sheetData', true, true, true);
@@ -5096,21 +5101,9 @@ var _xml: TZsspXMLWriterH;    //писатель
           WriteHelper.AddHyperLink(s, _sheet.Cell[j, i].HRef, _sheet.Cell[j, i].HRefScreenTip, 'External');
 
         _xml.Attributes.Add('r', s);
-        _in_merge_not_top := false;
-        k := _sheet.MergeCells.InMergeRange(j, i);
-        if (k >= 0) then
-          _in_merge_not_top := _sheet.MergeCells.InLeftTopCorner(j, i) < 0;
 
-        if (_in_merge_not_top) then begin
-          k1 := _sheet.MergeCells.Items[k].Left;
-          k2 := _sheet.MergeCells.Items[k].top;
-        end else begin
-          k1 := j;
-          k2 := i;
-        end;
-
-        if (_sheet.Cell[k1, k2].CellStyle >= -1) and (_sheet.Cell[k1, k2].CellStyle < XMLSS.Styles.Count) then
-          s := IntToStr(_sheet.Cell[k1, k2].CellStyle + 1)
+        if (_sheet.Cell[j, i].CellStyle >= -1) and (_sheet.Cell[j, i].CellStyle < XMLSS.Styles.Count) then
+          s := IntToStr(_sheet.Cell[j, i].CellStyle + 1)
         else
           s := '0';
         _xml.Attributes.Add('s', s, false);
@@ -5915,8 +5908,7 @@ var
     if (n > 0) then
       _xml.Attributes.Add('style', s1);
 
-    if ((_border.Color <> clBlack) and (n > 0)) then
-    begin
+    if ((_border.Color <> clBlack) and (n > 0)) then begin
       _xml.WriteTagNode(s, true, true, true);
       _xml.Attributes.Clear();
       _xml.Attributes.Add('rgb', '00' + ColorToHTMLHex(_border.Color));
