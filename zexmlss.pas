@@ -1142,8 +1142,6 @@ type
     function  GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange; virtual;
     //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
     function GetSheetIndex(): integer;
-
-    procedure SetCorrectTitle(const Value: string);
   public
     constructor Create(AStore: TZEXMLSS); virtual;
     destructor Destroy(); override;
@@ -1151,6 +1149,7 @@ type
     procedure Clear(); virtual;
     procedure InsertRows(ARow, ACount: Integer);
     procedure CopyRows(ARowDst, ARowSrc, ACount: Integer);
+    procedure SetCorrectTitle(const Value: string);
     property ColWidths[num: integer]: real read GetColWidth write SetColWidth;
     property Columns[num: integer]: TZColOptions read GetColumn write SetColumn;
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
