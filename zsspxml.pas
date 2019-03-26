@@ -14,21 +14,29 @@ const
 
 type
 
-  //конвертер ANSI текста в нужную кодировку
-  TAnsiToCPConverter = function (const AnsiText: ansistring): ansistring;
-
-  TReadCPCharObj = procedure(var RetChar: ansistring; var _eof: boolean) of object;
-  TReadCPChar = procedure(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
+  /// <summary>
+  /// Text converter from local encoding to needed encoding
+  /// </summary>
+  TAnsiToCPConverter = function (const AnsiText: ansistring): AnsiString;
+  TReadCPCharObj     = procedure(var RetChar: ansistring; var _eof: Boolean) of object;
+  TReadCPChar        = procedure(const ReadCPChar: TReadCPCharObj; var text: AnsiString; var _eof: Boolean);
+  /// <summary>
+  /// Text converter from reading encoding to local encoding
+  /// </summary>
   TCPToAnsiConverter = TAnsiToCPConverter;
-
-  TZAttrArray = array [0..1] of ansistring;
+  /// <summary>
+  /// Attribute-value
+  /// </summary>
+  TZAttrArray = array [0..1] of AnsiString;
 
   TagsProp = record
-    Name: ansistring;
-    CloseTagNewLine: boolean;
+    Name: AnsiString;
+    CloseTagNewLine: Boolean;
   end;
 
-  //Построитель атрибутов для тэгов
+  /// <summary>
+  /// Builder attributes for tags.
+  /// </summary>
   TZAttributes = class(TPersistent)
   private
     FCount: integer;
@@ -45,27 +53,117 @@ type
   public
     constructor Create();
     destructor Destroy(); override;
+    /// <summary>
+    /// Adds attribute
+    /// </summary>
+    /// <param name="AttrName">
+    /// Attribute Name
+    /// </param>
+    /// <param name="TestMatch">
+    /// Checks for attribute AttrName entry, if attribute was entered then changes it's value, else new attribute is added.
+    /// </param>
     procedure Add(const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
+    /// <summary>
+    /// Adds attributes
+    /// </summary>
+    /// <param name="Attr">
+    /// Attributes
+    /// </param>
+    /// <param name="TestMatch">
+    /// Checks for attribute AttrName entry, if attribute was entered then changes it's value, else new attribute is added.
+    /// </param>
     procedure Add(const Attr: TZAttrArray; TestMatch: boolean = true); overload;
+    /// <summary>
+    /// Adds attributes
+    /// </summary>
+    /// <param name="Att">
+    /// Attributes
+    /// </param>
+    /// <param name="TestMatch">
+    /// Checks for attribute AttrName entry, if attribute was entered then changes it's value, else new attribute is added.
+    /// </param>
     procedure Add(Att: array of TZAttrArray; TestMatch: boolean = true); overload;
     procedure Assign(Source: TPersistent); override;
+    /// <summary>
+    /// Delete all atributes.
+    /// </summary>
     procedure Clear();
+    /// <summary>
+    /// Delete attribute with number Index. Attributes with larger number are shifting left.
+    /// </summary>
     procedure DeleteItem(Index: integer);
-    procedure Insert(Index: integer; const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true); overload;
+    /// <summary>
+    /// Adds attribute AttrName with value Value on position Index.
+    /// </summary>
+    procedure Insert(Index: integer; const AttrName: AnsiString; const Value: AnsiString; TestMatch: boolean = true); overload;
+    /// <summary>
+    /// Adds attribute AttrName with value Value on position Index.
+    /// </summary>
     procedure Insert(Index: integer; const Attr: TZAttrArray; TestMatch: boolean = true); overload;
+    /// <summary>
+    /// Return string with attributes.
+    /// </summary>
+    /// <param name="quote">
+    /// quotation mark for attribute.
+    /// </param>
+    /// <param name="CheckEntity">
+    /// if true then corrects entity
+    /// </param>
+    /// <param name="addempty">
+    /// true then do not add attributes with empty value.
+    /// </param>
     function ToString(quote: ansichar; CheckEntity: boolean; addempty: boolean): ansistring; reintroduce; overload; virtual;
+    /// <summary>
+    /// Return string with attributes.
+    /// </summary>
+    /// <param name="quote">
+    /// quotation mark for attribute.
+    /// </param>
+    /// <param name="CheckEntity">
+    /// if true then corrects entity
+    /// </param>
     function ToString(quote: ansichar; CheckEntity: boolean): ansistring; reintroduce; overload; virtual;
+    /// <summary>
+    /// Return string with attributes.
+    /// </summary>
+    /// <param name="quote">
+    /// quotation mark for attribute.
+    /// </param>
     function ToString(quote: ansichar): ansistring; reintroduce; overload; virtual;
+    /// <summary>
+    /// Return string with attributes.
+    /// </summary>
+    /// <param name="CheckEntity">
+    /// If true then corrects entity
+    /// </param>
     function ToString(CheckEntity: boolean): ansistring; reintroduce; overload; virtual;
+    /// <summary>
+    /// Return string with attributes.
+    /// </summary>
     function ToString(): ansistring; reintroduce; overload; virtual;
     function IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
+    /// <summary>
+    /// Number of attributes. (RO)
+    /// </summary>
     property Count: integer read FCount;
+    /// <summary>
+    /// Access to the attribute-value by number num.
+    /// </summary>
     property Items[num: integer]: TZAttrArray read GetAttr write SetAttr;
+    /// <summary>
+    /// Access to the attribute value by name Att.
+    /// </summary>
     property ItemsByName[const Att: ansistring]: ansistring read GetAttrS write SetAttrS; default;
+    /// <summary>
+    /// Access to the attribute value by number num.
+    /// </summary>
     property ItemsByNum[num: integer]: ansistring read GetAttrI write SetAttrI;
   end;
 
-  //пишет XML
+  /// <summary>
+  /// Class-writer can write xml to string, stream or file in Windows-1251, UTF-8, UTF-16 (BE and LE) encodings.
+  /// Use TextConverter property for write in other encodings.
+  /// </summary>
   TZsspXMLWriter = class
   private
     FAttributeQuote: ansichar;          //какие кавычки используем для атрибутов
@@ -104,52 +202,380 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    function BeginSaveToStream(Stream: TStream): boolean;      //начать запись в поток
-    function BeginSaveToFile(const FileName: string): boolean;       //начать запись в файл
-    function BeginSaveToString(): boolean;                     //начать запись в Buffer
+    /// <summary>
+    /// Begin writing to Stream.
+    /// </summary>
+    /// <returns>
+    /// True - start writing to stream. Sets InProcess True. <br />False - could not write.
+    /// </returns>
+    function BeginSaveToStream(Stream: TStream): boolean;
+    /// <summary>
+    /// egin writing to file FileName. <br />
+    /// </summary>
+    /// <returns>
+    /// True - start writing to file. Sets InProcess True. <br />False - could not write.
+    /// </returns>
+    function BeginSaveToFile(const FileName: string): boolean;
+    /// <summary>
+    /// Begin writing to string Buffer. <br />
+    /// </summary>
+    /// <returns>
+    /// True - start writing to Buffer. Sets InProcess True. <br />False - could not write.
+    /// </returns>
+    function BeginSaveToString(): boolean;
+    /// <summary>
+    /// End writing to string/file/stream. Sets InProcess False.
+    /// </summary>
     procedure EndSaveTo();
+    /// <summary>
+    /// Empties the Buffer. All characters from Buffer have been written to a file.
+    /// </summary>
     procedure FlushBuffer();
+    /// <summary>
+    /// Write CDATA. CDATA - text. CorrectCDATA - if true then replaces ']]&gt;' on ']]&amp;gt;'.
+    /// StartNewLine - if true then starts from new line (ignored when NewLine = false).
+    /// </summary>
+    /// <param name="CDATA">
+    /// text
+    /// </param>
+    /// <param name="CorrectCDATA">
+    /// if true then replaces ']]&gt;' on ']]&amp;gt;'
+    /// </param>
+    /// <param name="StartNewLine">
+    /// if true then starts from new line (ignored when NewLine = false)
+    /// </param>
     procedure WriteCDATA(CDATA: ansistring; CorrectCDATA: boolean; StartNewLine: boolean = true); overload;     //<![CDATA[ bla-bla-bla <><><>...]]>
+    /// <summary>
+    /// Write CDATA. CDATA - text. CorrectCDATA - if true then replaces ']]&gt;' on ']]&amp;gt;'.
+    /// StartNewLine - if true then starts from new line (ignored when NewLine = false).
+    /// </summary>
+    /// <param name="CDATA">
+    /// text
+    /// </param>
     procedure WriteCDATA(const CDATA: ansistring); overload;
-    procedure WriteComment(const Comment: ansistring; StartNewLine: boolean = true);           //<!-- bla-bla-bla -->
+    /// <summary>
+    /// Write comment.
+    /// </summary>
+    /// <param name="Comment">
+    /// text of comment.
+    /// </param>
+    /// <param name="StartNewLine">
+    /// if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    procedure WriteComment(const Comment: ansistring; StartNewLine: boolean = true);
     procedure WriteEmptyTag(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true); overload; // <tag a="a"... />
     procedure WriteEmptyTag(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    /// Write empty tag.
+    /// </summary>
+    /// <param name="TagName">
+    /// name of tag
+    /// </param>
+    /// <param name="StartNewLine">
+    /// if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CheckEntity">
+    /// if true then corrects entity.
+    /// </param>
     procedure WriteEmptyTag(const TagName: ansistring; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    /// Write empty tag.
+    /// </summary>
     procedure WriteEmptyTag(const TagName: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    /// Write empty tag.
+    /// </summary>
     procedure WriteEmptyTag(const TagName: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    /// Write empty tag.
+    /// </summary>
+    /// <param name="TagName">
+    /// name of tag
+    /// </param>
     procedure WriteEmptyTag(const TagName: ansistring); overload;
+    /// <summary>
+    /// Write end of node.
+    /// </summary>
     procedure WriteEndTagNode(); overload;
+    /// <summary>
+    /// Write end of node.
+    /// </summary>
     procedure WriteEndTagNode(isForce: boolean; CloseTagNewLine: boolean); overload;
+    /// <summary>
+    /// Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    /// name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    /// attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    /// if true then start from new line (ignored when NewLine = false)
+    /// </param>
+    /// <param name="CheckEntity">
+    /// if true then corrects entity.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    /// Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    /// name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    /// attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    /// if true then start from new line (ignored when NewLine = false)
+    /// </param>
+    /// <param name="CheckEntity">
+    /// if true then corrects entity.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    /// Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    /// name of instruction.
+    /// </param>
+    /// <param name="StartNewLine">
+    /// if true then start from new line (ignored when NewLine = false)
+    /// </param>
+    /// <param name="CheckEntity">
+    /// if true then corrects entity.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; StartNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    /// Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    /// name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    /// attributes
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    /// Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    /// name of instruction.
+    /// </param>
+    /// <param name="SAttributes">
+    /// attributes
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    /// Write instruction
+    /// </summary>
+    /// <param name="InstructionName">
+    ///  name of instruction.
+    /// </param>
     procedure WriteInstruction(const InstructionName: ansistring); overload;
+    /// <summary>
+    ///   <para>
+    ///     Write not processed text. Text
+    ///   </para>
+    ///   <note type="warning">
+    ///     can break XML!
+    ///   </note>
+    /// </summary>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="UseConverter">
+    ///   used TextConverter
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
     procedure WriteRaw(Text: ansistring; UseConverter: boolean; StartNewLine: boolean = true);
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    ///   Write tag (&lt;tag ...&gt;text&lt;/tag&gt;).
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="Text">
+    ///   text
+    /// </param>
     procedure WriteTag(const TagName: ansistring; const Text: ansistring); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity. Attributes get from Attributes.
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="AttrArray">
+    ///   Attributes
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity. Attributes get from Attributes.
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="StartNewLine">
+    ///   if true then start from new line (ignored when NewLine = false).
+    /// </param>
+    /// <param name="CloseTagNewLine">
+    ///   if true then closed tag starts from new line.
+    /// </param>
+    /// <param name="CheckEntity">
+    ///   if true then corrects entity.
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="SAttributes">
+    ///   Attributes
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
+    /// <param name="AttrArray">
+    ///   Attributes
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray); overload;
+    /// <summary>
+    ///   Write node.
+    /// </summary>
+    /// <param name="TagName">
+    ///   name of tag
+    /// </param>
     procedure WriteTagNode(const TagName: ansistring); overload;
+    /// <summary>
+    /// Tag's attributes.
+    /// </summary>
     property Attributes: TZAttributes read FAttributes write SetAttributes;
+    /// <summary>
+    /// Quotation mark for attribute values ( ' (prime) or " (double prime)). <br />" (double prime) by default.
+    /// </summary>
     property AttributeQuote: ansichar read FAttributeQuote write SetAttributeQuote;
-    property Buffer: ansistring read FBuffer;
+    /// <summary>
+    /// Buffer. (read only)
+    /// </summary>
+    property Buffer: AnsiString read FBuffer;
+    /// <summary>
+    /// Return True if writing in process. (read only)
+    /// </summary>
     property InProcess: boolean read FInProcess;
+    /// <summary>
+    /// Buffer length (&gt;0). If InProcess = True then property read only. <br />4096 bytes by default.
+    /// </summary>
     property MaxBufferLength: integer read FMaxBufferLength write SetMaxBufferLength;
+    /// <summary>
+    /// If True then tag starts with new line. If InProcess = True then property read only. <br />True by default
+    /// </summary>
     property NewLine: boolean read FNewLine write SetNewLine;
+    /// <summary>
+    /// Number of tab-symbols before tag. If InProcess = True then property read only. <br />0 by default.
+    /// </summary>
     property TabLength: integer read FTabLength write SetTabLength;
+    /// <summary>
+    /// Tab symbol (#32 (space) or #9 (tab)). If InProcess = True then property read only. <br />#32 by default.
+    /// </summary>
     property TabSymbol: ansichar read GetTabSymbol write SetTabSymbol;
+    /// <summary>
+    /// Number of open tags before current tag. (read only)
+    /// </summary>
     property TagCount: integer read FTagCount;
+    /// <summary>
+    /// Return open tag number num. (read only)
+    /// </summary>
     property Tags[num: integer]: ansistring read GetTag;
+    /// <summary>
+    /// Set text converter. If InProcess = True then property read only.
+    /// </summary>
     Property TextConverter: TAnsiToCPConverter read FTextConverter write SetTextConverter;
+    /// <summary>
+    /// If True then newline character is #10 (LF) else newline "character" is #13#10 (CR+LF).
+    /// </summary>
     property UnixNLSeparator: boolean read FUnixNLSeparator write SetUnixNLSeparator;
   end;
 
@@ -163,7 +589,9 @@ type
   //            3. Как парсить текст в многобайтной кодировке?
   //            4. Как обрабатывать неизвестные кодировки?
 
-  //читает XML
+  /// <summary>
+  /// Class-reader. Read XML from string, stream or file in CP866, Windows-1251, UTF-8 and UTF-16 (BE and LE) encodings.
+  /// </summary>
   TZsspXMLReader = class
   private
     FAttributes: TZAttributes;      //Атрибуты
@@ -238,24 +666,94 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
+    /// <summary>
+    /// Begin to read XML from a file FileName. <br />
+    /// </summary>
+    /// <returns>
+    /// 0 - OK <br />1 - already in reading <br />2 - error <br />3 - Stream = nil
+    /// </returns>
     function BeginReadFile(FileName: string): integer;
+    /// <summary>
+    /// Begin to read XML from Stream. <br />
+    /// </summary>
+    /// <returns>
+    /// 0 if no errors.
+    /// </returns>
     function BeginReadStream(Stream: TStream): integer;
+    /// <summary>
+    /// Begin to read XML from string Source.
+    /// </summary>
+    /// <param name="IgnoreCodePage">
+    /// if True then Ignores encoding
+    /// </param>
+    /// <returns>
+    /// 0 if no errors.
+    /// </returns>
     function BeginReadString(Source: ansistring; IgnoreCodePage: boolean = true): integer;
+    /// <summary>
+    /// Read tag.
+    /// </summary>
     function ReadTag(): boolean;
+    /// <summary>
+    /// End reading.
+    /// </summary>
     procedure EndRead();
+    /// <returns>
+    /// True when current file (stream or string) position is the end.
+    /// </returns>
     function Eof(): boolean; virtual;
+    /// <summary>
+    /// Attributes of tag.
+    /// </summary>
     property Attributes: TZAttributes read FAttributes write SetAttributes;
     property AttributesMatch: boolean read FAttributesMatch write SetAttributesMatch;
+    /// <summary>
+    /// Return True when processed XML. (RO)
+    /// </summary>
     property InProcess: boolean read FInProcess;
+    /// <summary>
+    /// Raw text. (RO)
+    /// </summary>
     property RawTextTag: ansistring read FRawTextTag;
+    /// <summary>
+    /// Return error code. 0 - OK, 1 - value without quotes, etc. (RO)
+    /// </summary>
     property ErrorCode: integer read FErrorCode;
+    /// <summary>
+    /// If True then ignore case sensitive. If InProcess = True then property read only. <br />False by default.
+    /// </summary>
     property IgnoreCase: boolean read FIgnoreCase write SetIgnoreCase;
+    /// <summary>
+    /// Return name of readed tag/instruction/comment. (RO)
+    /// </summary>
     property TagName: ansistring read FTagName;
+    /// <summary>
+    /// Return CDATA or comment text. (RO)
+    /// </summary>
     property TagValue: ansistring read FValue;
+    /// <summary>
+    /// Return type of tag:
+    /// <para>0 - unknown</para>
+    /// <para>1 - &lt;?...?&gt;</para>
+    /// <para>2 - &lt;![CDATA[..]]&gt;</para>
+    /// <para>3 - &lt;!--..--&gt;</para>
+    /// <para>4 - &lt;...&gt;</para>
+    /// <para>5 - &lt;.../&gt;</para>
+    /// <para>6 - &lt;/...&gt;</para>
+    /// </summary>
     property TagType: byte read FTagType;
+    /// <summary>
+    /// Number of opened tags before current tag. (RO)
+    /// </summary>
     property TagCount: integer read FTagCount;
+    /// <summary>
+    /// Return opened tag number num. (RO)
+    /// </summary>
     property Tags[num: integer]: ansistring read GetTag;
     property TextBeforeTag: ansistring read FTextBeforeTag;
+    /// <summary>
+    /// Buffer size (&gt;=512). If InProcess = True then property read only. <br />4096 bytes by default.
+    /// </summary>
     property MaxBufferLength: integer read FMaxBufferLength write SetMaxBufferLength;
     property QuotesEqual: boolean read FQuotesEqual write SetQuotesEqual; //признак того, что двойные и одинарные кавычки
                                                                           //равны. Если установлено в false, то в <tagname attr1="asda' attr2='adsas">
@@ -264,7 +762,6 @@ type
                                                                           //По умолчанию false.
   end;
 
-//для Delphi >=2009
   TZAttrArrayH = array [0..1] of string;
   //Класс-обёртка-костыль для атрибутов над TZAttributes
   TZAttributesH = class(TPersistent)
