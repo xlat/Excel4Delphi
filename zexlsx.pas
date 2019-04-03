@@ -6414,7 +6414,7 @@ begin
 
     _WriteHelper := TZEXLSXWriteHelper.Create();
 
-    path_xl := PathName + 'xl' + PathDelim;
+    path_xl := TPath.Combine(PathName, 'xl') + PathDelim;
     if (not DirectoryExists(path_xl)) then
       ForceDirectories(path_xl);
 
@@ -6476,7 +6476,7 @@ begin
 
     //iDrawingsCount := XMLSS.DrawingCount();
     if iDrawingsCount <> 0 then begin
-      path_draw := path_xl + PathDelim + 'drawings' + PathDelim;
+      path_draw := path_xl + 'drawings' + PathDelim;
       if (not DirectoryExists(path_draw)) then
         ForceDirectories(path_draw);
 
@@ -6484,7 +6484,7 @@ begin
       if (not DirectoryExists(path_draw_rel)) then
         ForceDirectories(path_draw_rel);
 
-      path_media := path_xl + PathDelim + 'media' + PathDelim;
+      path_media := path_xl + 'media' + PathDelim;
       if (not DirectoryExists(path_media)) then
         ForceDirectories(path_media);
 
@@ -6527,11 +6527,12 @@ begin
     FreeAndNil(Stream);
 
     //[Content_Types].xml
-    Stream := TFileStream.Create(PathName + '[Content_Types].xml', fmCreate);
+    Stream := TFileStream.Create(TPath.Combine(PathName, '[Content_Types].xml'), fmCreate);
     ZEXLSXCreateContentTypes(XMLSS, Stream, kol, 0, nil, TextConverter, CodePageName, BOM, _WriteHelper);
     FreeAndNil(Stream);
 
-    path_docprops := PathName + 'docProps' + PathDelim;
+    path_docprops := TPath.Combine(PathName, 'docProps') + PathDelim;
+
     if (not DirectoryExists(path_docprops)) then
       ForceDirectories(path_docprops);
 
