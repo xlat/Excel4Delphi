@@ -13,6 +13,25 @@ const
   BOMUTF32LE = #255#254#0#0; // FF FE 00 00
 
 type
+  /// <summary>
+  /// Xml tag type.
+  /// </summary>
+  TXmlTagType = (
+    // Unknown.
+    xttUnknown = 0,
+    /// <?...?>
+    xttDeclare = 1,
+    /// <![CDATA[..]]>
+    xttCData   = 2,
+    /// <!--..-->
+    xttComment = 3,
+    /// <...>
+    xttStart   = 4,
+    /// <.../>
+    xttClosed  = 5,
+    //</...>
+    xttEnd     = 6
+  );
 
   /// <summary>
   /// Text converter from local encoding to needed encoding
@@ -633,14 +652,7 @@ type
 //    FRawTextTagNotDecoded: ansistring; //Текст тэга не декодированный
     FTagName: ansistring;              //Имя тэга (инструкции/комментария)
     FValue: ansistring;                //Текст CDATA или комментария
-    FTagType: byte;                    //Тип тэга:
-                                                // 0 - что-то непонятное
-                                                // 1 - <?...?>
-                                                // 2 - <![CDATA[..]]>
-                                                // 3 - <!--..-->
-                                                // 4 - <...>    (4 and 4 = 4)
-                                                // 5 - <.../>   (5 and 4 = 4)
-                                                // 6 - </...>   (6 and 4 = 4)
+    FTagType: TXmlTagType;
     FCharReader: TReadCPChar;           //Читает "символ"
     FCharConverter: TCPToAnsiConverter; //конвертер
     FStreamEnd: boolean;
@@ -744,7 +756,7 @@ type
     /// <para>5 - &lt;.../&gt;</para>
     /// <para>6 - &lt;/...&gt;</para>
     /// </summary>
-    property TagType: byte read FTagType;
+    property TagType: TXmlTagType read FTagType;
     /// <summary>
     /// Number of opened tags before current tag. (RO)
     /// </summary>
@@ -889,7 +901,10 @@ type
     function GetErrorCode(): integer;
     function GetIgnoreCase(): boolean;
     function GetValue(): string;
-    function GetTagType(): byte;
+    function GetTagType(): TXmlTagType;
+    function GetIsTagStart(): boolean;
+    function GetIsTagClosed(): boolean;
+    function GetIsTagEnd(): boolean;
     function GetTagCount(): integer;
     function GetTextBeforeTag(): string;
     function GetTagName(): string;
@@ -902,6 +917,7 @@ type
     function GetQuotesEqual(): boolean;
     procedure SetAttributesMatch(Value: boolean);
     function GetAttributesMatch(): boolean;
+    function GetIsTagStartOrClosed: boolean;
   protected
   public
     constructor Create(); virtual;
@@ -920,7 +936,11 @@ type
     property IgnoreCase: boolean read GetIgnoreCase write SetIgnoreCase;
     property TagName: string read GetTagName;
     property TagValue: string read GetValue;
-    property TagType: byte read GetTagType;
+    property TagType: TXmlTagType read GetTagType;
+    property IsTagStart: boolean read GetIsTagStart;
+    property IsTagClosed: boolean read GetIsTagClosed;
+    property IsTagStartOrClosed: boolean read GetIsTagStartOrClosed;
+    property IsTagEnd: boolean read GetIsTagEnd;
     property TagCount: integer read GetTagCount;
     property Tags[num: integer]: string read GetTag;
     property TextBeforeTag: string read GetTextBeforeTag;
@@ -2632,7 +2652,7 @@ begin
   FTextBeforeTag := '';
   FRawTextTag := '';
   FTagName := '';
-  FTagType := 0;
+  FTagType := TXmlTagType.xttUnknown;
   FValue := '';
   FErrorCode := 0;
   FAttributes.Clear();
@@ -3118,14 +3138,14 @@ var
               //
               if _isClosedTag then
               begin
-                if (FTagType <> 1) and (FTagType <> 6) then
-                  FTagType := 5
+                if (FTagType <> TXmlTagType.xttDeclare) and (FTagType <> TXmlTagType.xttEnd) then
+                  FTagType := TXmlTagType.xttClosed
                 else
                   FErrorCode := FErrorCode or 8192;
               end else
               if _isInstruction then
               begin
-                if FTagType <> 1 then
+                if FTagType <> TXmlTagType.xttDeclare then
                   FErrorCode := FErrorCode or 16384;
               end;
               end_tag := true;
@@ -3161,8 +3181,8 @@ var
                 _tmp := GetCommentCDATA();
                 if end_tag then
                   case _tmp of
-                    1: FTagType := 3;
-                    2: FTagType := 2;
+                    1: FTagType := TXmlTagType.xttComment;
+                    2: FTagType := TXmlTagType.xttCData;
                   end;
                 break;
               end else
@@ -3174,7 +3194,7 @@ var
           '?':
             begin
               if (_isTagName = 0) and (length(s) = 0) then
-                FTagType := 1
+                FTagType := TXmlTagType.xttDeclare
               else
                 _isInstruction := true;
             end;
@@ -3182,7 +3202,7 @@ var
             begin
               // сделать проверку, если текст тэга не пустой
               if (_isTagName = 0) and (length(s) = 0) then
-                FTagType := 6
+                FTagType := TXmlTagType.xttEnd
               else
               begin
                 if _isTagName = 0 then
@@ -3252,8 +3272,8 @@ begin
               FErrorCode := FErrorCode or 131072
             else
               if end_tag then
-                if (FTagType = 0) and (length(FTagName) > 0) then
-                  FTagType := 4;
+                if (FTagType = TXmlTagType.xttUnknown) and (length(FTagName) > 0) then
+                  FTagType := TXmlTagType.xttStart;
 
             Break;
           end;
@@ -3265,10 +3285,10 @@ begin
       end;//case
     end; //if
   end;  //while
-  if FTagType = 4 then
+  if FTagType = TXmlTagType.xttStart then
     AddTag(FTagName)
   else
-  if FTagType = 6 then
+  if FTagType = TXmlTagType.xttEnd then
     DeleteClosedTag();
   if eof() then
     if TagCount > 0 then
@@ -3878,6 +3898,26 @@ begin
   result := FXMLReader.InProcess;
 end;
 
+function TZsspXMLReaderH.GetIsTagClosed(): boolean;
+begin
+    result := (TagType = TXmlTagType.xttClosed);
+end;
+
+function TZsspXMLReaderH.GetIsTagEnd(): boolean;
+begin
+    result := (TagType = TXmlTagType.xttEnd);
+end;
+
+function TZsspXMLReaderH.GetIsTagStart(): boolean;
+begin
+    result := (TagType = TXmlTagType.xttStart);
+end;
+
+function TZsspXMLReaderH.GetIsTagStartOrClosed: boolean;
+begin
+    result := (TagType = TXmlTagType.xttStart) or (TagType = TXmlTagType.xttClosed);
+end;
+
 function TZsspXMLReaderH.GetRawTextTag(): string;
 begin
   result := UTF8ToString(FXMLReader.RawTextTag);
@@ -3898,7 +3938,7 @@ begin
   result := UTF8ToString(FXMLReader.TagValue);
 end;
 
-function TZsspXMLReaderH.GetTagType(): byte;
+function TZsspXMLReaderH.GetTagType(): TXmlTagType;
 begin
   result := FXMLReader.TagType;
 end;

@@ -654,7 +654,7 @@ end;
 procedure TZEXLSXNumberFormats.ReadNumFmts(const xml: TZsspXMLReaderH);
 var t: integer;
 begin
-  while (not((xml.TagName = 'numFmts') and (xml.TagType = 6))) and (not xml.Eof()) do begin
+  while (not((xml.TagName = 'numFmts') and (xml.IsTagEnd))) and (not xml.Eof()) do begin
     xml.ReadTag();
     if (xml.TagName = 'numFmt') then
       if (TryStrToInt(xml.Attributes['numFmtId'], t)) then
@@ -969,13 +969,13 @@ begin
     while (not xml.Eof()) do begin
       xml.ReadTag();
       if (xml.TagName = 'a:clrScheme') then  begin
-        if (xml.TagType = 4) then
+        if (xml.IsTagStart) then
           _b := true;
-        if (xml.TagType = 6) then
+        if (xml.IsTagEnd) then
           _b := false;
-      end else if ((xml.TagName = 'a:sysClr') and (_b) and (xml.TagType in [4, 5])) then begin
+      end else if ((xml.TagName = 'a:sysClr') and (_b) and (xml.IsTagStartOrClosed)) then begin
         _addFillColor(xml.Attributes.ItemsByName['lastClr']);
-      end else if ((xml.TagName = 'a:srgbClr') and (_b) and (xml.TagType in [4, 5])) then begin
+      end else if ((xml.TagName = 'a:srgbClr') and (_b) and (xml.IsTagStartOrClosed)) then begin
         _addFillColor(xml.Attributes.ItemsByName['val']);
       end;
     end; //while
@@ -1010,7 +1010,7 @@ begin
     FilesCount := 0;
     while (not xml.Eof()) do begin
       xml.ReadTag();
-      if ((xml.TagName = 'Override') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'Override') and (xml.IsTagClosed)) then begin
         s := xml.Attributes.ItemsByName['PartName'];
         if (s > '') then begin
           SetLength(FileArray, FilesCount + 1);
@@ -1078,17 +1078,17 @@ begin
 
     while (not xml.Eof()) do begin
       xml.ReadTag();
-      if ((xml.TagName = 'si') and (xml.TagType = 4)) then begin
+      if ((xml.TagName = 'si') and (xml.IsTagStart)) then begin
         s := '';
         k := 0;
-        while (not((xml.TagName = 'si') and (xml.TagType = 6))) and (not xml.Eof) do begin
+        while (not((xml.TagName = 'si') and (xml.IsTagEnd))) and (not xml.Eof) do begin
           xml.ReadTag();
-          if ((xml.TagName = 't') and (xml.TagType = 6)) then begin
+          if ((xml.TagName = 't') and (xml.IsTagEnd)) then begin
             if (k > 1) then
               s := s + sLineBreak;
             s := s + xml.TextBeforeTag;
           end;
-          if (xml.TagName = 'r') and (xml.TagType = 6) then
+          if (xml.TagName = 'r') and (xml.IsTagEnd) then
             inc(k);
         end; //while
         SetLength(StrArray, StrCount + 1);
@@ -1246,7 +1246,7 @@ var
     maxCol := 0;
     CheckRow(1);
     CheckCol(1);
-    while (not ((xml.TagName = 'sheetData') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'sheetData') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
@@ -1272,19 +1272,19 @@ var
         if (s > '') then
           if (tryStrToInt(s, t)) then
             _currCell.CellStyle := t;
-        if (xml.TagType = 4) then
-        while (not ((xml.TagName = 'c') and (xml.TagType = 6))) do begin
+        if (xml.IsTagStart) then
+        while (not ((xml.TagName = 'c') and (xml.IsTagEnd))) do begin
           xml.ReadTag();
           if (xml.Eof) then
             break;
 
           //is пока игнорируем
-          if (((xml.TagName = 'v') or (xml.TagName = 't')) and (xml.TagType = 6)) then begin
+          if (((xml.TagName = 'v') or (xml.TagName = 't')) and (xml.IsTagEnd)) then begin
             if (_num > 0) then
               v := v + sLineBreak;
             v := v + xml.TextBeforeTag;  
             inc(_num);
-          end else if ((xml.TagName = 'f') and (xml.TagType = 6)) then
+          end else if ((xml.TagName = 'f') and (xml.IsTagEnd)) then
             _currCell.Formula := ZEReplaceEntity(xml.TextBeforeTag);
 
         end; //while
@@ -1332,7 +1332,7 @@ var
            maxCol := _currCol;
       end else
       //строка
-      if ((xml.TagName = 'row') and (xml.TagType in [4, 5])) then begin
+      if ((xml.TagName = 'row') and (xml.IsTagStartOrClosed)) then begin
         _currCol := 0;
         s := xml.Attributes.ItemsByName['r']; //индекс строки
         if (s > '') then
@@ -1366,13 +1366,13 @@ var
         //s := xml.Attributes.ItemsByName['thickBot'];
         //s := xml.Attributes.ItemsByName['thickTop'];
 
-        if (xml.TagType = 5) then begin
+        if xml.IsTagClosed then begin
           inc(_currRow);
           CheckRow(_currRow + 1);
         end;
       end else
       //конец строки
-      if ((xml.TagName = 'row') and (xml.TagType = 6)) then begin
+      if ((xml.TagName = 'row') and (xml.IsTagEnd)) then begin
         inc(_currRow);
         CheckRow(_currRow + 1);
       end;
@@ -1411,12 +1411,12 @@ var
     y1 := 0;
     x2 := 0;
     y2 := 0;
-    while (not ((xml.TagName = 'mergeCells') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'mergeCells') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
 
-      if ((xml.TagName = 'mergeCell') and (xml.TagType in [4, 5])) then begin
+      if ((xml.TagName = 'mergeCell') and (xml.IsTagStartOrClosed)) then begin
         s := xml.Attributes.ItemsByName['ref'];
         t := length(s);
         if (t > 0) then begin
@@ -1473,12 +1473,12 @@ var
     _delta, i: integer;
   begin
     num := 0;
-    while (not ((xml.TagName = 'cols') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'cols') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
 
-      if ((xml.TagName = 'col') and (xml.TagType in [4, 5])) then begin
+      if ((xml.TagName = 'col') and (xml.IsTagStartOrClosed)) then begin
         CheckCol(num + 1);
         s := xml.Attributes.ItemsByName['bestFit'];
         if (s > '') then
@@ -1574,12 +1574,12 @@ var
   begin
     _c := 0;
     _r := 0;
-    while (not ((xml.TagName = 'hyperlinks') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'hyperlinks') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'hyperlink') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'hyperlink') and (xml.IsTagClosed)) then begin
         s := xml.Attributes.ItemsByName['ref'];
         if (s > '') then
           if (ZEGetCellCoords(s, _c, _r, true)) then begin
@@ -1603,7 +1603,7 @@ var
   end; //_ReadHyperLinks();
   procedure _ReadSheetPr();
   begin
-    while (not ((xml.TagName = 'sheetPr') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'sheetPr') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
@@ -1618,7 +1618,7 @@ var
   procedure _ReadRowBreaks();
   begin
     _currSheet.RowBreaks := [];
-    while (not ((xml.TagName = 'rowBreaks') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'rowBreaks') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
@@ -1631,7 +1631,7 @@ var
   procedure _ReadColBreaks();
   begin
     _currSheet.ColBreaks := [];
-    while (not ((xml.TagName = 'colBreaks') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'colBreaks') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
@@ -1649,12 +1649,12 @@ var
     SplitMode: TZSplitMode;
     s: string;
   begin
-    while (not ((xml.TagName = 'sheetViews') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'sheetViews') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'sheetView') and (xml.TagType = 4)) then begin
+      if ((xml.TagName = 'sheetView') and xml.IsTagStart) then begin
         s := xml.Attributes.ItemsByName['tabSelected'];
         _currSheet.Selected := s = '1';
 
@@ -1663,7 +1663,7 @@ var
             _currSheet.ViewMode := zvmPageBreakPreview;
       end;
 
-      if ((xml.TagName = 'pane') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'pane') and (xml.IsTagClosed)) then begin
         SplitMode := ZSplitSplit;
         s := xml.Attributes.ItemsByName['state'];
         if (s = 'frozen') then
@@ -1949,13 +1949,13 @@ var
       _isCFAdded := false;
       _CF := nil;
       _tmpStyle := TZStyle.Create();
-      while (not ((xml.TagType = 6) and (xml.TagName = ZETag_conditionalFormatting))) do begin
+      while (not ((xml.IsTagEnd) and (xml.TagName = ZETag_conditionalFormatting))) do begin
         xml.ReadTag();
         if (xml.Eof()) then
           break;
 
         // cfRule = Conditional Formatting Rule
-        if ((xml.TagType = 4) and (xml.TagName = ZETag_cfRule)) then begin
+        if ((xml.IsTagStart) and (xml.TagName = ZETag_cfRule)) then begin
          (*
           Атрибуты в cfRule:
           type	       	- тип
@@ -2009,11 +2009,11 @@ var
           //_priority := xml.Attributes['priority'];
 
           count := 0;
-          while (not ((xml.TagType = 6) and (xml.TagName = ZETag_cfRule))) do begin
+          while (not ((xml.IsTagEnd) and (xml.TagName = ZETag_cfRule))) do begin
             xml.ReadTag();
             if (xml.Eof()) then
               break;
-            if (xml.TagType = 6) then
+            if (xml.IsTagEnd) then
               if (xml.TagName = ZETag_formula) then begin
                 if (count >= MaxFormulasCount) then begin
                   inc(MaxFormulasCount, 2);
@@ -2038,10 +2038,10 @@ var
   begin
     _currSheet.SheetOptions.IsDifferentFirst   := ZEStrToBoolean(xml.Attributes['differentFirst']);
     _currSheet.SheetOptions.IsDifferentOddEven := ZEStrToBoolean(xml.Attributes['differentOddEven']);
-    while (not ((xml.TagType = 6) and (xml.TagName = 'headerFooter'))) do begin
+    while (not ((xml.IsTagEnd) and (xml.TagName = 'headerFooter'))) do begin
       xml.ReadTag();
       if (xml.Eof()) then break;
-      if xml.TagType = 6 then begin
+      if xml.IsTagEnd then begin
         if xml.TagName = 'oddHeader' then
           _currSheet.SheetOptions.Header := ClenuapXmlTagValue(xml.TextBeforeTag)
         else if xml.TagName = 'oddFooter' then
@@ -2075,20 +2075,20 @@ begin
     while (not xml.Eof()) do
     begin
       xml.ReadTag();
-      if ((xml.TagName = 'sheetData') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'sheetData') and (xml.IsTagStart)) then
         _ReadSheetData()
       else
-      if ((xml.TagName = 'autoFilter') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'autoFilter') and (xml.IsTagClosed)) then
         _ReadAutoFilter()
       else
-      if ((xml.TagName = 'mergeCells') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'mergeCells') and (xml.IsTagStart)) then
         _ReadMerge()
       else
-      if ((xml.TagName = 'cols') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'cols') and (xml.IsTagStart)) then
         _ReadCols()
       else
       //Отступы
-      if ((xml.TagName = 'pageMargins') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'pageMargins') and (xml.IsTagClosed)) then
       begin
         //в дюймах
         s := xml.Attributes.ItemsByName['bottom'];
@@ -2111,7 +2111,7 @@ begin
           _currSheet.SheetOptions.MarginTop := round(_tmpr);
       end else
       //Настройки страницы
-      if ((xml.TagName = 'pageSetup') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'pageSetup') and (xml.IsTagClosed)) then
       begin
         //s := xml.Attributes.ItemsByName['blackAndWhite'];
         //s := xml.Attributes.ItemsByName['cellComments'];
@@ -2159,7 +2159,7 @@ begin
         //s := xml.Attributes.ItemsByName['verticalDpi'];
       end else
       //настройки печати
-      if ((xml.TagName = 'printOptions') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'printOptions') and (xml.IsTagClosed)) then
       begin
         //s := xml.Attributes.ItemsByName['gridLines'];
         //s := xml.Attributes.ItemsByName['gridLinesSet'];
@@ -2172,27 +2172,27 @@ begin
         if (s > '') then
           _currSheet.SheetOptions.CenterVertical := ZEStrToBoolean(s);
       end else
-      if ((xml.TagName = 'dimension') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'dimension') and (xml.IsTagClosed)) then
         _GetDimension()
       else
-      if ((xml.TagName = 'hyperlinks') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'hyperlinks') and (xml.IsTagStart)) then
         _ReadHyperLinks()
       else
-      if ((xml.TagName = 'sheetPr') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'sheetPr') and (xml.IsTagStart)) then
         _ReadSheetPr()
       else
-      if ((xml.TagName = 'rowBreaks') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'rowBreaks') and (xml.IsTagStart)) then
         _ReadRowBreaks()
       else
-      if ((xml.TagName = 'colBreaks') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'colBreaks') and (xml.IsTagStart)) then
         _ReadColBreaks()
       else
-      if ((xml.TagName = 'sheetViews') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'sheetViews') and (xml.IsTagStart)) then
         _ReadSheetViews()
       else
-      if ((xml.TagType = 4) and (xml.TagName = ZETag_conditionalFormatting)) then
+      if ((xml.IsTagStart) and (xml.TagName = ZETag_conditionalFormatting)) then
         _ReadConditionFormatting()
-      else if ((xml.TagName = 'headerFooter') and (xml.TagType = 4)) then
+      else if ((xml.TagName = 'headerFooter') and (xml.IsTagStart)) then
         _ReadHeaderFooter();
     end; //while
 
@@ -2458,42 +2458,42 @@ var
   var _currFont: integer;
   begin
     _currFont := -1;
-    while (not ((xml.TagName = 'fonts') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'fonts') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
 
       s := xml.Attributes.ItemsByName['val'];
-      if ((xml.TagName = 'font') and (xml.TagType = 4)) then begin
+      if ((xml.TagName = 'font') and (xml.IsTagStart)) then begin
         _currFont := FontCount;
         inc(FontCount);
         SetLength(FontArray, FontCount);
         ZEXLSXZeroFont(FontArray[_currFont]);
       end else if (_currFont >= 0) then begin
-        if ((xml.TagName = 'name') and (xml.TagType = 5)) then
+        if ((xml.TagName = 'name') and (xml.IsTagClosed)) then
           FontArray[_currFont].name := s
-        else if ((xml.TagName = 'b') and (xml.TagType = 5)) then
+        else if ((xml.TagName = 'b') and (xml.IsTagClosed)) then
           FontArray[_currFont].bold := true
-        else if ((xml.TagName = 'charset') and (xml.TagType = 5)) then begin
+        else if ((xml.TagName = 'charset') and (xml.IsTagClosed)) then begin
           if (TryStrToInt(s, t)) then
             FontArray[_currFont].charset := t;
-        end else if ((xml.TagName = 'color') and (xml.TagType = 5)) then begin
+        end else if ((xml.TagName = 'color') and (xml.IsTagClosed)) then begin
           ZXLSXGetColor(FontArray[_currFont].color,
                         FontArray[_currFont].ColorType,
                         FontArray[_currFont].LumFactor);
-        end else if ((xml.TagName = 'i') and (xml.TagType = 5)) then
+        end else if ((xml.TagName = 'i') and (xml.IsTagClosed)) then
           FontArray[_currFont].italic := true
-        else if ((xml.TagName = 'strike') and (xml.TagType = 5)) then
+        else if ((xml.TagName = 'strike') and (xml.IsTagClosed)) then
           FontArray[_currFont].strike := true
         else
-        if ((xml.TagName = 'sz') and (xml.TagType = 5)) then begin
+        if ((xml.TagName = 'sz') and (xml.IsTagClosed)) then begin
           if (TryStrToInt(s, t)) then
             FontArray[_currFont].fontsize := t;
-        end else if ((xml.TagName = 'u') and (xml.TagType = 5)) then begin
+        end else if ((xml.TagName = 'u') and (xml.IsTagClosed)) then begin
           if (s > '') then
             if (s <> 'none') then
               FontArray[_currFont].underline := true;
-        end else if ((xml.TagName = 'vertAlign') and (xml.TagType = 5)) then
+        end else if ((xml.TagName = 'vertAlign') and (xml.IsTagClosed)) then
         begin
         end;
       end; //if  
@@ -2637,12 +2637,12 @@ var
     _diagDown := false;
     _diagUP := false;
     _color := clBlack;
-    while (not ((xml.TagName = 'borders') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'borders') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'border') and (xml.TagType = 4)) then begin
+      if ((xml.TagName = 'border') and (xml.IsTagStart)) then begin
         _currBorder := BorderCount;
         inc(BorderCount);
         SetLength(BorderArray, BorderCount);
@@ -2657,7 +2657,7 @@ var
         if (s > '') then
           _diagUP := ZEStrToBoolean(s);
       end else begin
-        if (xml.TagType in [4, 5]) then begin
+        if (xml.IsTagStartOrClosed) then begin
           if (xml.TagName = 'left') then begin
             _SetCurBorder(0);
           end else if (xml.TagName = 'right') then begin
@@ -2700,17 +2700,17 @@ var
   var _currFill: integer;
   begin
     _currFill := -1;
-    while (not ((xml.TagName = 'fills') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'fills') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'fill') and (xml.TagType = 4)) then begin
+      if ((xml.TagName = 'fill') and (xml.IsTagStart)) then begin
         _currFill := FillCount;
         inc(FillCount);
         SetLength(FillArray, FillCount);
         ZEXLSXClearPatternFill(FillArray[_currFill]);
-      end else if ((xml.TagName = 'patternFill') and (xml.TagType in [4, 5])) then begin
+      end else if ((xml.TagName = 'patternFill') and (xml.IsTagStartOrClosed)) then begin
         if (_currFill >= 0) then begin
           s := xml.Attributes.ItemsByName['patternType'];
           {
@@ -2739,7 +2739,7 @@ var
             FillArray[_currFill].patternfill := _GetPatternFillByStr(s);
         end;
       end else
-      if ((xml.TagName = 'bgColor') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'bgColor') and (xml.IsTagClosed)) then begin
         if (_currFill >= 0) then  begin
           ZXLSXGetColor(FillArray[_currFill].patterncolor,
                         FillArray[_currFill].patternColorType,
@@ -2748,7 +2748,7 @@ var
           //если не сплошная заливка - нужно поменять местами цвета (bgColor <-> fgColor)
           ZEXLSXSwapPatternFillColors(FillArray[_currFill]);
         end;
-      end else if ((xml.TagName = 'fgColor') and (xml.TagType = 5)) then begin
+      end else if ((xml.TagName = 'fgColor') and (xml.IsTagClosed)) then begin
         if (_currFill >= 0) then
           ZXLSXGetColor(FillArray[_currFill].bgcolor,
                         FillArray[_currFill].bgColorType,
@@ -2766,13 +2766,13 @@ var
   var _currCell: integer; b: boolean;
   begin
     _currCell := -1;
-    while (not ((xml.TagName = TagName) and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = TagName) and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
       b := false;
-      if ((xml.TagName = 'xf') and (xml.TagType in [4, 5])) then begin
+      if ((xml.TagName = 'xf') and (xml.IsTagStartOrClosed)) then begin
         _currCell := StyleCount;
         inc(StyleCount);
         SetLength(CSA, StyleCount);
@@ -2823,7 +2823,7 @@ var
           if (TryStrToInt(s, t)) then
             CSA[_currCell].xfId := t;
       end else
-      if ((xml.TagName = 'alignment') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'alignment') and (xml.IsTagClosed)) then begin
         if (_currCell >= 0) then begin
           s := xml.Attributes.ItemsByName['horizontal'];
           if (s > '') then begin
@@ -2885,7 +2885,7 @@ var
           if (s > '') then
             CSA[_currCell].alignment.wrapText := ZEStrToBoolean(s);
         end; //if
-      end else if ((xml.TagName = 'protection') and (xml.TagType = 5)) then begin
+      end else if ((xml.TagName = 'protection') and (xml.IsTagClosed)) then begin
         if (_currCell >= 0) then begin
           s := xml.Attributes.ItemsByName['hidden'];
           if (s > '') then
@@ -2903,12 +2903,12 @@ var
   procedure _ReadCellStyles();
   var b: boolean;
   begin
-    while (not ((xml.TagName = 'cellStyles') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'cellStyles') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'cellStyle') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'cellStyle') and (xml.IsTagClosed)) then begin
         b := false;
         SetLength(StyleArray, StyleCount + 1);
         s := xml.Attributes.ItemsByName['builtinId']; //?
@@ -2939,12 +2939,12 @@ var
 
   procedure _ReadColors();
   begin
-    while (not ((xml.TagName = 'colors') and (xml.TagType = 6))) do begin
+    while (not ((xml.TagName = 'colors') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'rgbColor') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'rgbColor') and (xml.IsTagClosed)) then begin
         s := xml.Attributes.ItemsByName['rgb'];
         if (length(s) > 2) then
           delete(s, 1, 2);
@@ -3136,7 +3136,7 @@ var
     procedure _ReadDFFont();
     begin
       _df.UseFont := true;
-      while ((xml.TagType <> 6) and (xml.TagName <> 'font')) do begin
+      while ((not xml.IsTagEnd) and (xml.TagName <> 'font')) do begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
@@ -3163,12 +3163,12 @@ var
     procedure _ReadDFFill();
     begin
       _df.UseFill := true;
-      while ((xml.TagType <> 6) or (xml.TagName <> 'fill')) do begin
+      while ((not xml.IsTagEnd) or (xml.TagName <> 'fill')) do begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
 
-        if (xml.TagType in [4, 5]) then begin
+        if (xml.IsTagStartOrClosed) then begin
           if (xml.TagName = 'patternFill') then begin
             s := xml.Attributes.ItemsByName['patternType'];
             if (s <> '') then begin
@@ -3213,13 +3213,13 @@ var
     begin
       _df.UseBorder := true;
       _borderNum := bpLeft;
-      while ((xml.TagType <> 6) or (xml.TagName <> 'border')) do
+      while ((not xml.IsTagEnd) or (xml.TagName <> 'border')) do
       begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
 
-        if (xml.TagType in [4, 5]) then
+        if (xml.IsTagStartOrClosed) then
         begin
           _tmptag := xml.TagName;
           if (_tmptag = 'left') then
@@ -3269,11 +3269,11 @@ var
 
       ReadHelper.DiffFormatting.Add();
       _df := ReadHelper.DiffFormatting[_dfIndex];
-      while ((xml.TagType <> 6) or (xml.TagName <> 'dxf')) do begin
+      while ((not xml.IsTagEnd) or (xml.TagName <> 'dxf')) do begin
         xml.ReadTag();
         if (xml.Eof) then
           break;
-        if (xml.TagType = 4) then begin
+        if (xml.IsTagStart) then begin
           if (xml.TagName = 'font') then
             _ReadDFFont()
           else
@@ -3287,11 +3287,11 @@ var
     end; //_ReaddxfItem
 
   begin
-    while ((xml.TagType <> 6) or (xml.TagName <> 'dxfs')) do  begin
+    while ((not xml.IsTagEnd) or (xml.TagName <> 'dxfs')) do  begin
       xml.ReadTag();
       if (xml.Eof) then
         break;
-      if ((xml.TagType = 4) and (xml.TagName = 'dxf')) then
+      if ((xml.IsTagStart) and (xml.TagName = 'dxf')) then
         _ReaddxfItem();
     end; //while
   end; //_Readdxfs
@@ -3489,32 +3489,32 @@ begin
     while (not xml.Eof()) do begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'fonts') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'fonts') and (xml.IsTagStart)) then
         _ReadFonts()
       else
-      if ((xml.TagName = 'borders') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'borders') and (xml.IsTagStart)) then
         _ReadBorders()
       else
-      if ((xml.TagName = 'fills') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'fills') and (xml.IsTagStart)) then
         _ReadFills()
       else
       //TODO: разобраться, чем отличаются cellStyleXfs и cellXfs. Что за cellStyles?
-      if ((xml.TagName = 'cellStyleXfs') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'cellStyleXfs') and (xml.IsTagStart)) then
         _ReadCellCommonStyles('cellStyleXfs', CellStyleArray, CellStyleCount)//_ReadCellStyleXfs()
       else
-      if ((xml.TagName = 'cellXfs') and (xml.TagType = 4)) then  //сами стили?
+      if ((xml.TagName = 'cellXfs') and (xml.IsTagStart)) then  //сами стили?
         _ReadCellCommonStyles('cellXfs', CellXfsArray, CellXfsCount) //_ReadCellXfs()
       else
-      if ((xml.TagName = 'cellStyles') and (xml.TagType = 4)) then //??
+      if ((xml.TagName = 'cellStyles') and (xml.IsTagStart)) then //??
         _ReadCellStyles()
       else
-      if ((xml.TagName = 'colors') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'colors') and (xml.IsTagStart)) then
         _ReadColors()
       else
-      if ((xml.TagType = 4) and (xml.TagName = 'dxfs')) then
+      if ((xml.IsTagStart) and (xml.TagName = 'dxfs')) then
         _Readdxfs()
       else
-      if ((xml.TagType = 4) and (xml.TagName = 'numFmts')) then
+      if ((xml.IsTagStart) and (xml.TagName = 'numFmts')) then
         ReadHelper.NumberFormats.ReadNumFmts(xml);
     end; //while
 
@@ -3607,7 +3607,7 @@ begin
     while (not xml.Eof()) do begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'sheet') and (xml.TagType = 5)) then
+      if ((xml.TagName = 'sheet') and (xml.IsTagClosed)) then
       begin
         s := xml.Attributes.ItemsByName['r:id'];
         for i := 0 to RelationsCount - 1 do
@@ -3621,7 +3621,7 @@ begin
             break;
           end;
       end else
-      if ((xml.TagName = 'workbookView') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'workbookView') and (xml.IsTagClosed)) then begin
         s := xml.Attributes.ItemsByName['activeTab'];
         s := xml.Attributes.ItemsByName['firstSheet'];
         s := xml.Attributes.ItemsByName['showHorizontalScroll'];
@@ -3688,7 +3688,7 @@ begin
     while (not xml.Eof()) do begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'Relationship') and (xml.TagType = 5)) then begin
+      if ((xml.TagName = 'Relationship') and (xml.IsTagClosed)) then begin
         SetLength(Relations, RelationsCount + 1);
         Relations[RelationsCount].id := xml.Attributes.ItemsByName['Id'];
 
@@ -3731,12 +3731,12 @@ var xml: TZsspXMLReaderH;
   _page: integer;
   procedure _ReadAuthors();
   begin
-    while (not((xml.TagName = 'authors') and (xml.TagType = 6))) do begin
+    while (not((xml.TagName = 'authors') and (xml.IsTagEnd))) do begin
       xml.ReadTag();
       if (xml.Eof()) then
         break;
 
-      if ((xml.TagName = 'author') and (xml.TagType = 6)) then begin
+      if ((xml.TagName = 'author') and (xml.IsTagEnd)) then begin
         SetLength(_authors, _authorsCount + 1);
         _authors[_authorsCount] := xml.TextBeforeTag;
         inc(_authorsCount);
@@ -3767,11 +3767,11 @@ var xml: TZsspXMLReaderH;
 
       _comment := '';
       _kol := 0;
-      while (not((xml.TagName = 'comment') and (xml.TagType = 6))) do begin
+      while (not((xml.TagName = 'comment') and (xml.IsTagEnd))) do begin
         xml.ReadTag();
         if (xml.Eof()) then
           break;
-        if ((xml.TagName = 't') and (xml.TagType = 6)) then
+        if ((xml.TagName = 't') and (xml.IsTagEnd)) then
         begin
           if (_kol > 0) then
             _comment := _comment + sLineBreak + xml.TextBeforeTag
@@ -3801,10 +3801,10 @@ begin
     while (not xml.Eof()) do begin
       xml.ReadTag();
 
-      if ((xml.TagName = 'authors') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'authors') and (xml.IsTagStart)) then
         _ReadAuthors()
       else
-      if ((xml.TagName = 'comment') and (xml.TagType = 4)) then
+      if ((xml.TagName = 'comment') and (xml.IsTagStart)) then
         _ReadComment();
         
     end; //while

@@ -1991,16 +1991,16 @@ begin
   _isLong := false;
   num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_DATETIME);
 
-  while ((xml.TagType <> 6) or (xml.TagName <> ATagName)) do
+  while ((not xml.IsTagEnd) or (xml.TagName <> ATagName)) do
   begin
     xml.ReadTag();
 
     //Day
-    if ((xml.TagName = ZETag_number_day) and (xml.TagType and 4 = 4)) then
+    if ((xml.TagName = ZETag_number_day) and (xml.TagType in [TXmlTagType.xttStart,TXmlTagType.xttClosed,TXmlTagType.xttEnd])) then
       _result := _result + CheckIsLong('DD', 'D')
     else
     //Text
-    if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
+    if ((xml.TagName = ZETag_number_text) and (xml.IsTagEnd)) then
     begin
       s := xml.TextBeforeTag;
       t := length(s);
@@ -2127,7 +2127,7 @@ begin
   //         number:text-content   *
   //         style:map
   //         style:textproperties
-  while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_text_style)) do
+  while ((not xml.IsTagEnd) or (xml.TagName <> ZETag_number_text_style)) do
   begin
     xml.ReadTag();
 
@@ -2136,7 +2136,7 @@ begin
       _result := _result + '@'
     else
     //Text
-    if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
+    if ((xml.TagName = ZETag_number_text) and (xml.IsTagEnd)) then
       _result := _result + '"' + xml.TextBeforeTag + '"';
 
     if (xml.Eof()) then
@@ -2243,17 +2243,17 @@ var
   procedure _ReadEmbededText();
   begin
     _number_position := -100;
-    while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_number)) do
+    while ((not xml.IsTagEnd) or (xml.TagName <> ZETag_number_number)) do
     begin
       xml.ReadTag();
 
       //<number:embedded-text number:position="1">..</number:embedded-text>
       if (xml.TagName = ZETag_number_embedded_text) then
       begin
-        if (xml.TagType = 4) then
+        if (xml.IsTagStart) then
           _TryGetIntValue(ZETag_number_position, _number_position, -100)
         else
-        if ((xml.TagType = 6) and (_number_position >= 0)) then
+        if ((xml.IsTagEnd) and (_number_position >= 0)) then
           if (xml.TextBeforeTag <> '') then
             AddEmbededText(ZEReplaceEntity(xml.TextBeforeTag), _number_position);
       end;
@@ -2284,7 +2284,7 @@ var
     _currentpos := 0;
     _ReadNumber_NumberPrepare();
 
-    if (xml.TagType = 4) then
+    if (xml.IsTagStart) then
       _ReadEmbededText();
 
     if (FEmbededTextCount > 0) then
@@ -2397,8 +2397,8 @@ var
     //TODO: need get currency symbol by attributes:
     //      ZETag_number_language = 'number:language'
     //      ZETag_number_country  = 'number:country'
-    if (xml.TagType = 4) then
-      while ((xml.TagType <> 6) or (xml.TagName <> ZETag_number_currency_symbol)) do
+    if (xml.IsTagStart) then
+      while ((not xml.IsTagEnd) or (xml.TagName <> ZETag_number_currency_symbol)) do
       begin
         xml.ReadTag();
 
@@ -2460,7 +2460,7 @@ begin
   num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_NUMBER or sub_number_type);
   _cond_text := '';
 
-  while ((xml.TagType <> 6) or (xml.TagName <> NumberFormatTag)) do
+  while ((not xml.IsTagEnd) or (xml.TagName <> NumberFormatTag)) do
   begin
     xml.ReadTag();
 
@@ -2476,7 +2476,7 @@ begin
     if (xml.TagName = ZETag_number_currency_symbol) then
       _ReadCurrecny_Symbol()
     else
-    if ((xml.TagName = ZETag_number_text) and (xml.TagType = 6)) then
+    if ((xml.TagName = ZETag_number_text) and (xml.IsTagEnd)) then
     begin
       s := ZEReplaceEntity(xml.TextBeforeTag);
       if (s = '"') then
