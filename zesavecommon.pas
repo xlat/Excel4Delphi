@@ -96,7 +96,7 @@ var
   isAmp: boolean;
   ch: char;
 
-  procedure _checkS();
+  procedure CheckS();
   begin
     s1 := UpperCase(s);
     if (s1 = '&GT;') then
@@ -118,8 +118,6 @@ var
 begin
   s := '';
   result := '';
-//  n := length(st);
-//  i := 1;
   isAmp := false;
   for i := 1 to length(st) do
   begin
@@ -142,7 +140,7 @@ begin
             if (isAmp) then
             begin
               s := s + ch;
-              _checkS();
+              CheckS();
               result := result + s;
               s := '';
               isAmp := false;
@@ -161,7 +159,7 @@ begin
   end; //for
   if (s > '') then
   begin
-    _checkS();
+    CheckS();
     result := result + s;
   end;
 end; //ZEReplaceEntity
@@ -183,8 +181,7 @@ end;
 function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boolean;
 begin
   result := valueIfError;
-  if (st > '') then
-  begin
+  if (st > '') then begin
     if (CharInSet(st[1], ['T', 't', '1', '-'])) then
       result := true
     else if (CharInSet(st[1], ['F', 'f', '0'])) then
@@ -205,15 +202,11 @@ end;
 //  out isOk: boolean       - если true - ошибки небыло
 //    valueIfError: double  - значение, которое подставляется при ошибке преобразования
 function ZETryStrToFloat(const st: string; out isOk: boolean; valueIfError: double = 0): double;
-var
-  s: string;
-  i: integer;
-
+var s: string; i: integer;
 begin
   result := 0;
   isOk := true;
-  if (length(trim(st)) <> 0) then
-  begin
+  if (length(trim(st)) <> 0) then begin
     s := '';
     for i := 1 to length(st) do
       if (CharInSet(st[i], ['.', ','])) then
@@ -269,14 +262,13 @@ end;
 //  const BOM: ansistring       - BOM
 procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
 begin
-  with (xml) do begin
-    WriteRaw(BOM, false, false);
-    Attributes.Add('version', '1.0');
-    if (CodePageName > '') then
-      Attributes.Add('encoding', CodePageName);
-    WriteInstruction('xml', false);
-    Attributes.Clear();
-  end;
+  //with xml do begin
+  xml.WriteRaw(BOM, false, false);
+  xml.Attributes.Add('version', '1.0');
+  if (CodePageName > '') then
+    xml.Attributes.Add('encoding', CodePageName);
+  xml.WriteInstruction('xml', false);
+  xml.Attributes.Clear();
 end;
 
 //Очищает массивы
@@ -288,8 +280,7 @@ begin
   _pages := nil;
 end;
 
-resourcestring
-  DefaultSheetName = 'Sheet';
+resourcestring DefaultSheetName = 'Sheet';
 
 //делает уникальную строку, добавляя к строке '(num)'
 //топорно, но работает

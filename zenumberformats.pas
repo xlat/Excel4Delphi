@@ -240,9 +240,7 @@ type
     procedure AddEmbededText(const AText: string; ANumberPosition: integer);
   protected
     procedure AddItem();
-    procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH;
-                                     const NumberFormatTag: string;
-                                     sub_number_type: integer);
+    procedure ReadNumberFormatCommon(const xml: TZsspXMLReaderH; const NumberFormatTag: string; sub_number_type: integer);
     function BeginReadFormat(const xml: TZsspXMLReaderH; out retStartString: string; const NumFormat: integer): integer;
   public
     constructor Create();
@@ -343,16 +341,11 @@ function TryXlsxTimeToDateTime(const XlsxDateTime: string; out retDateTime: TDat
 
 implementation
 
-uses
-  zesavecommon,
-  StrUtils            {IfThen}
-  ;
+uses zesavecommon, StrUtils;
 
 const
   ZE_NUMBER_FORMAT_DECIMAL_SEPARATOR    = '.';
-
   ZE_MAX_NF_ITEMS_COUNT                 = 3;
-
   ZE_MAP_CONDITIONAL_COLORS_COUNT       = 8;
 
   ZE_MAP_CONDITIONAL_COLORS: array [0 .. ZE_MAP_CONDITIONAL_COLORS_COUNT - 1] of
@@ -367,14 +360,7 @@ const
                           ('#FFFF00', 'YELLOW')
                          );
 
-  ZE_VALID_CONDITIONS_STR: array [0..4] of string =
-                        (
-                          '>',
-                          '<',
-                          '>=',
-                          '<=',
-                          '='
-                        );
+  ZE_VALID_CONDITIONS_STR: TArray<string> = [ '>', '<', '>=', '<=', '=' ];
 
   ZE_VALID_NAMED_FORMATS_COUNT = 15;
 
@@ -558,11 +544,9 @@ end; //IsHaveSymbolsAfterPosQuotas
 //RETURN
 //      boolean - true - one of symbols was found in string after AStartPos (and not between quotas)
 function IsHaveSymbolsAfterPosQuotas(AStartPos: integer; ALen: integer; const AStr: string; const SymbolsArr: array of string): boolean; overload;
-var
-  _retPos: integer;
-
+var retPos: integer;
 begin
-  Result := IsHaveSymbolsAfterPosQuotas(AStartPos, ALen, _retPos, AStr, SymbolsArr);
+  Result := IsHaveSymbolsAfterPosQuotas(AStartPos, ALen, retPos, AStr, SymbolsArr);
 end; //IsHaveSymbolsAfterPosQuotas
 
 // Try to get xlsx number format type by string (very simplistic)
@@ -587,17 +571,13 @@ begin
 
   //General is not for dates
   if ((UpperCase(FormatStr) = 'GENERAL') or (FormatStr = '')) then
-  begin
-    Result := ZE_NUMFORMAT_IS_NUMBER;
-    exit;
-  end;
+    exit(ZE_NUMFORMAT_IS_NUMBER);
 
   _isQuote := false;
   _isBracket := false;
 
   l := length(FormatStr);
-  for i := 1 to l do
-  begin
+  for i := 1 to l do begin
     ch := FormatStr[i];
 
     if ((ch = '"') and (not _isBracket)) then
@@ -665,8 +645,7 @@ var
 
   function _CheckSemicolon(): boolean;
   begin
-    if (not _isSemicolon) then
-    begin
+    if not _isSemicolon then begin
       t := i - 1;
       _isSemicolon := IsHaveSymbolsAfterPosQuotas(t, l, i, FormatStr, [';']);
     end;
@@ -684,8 +663,7 @@ begin
 
   l := length(FormatStr);
   i := 1;
-  while (i <= l) do
-  begin
+  while (i <= l) do begin
     ch := FormatStr[i];
 
     if ((ch = '"') and (not _isBracket)) then
@@ -801,9 +779,7 @@ var
   end; //_AddText
 
   function _RepeatSymbol(const ASymbol: string; ALen: integer; AMin, AMax: integer): string;
-  var
-    i: integer;
-
+  var i: integer;
   begin
     Result := '';
     if (ALen < AMin) then
@@ -865,40 +841,23 @@ var
   end; //_AddAMPM
 
   function _GetXlsxDateFormat(): string;
-  var
-    i: integer;
-
+  var i: integer;
   begin
     Result := '';
     for i := 0 to _DateParser.Count - 1 do
       case (_DateParser.FItems[i].ItemType) of
-        ZE_DATETIME_ITEM_TEXT:
-                              Result := Result + _AddText(_DateParser.FItems[i].TextValue);
-
-        ZE_DATETIME_ITEM_YEAR:
-                              Result := Result + _AddYear(_DateParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_MONTH:
-                              Result := Result + _AddMonth(_DateParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_DAY:
-                              Result := Result + _AddDay(_DateParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_HOUR:
-                              Result := Result + _AddHour(_DateParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_MINUTE:
-                              Result := Result + _AddMinute(_DateParser.FItems[i]);
-
-        ZE_DATETIME_ITEM_SECOND:
-                              Result := Result + _AddSecond(_DateParser.FItems[i]);
-
+        ZE_DATETIME_ITEM_TEXT:   Result := Result + _AddText(_DateParser.FItems[i].TextValue);
+        ZE_DATETIME_ITEM_YEAR:   Result := Result + _AddYear(_DateParser.FItems[i]);
+        ZE_DATETIME_ITEM_MONTH:  Result := Result + _AddMonth(_DateParser.FItems[i]);
+        ZE_DATETIME_ITEM_DAY:    Result := Result + _AddDay(_DateParser.FItems[i]);
+        ZE_DATETIME_ITEM_HOUR:   Result := Result + _AddHour(_DateParser.FItems[i]);
+        ZE_DATETIME_ITEM_MINUTE: Result := Result + _AddMinute(_DateParser.FItems[i]);
+        ZE_DATETIME_ITEM_SECOND: Result := Result + _AddSecond(_DateParser.FItems[i]);
         ZE_DATETIME_ITEM_WEEK:;     //??
         ZE_DATETIME_ITEM_QUARTER:;  //??
         ZE_DATETIME_ITEM_ERA_JAP:;  //??
         ZE_DATETIME_ITEM_ERA_YEAR:; //??
-        ZE_DATETIME_ITEM_AMPM:
-                              Result := Result + _AddAMPM(_DateParser.FItems[i]);
+        ZE_DATETIME_ITEM_AMPM:   Result := Result + _AddAMPM(_DateParser.FItems[i]);
       end; //case
 
   end; //_GetXlsxDateFormat
@@ -907,8 +866,7 @@ begin
   _fmt := GetNativeNumberFormatType(FormatNative);
 
   //For now difference only for datetime
-  if (_fmt and ZE_NUMFORMAT_IS_DATETIME = ZE_NUMFORMAT_IS_DATETIME) then
-  begin
+  if (_fmt and ZE_NUMFORMAT_IS_DATETIME = ZE_NUMFORMAT_IS_DATETIME) then begin
     Result := '';
     _FmtParser := AFmtParser;
     _DateParser := ADateParser;
@@ -929,8 +887,7 @@ begin
       if (_delD) then
         FreeAndNil(_DateParser);
     end;
-  end
-  else
+  end else
     Result := FormatNative;
 end; //ConvertFormatNativeToXlsx
 
@@ -994,8 +951,7 @@ var
     else
     //Minute or Month?
     //  If M/MM between 'H/S' - minutes
-    if (z = 'M') or (z = 'MM') then
-    begin
+    if (z = 'M') or (z = 'MM') then begin
       //Is it minute?
       b := (_prevCh = ':') or (_prevCh = 'H') or
            (currCh = 'S') or (currCh = ':');
@@ -1018,8 +974,7 @@ var
         b := pos('N', _strDateList) = 0;
 
       //minutes
-      if (b) then
-      begin
+      if (b) then begin
         if (Z = 'M') then
           _AddToResult('m', 'N')
         else
@@ -1037,21 +992,17 @@ var
 
   procedure _ProcessOpenBracket();
   begin
-    if (_isQuote) then
+    if _isQuote then
       s := s + ch
-    else
-      if (not _isBracket) then
-      begin
-        _CheckStringItem(ch);
-        _isBracket := true;
-      end;
+    else if not _isBracket then begin
+      _CheckStringItem(ch);
+      _isBracket := true;
+    end;
   end; //_ProcessOpenBracket
 
   //[some data]
   procedure _ProcessCloseBracket();
-  var
-    z: string;
-
+  var z: string;
   begin
     _isBracket := not _isBracket;
 
@@ -1122,12 +1073,10 @@ begin
 
   _isSlash := false;
 
-  for i := 1 to l do
-  begin
+  for i := 1 to l do begin
     ch := FormatXlsx[i];
 
-    if (_isSlash) then
-    begin
+    if _isSlash then begin
       Result := Result + ch;
       _isSlash := false;
     end
@@ -1183,15 +1132,13 @@ var
   i: integer;
   b: boolean;
   ch: char;
-
 begin
   b := false;
   Result := false;
   s1 := '';
   s2 := '';
 
-  for i := 1 to length(XlsxDateTime) do
-  begin
+  for i := 1 to length(XlsxDateTime) do begin
     ch := XlsxDateTime[i];
     if ((ch = '.') or (ch = ',')) then
     begin
@@ -1209,8 +1156,7 @@ begin
   if (s1 = '') then
     s1 := '0';
 
-  if (TryStrToInt(s1, i)) then
-  begin
+  if (TryStrToInt(s1, i)) then begin
     retDateTime := i;
     if (is1904) then
       retDateTime := IncMonth(retDateTime, 12 * 4);
@@ -1223,15 +1169,12 @@ begin
 end; //TryXlsxTimeToDateTime
 
 function TryGetNumFormatByName(ANamedFormat: string; out retNumFormat: string): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := False;
   ANamedFormat := UpperCase(ANamedFormat);
   for i := 0 to ZE_VALID_NAMED_FORMATS_COUNT - 1 do
-    if (ZE_VALID_NAMED_FORMATS[i][0] = ANamedFormat) then
-    begin
+    if (ZE_VALID_NAMED_FORMATS[i][0] = ANamedFormat) then begin
       Result := True;
       retNumFormat := ZE_VALID_NAMED_FORMATS[i][1];
       break;
@@ -1239,14 +1182,11 @@ begin
 end;
 
 function TryGetMapColorName(AColor: string; out retColorName: string): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := false;
   for i := 0 to ZE_MAP_CONDITIONAL_COLORS_COUNT - 1 do
-    if (ZE_MAP_CONDITIONAL_COLORS[i][0] = AColor) then
-    begin
+    if (ZE_MAP_CONDITIONAL_COLORS[i][0] = AColor) then begin
       Result := true;
       retColorName := ZE_MAP_CONDITIONAL_COLORS[i][1];
       break;
@@ -1254,14 +1194,11 @@ begin
 end; //TryGetMapColor
 
 function TryGetMapColorColor(AColorName: string; out retColor: string): boolean;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := false;
   for i := 0 to ZE_MAP_CONDITIONAL_COLORS_COUNT - 1 do
-    if (ZE_MAP_CONDITIONAL_COLORS[i][1] = AColorName) then
-    begin
+    if (ZE_MAP_CONDITIONAL_COLORS[i][1] = AColorName) then begin
       Result := true;
       retColor := ZE_MAP_CONDITIONAL_COLORS[i][0];
       break;
@@ -1280,8 +1217,7 @@ var
 
   procedure _AddItem();
   begin
-    if (kol < 3) then
-    begin
+    if (kol < 3) then begin
       a[kol] := s;
       s := '';
       inc(kol);
@@ -1300,10 +1236,7 @@ var
   end; //_ProcessSymbol
 
   function _CheckCondition(): boolean;
-  var
-    i: integer;
-    d: double;
-
+  var i: integer; d: double;
   begin
     Result := false;
     for i := Low(ZE_VALID_CONDITIONS_STR) to High(ZE_VALID_CONDITIONS_STR) do
@@ -1323,14 +1256,11 @@ var
 begin
   Result := false;
   retODSCondution := '';
-
   kol := 0;
-
   _isNumber := false;
   _isCond := false;
 
-  for i := 1 to length(AConditionStr) do
-  begin
+  for i := 1 to length(AConditionStr) do begin
     ch := AConditionStr[i];
     case (ch) of
       '0'..'9', '.', ',':
@@ -1371,11 +1301,9 @@ end;
 
 procedure TZDateTimeODSFormatParser.IncCount(ADelta: integer = 1);
 begin
-  if (ADelta > 0) then
-  begin
+  if (ADelta > 0) then begin
     inc(FCount, ADelta);
-    if (FCount >= FMaxCount) then
-    begin
+    if (FCount >= FMaxCount) then begin
       FMaxCount := FCount + 10;
       SetLength(FItems, FMaxCount);
     end;
@@ -1383,11 +1311,7 @@ begin
 end; //IncCount
 
 procedure TZDateTimeODSFormatParser.CheckMonthMinute();
-var
-  i: integer;
-  _left: boolean;
-  _right: boolean;
-
+var i: integer; _left, _right: boolean;
   //Return FALSE if date and TRUE if time
   function _CheckNeighbors(ADateType: integer): boolean;
   begin
@@ -1409,24 +1333,20 @@ var
   end; //_CheckNeighbors
 
   procedure _TryToCheckMonth(AIndex: integer);
-  var
-    i: integer;
-
+  var i: integer;
   begin
     _right := false;
     _left := false;
     FItems[AIndex].Settings := 0;
 
     for i := AIndex - 1 downto 0 do
-      if (FItems[i].ItemType > 0) then
-      begin
+      if (FItems[i].ItemType > 0) then begin
         _left := _CheckNeighbors(FItems[i].ItemType);
         break;
       end;
 
     for i := AIndex + 1 to FCount - 1 do
-      if (FItems[i].ItemType > 0) then
-      begin
+      if (FItems[i].ItemType > 0) then begin
         _right := _CheckNeighbors(FItems[i].ItemType);
         break;
       end;
@@ -1441,8 +1361,7 @@ begin
       _TryToCheckMonth(i);
 end; //CheckMonthMinute
 
-function TZDateTimeODSFormatParser.TryToParseDateFormat(const AFmtStr: string;
-                                                        const AFmtParser: TNumFormatParser): integer;
+function TZDateTimeODSFormatParser.TryToParseDateFormat(const AFmtStr: string; const AFmtParser: TNumFormatParser): integer;
 var
   _parser: TNumFormatParser;
   _isFree: boolean;
@@ -1455,8 +1374,7 @@ var
 
   procedure _ProcessDateTimeItem();
   begin
-    if (s <> '') then
-    begin
+    if (s <> '') then begin
       _tmp := UpperCase(s);
       _len := Length(_tmp);
 
@@ -1522,12 +1440,10 @@ var
   procedure _ProcessAMPM();
   begin
     //check for a/p A/P
-    if (_parser.CurrentPos + 1 <= _parser.StrLength) then
-    begin
+    if (_parser.CurrentPos + 1 <= _parser.StrLength) then begin
       _tmp := Copy(AFmtStr, _parser.CurrentPos - 1, 3);
 
-      if (UpperCase(_tmp) = 'A/P') then
-      begin
+      if (UpperCase(_tmp) = 'A/P') then begin
         if (_parser.FirstSymbol = 'a') then
           t := ZE_DATETIME_AMPM_SHORT_LOW
         else
@@ -1540,8 +1456,7 @@ var
     end;
 
     //check for am/pm AM/PM
-    if (_parser.CurrentPos + 3 <= _parser.StrLength) then
-    begin
+    if (_parser.CurrentPos + 3 <= _parser.StrLength) then begin
       _tmp := Copy(AFmtStr, _parser.CurrentPos - 1, 5);
 
       if (UpperCase(_tmp) = 'AM/PM') then
@@ -1565,10 +1480,8 @@ var
   begin
     s := _ch;
     _len := 1;
-
     t := 0;
-    while (_parser.CurrentPos <= _parser.StrLength) do
-    begin
+    while (_parser.CurrentPos <= _parser.StrLength) do begin
       _ch := AFmtStr[_parser.CurrentPos];
       case (_ch) of
         's', 'S':
@@ -1606,7 +1519,6 @@ var
   procedure _TryToAddEraJap();
   begin
     _tmp := UpperCase(s);
-
     t := -1;
     if (_tmp = 'G') then
       t := 1
@@ -1734,9 +1646,7 @@ begin
 end; //TryToParseDateFormat
 
 procedure TZDateTimeODSFormatParser.DeleteRepeatedItems();
-var
-  i, j: integer;
-
+var i, j: integer;
 begin
   for i := 1 to FCount - 2 do
     if (FItems[i].ItemType > 0) then
@@ -1754,9 +1664,7 @@ begin
 end; //DeleteRepeatedItems
 
 function TZDateTimeODSFormatParser.GetValidCount(): integer;
-var
-  i: integer;
-
+var i: integer;
 begin
   Result := 0;
   for i := 1 to FCount - 1 do
@@ -1790,9 +1698,7 @@ begin
 end;
 
 function TNumFormatParser.ReadSymbol(): boolean;
-var
-  ch: char;
-
+var ch: char;
   procedure _ReadBeforeSymbol(Symbol: char);
   begin
     if (FPos <= FLen) then
@@ -1823,8 +1729,7 @@ begin
   FReadedSymbol := '';
 
   Result := true;
-  while (FPos <= FLen) do
-  begin
+  while (FPos <= FLen) do begin
     ch := FStr[FPos];
     inc(FPos);
 
@@ -1879,12 +1784,8 @@ end; //IncPos
 
 ////::::::::::::: TZEODSNumberFormatReader :::::::::::::::::////
 
-procedure TZEODSNumberFormatReader.AddEmbededText(const AText: string;
-                                                  ANumberPosition: integer);
-var
-  i: integer;
-  _pos: integer;
-
+procedure TZEODSNumberFormatReader.AddEmbededText(const AText: string; ANumberPosition: integer);
+var i, _pos: integer;
 begin
   if (FEmbededTextCount >= FEmbededMaxCount) then
   begin
@@ -1916,9 +1817,7 @@ begin
 end;
 
 procedure TZEODSNumberFormatReader.AddItem();
-var
-  i: integer;
-
+var i: integer;
 begin
   inc(FCount);
   if (FCount >= FCountMax) then
@@ -1935,9 +1834,7 @@ begin
 end;
 
 constructor TZEODSNumberFormatReader.Create();
-var
-  i: integer;
-
+var i: integer;
 begin
   FCount := 0;
   FCountMax := 20;
@@ -1945,8 +1842,7 @@ begin
   SetLength(FItems, FCountMax);
   SetLength(FItemsOptions, FCountMax);
   SetLength(FEmbededTextArray, FEmbededMaxCount);
-  for i := 0 to FCountMax - 1 do
-  begin
+  for i := 0 to FCountMax - 1 do begin
     FItemsOptions[i].isColor := false;
     FItemsOptions[i].ColorStr := '';
     FItemsOptions[i].StyleType := 0;
@@ -1991,21 +1887,16 @@ begin
   _isLong := false;
   num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_DATETIME);
 
-  while ((not xml.IsTagEnd) or (xml.TagName <> ATagName)) do
-  begin
-    xml.ReadTag();
-
+  while xml.ReadToEndTagByName(ATagName) do begin
     //Day
-    if ((xml.TagName = ZETag_number_day) and (xml.TagType in [TXmlTagType.xttStart,TXmlTagType.xttClosed,TXmlTagType.xttEnd])) then
+    if ((xml.TagName = ZETag_number_day) and (xml.IsTagOfData)) then
       _result := _result + CheckIsLong('DD', 'D')
     else
     //Text
-    if ((xml.TagName = ZETag_number_text) and (xml.IsTagEnd)) then
-    begin
+    if xml.IsTagEndByName(ZETag_number_text) then begin
       s := xml.TextBeforeTag;
       t := length(s);
-      if (t = 1) then
-      begin
+      if (t = 1) then begin
         case (s[1]) of
           ' ', '.', ':', '-', '/', '*':;
           else
@@ -2101,9 +1992,7 @@ end; //ReadDateFormat
 
 //Read string format <number:text-style> .. </number:text-style>
 procedure TZEODSNumberFormatReader.ReadStringFormat(const xml: TZsspXMLReaderH);
-var
-  num: integer;
-  _result: string;
+var num: integer; _result: string;
 
 begin
   num := BeginReadFormat(xml, _result, ZE_NUMFORMAT_IS_STRING);
@@ -2264,9 +2153,7 @@ var
   end; //_ReadEmbededText
 
   function _GetRepeatedString(ACount: integer; const AStr: string): string;
-  var
-    i: integer;
-
+  var i: integer;
   begin
     Result := '';
     for i := 1 to ACount do
@@ -2502,16 +2389,12 @@ begin
   FItems[num][1] := _cond_text + _result;
 end; //ReadNumberFormatCommon
 
-function TZEODSNumberFormatReader.TryGetFormatStrByNum(const DataStyleName: string;
-                                                       out retFormatStr: string): boolean;
-var
-  i: integer;
-
+function TZEODSNumberFormatReader.TryGetFormatStrByNum(const DataStyleName: string; out retFormatStr: string): boolean;
+var i: integer;
 begin
   Result := false;
   for i := 0 to FCount - 1 do
-    if (FItems[i][0] = DataStyleName) then
-    begin
+    if (FItems[i][0] = DataStyleName) then begin
       Result := true;
       retFormatStr := FItems[i][1];
       break;
@@ -2522,9 +2405,7 @@ end; //TryGetFormatStrByNum
 ////::::::::::::: TZEODSNumberFormatWriter :::::::::::::::::////
 
 constructor TZEODSNumberFormatWriter.Create(const AMaxCount: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
   FCount := 0;
   FCountMax := AMaxCount;
@@ -2545,9 +2426,7 @@ begin
 end;
 
 destructor TZEODSNumberFormatWriter.Destroy();
-var
-  i: integer;
-
+var i: integer;
 begin
   SetLength(FItems, 0);
   for i := 0 to ZE_MAX_NF_ITEMS_COUNT - 1 do
@@ -2565,11 +2444,8 @@ end;
 //  out NumberFormatName: string  - finded number format name
 //RETURN
 //      boolean - true - number format finded
-function TZEODSNumberFormatWriter.TryGetNumberFormatName(StyleID: integer;
-                                                         out NumberFormatName: string): boolean;
-var
-  i: integer;
-
+function TZEODSNumberFormatWriter.TryGetNumberFormatName(StyleID: integer; out NumberFormatName: string): boolean;
+var i: integer;
 begin
   Result := false;
   for i := 0 to FCount - 1 do
@@ -2587,8 +2463,7 @@ end; //TryGetNumberFormatName
 //  out NumberFormatProp: integer - finded number additional properties
 //RETURN
 //      boolean - true - additional properties is found
-function TZEODSNumberFormatWriter.TryGetNumberFormatAddProp(StyleID: integer;
-                                                            out NumberFormatProp: integer): boolean;
+function TZEODSNumberFormatWriter.TryGetNumberFormatAddProp(StyleID: integer; out NumberFormatProp: integer): boolean;
 begin
   Result := (StyleID >= 0) and (StyleID < FCountMax);
 
@@ -2609,7 +2484,6 @@ var
   b: boolean;
   s: string;
   ch: char;
-
 begin
   b := true;
   s := '';
@@ -2670,9 +2544,7 @@ end; //TryAddNFItem
 //      ANumberFormat: string   - number format
 //RETURN
 //      boolean - true - NumberFormat was written ok
-function TZEODSNumberFormatWriter.TryWriteNumberFormat(const xml: TZsspXMLWriterH;
-                                                       StyleID: integer;
-                                                       ANumberFormat: string): boolean;
+function TZEODSNumberFormatWriter.TryWriteNumberFormat(const xml: TZsspXMLWriterH; StyleID: integer; ANumberFormat: string): boolean;
 var
   s: string;
   _nfType: integer;
@@ -2740,9 +2612,7 @@ var
   end;
 
   function _WriteDateTime(): boolean;
-  var
-    _addProp: integer;
-
+  var _addProp: integer;
   begin
     Result := false;
 
@@ -2815,9 +2685,7 @@ var
   end;
 
   function _CheckIsDuplicate(): boolean;
-  var
-    i: integer;
-
+  var i: integer;
   begin
     Result := false;
     for i := 0 to FCount - 1 do

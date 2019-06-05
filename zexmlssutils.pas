@@ -17,7 +17,7 @@ uses
   zenumberformats, StrUtils, AnsiStrings;
 
 function SaveXmlssToHtml(sheet: TZSheet; CodePageName: string = 'UTF-8'): string;
-var _xml: TZsspXMLWriterH;
+var xml: TZsspXMLWriterH;
   i, j, t, l, r: integer;
   NumTopLeft, NumArea: integer;
   s, value, numformat: string;
@@ -74,17 +74,15 @@ var _xml: TZsspXMLWriterH;
 begin
   result := '';
   Stream := TStringStream.Create('', TEncoding.UTF8);
+  xml := TZsspXMLWriterH.Create(Stream);
   try
-    _xml := TZsspXMLWriterH.Create();
-    _xml.TabLength := 1;
-    _xml.BeginSaveToStream(Stream);
-
+    xml.TabLength := 1;
     // start
-    _xml.Attributes.Clear();
-    _xml.WriteRaw('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">', true, false);
-    _xml.WriteTagNode('HTML', true, true, false);
-    _xml.WriteTagNode('HEAD', true, true, false);
-    _xml.WriteTag('TITLE', sheet.Title, true, false, false);
+    xml.Attributes.Clear();
+    xml.WriteRaw('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">', true, false);
+    xml.WriteTagNode('HTML', true, true, false);
+    xml.WriteTagNode('HEAD', true, true, false);
+    xml.WriteTag('TITLE', sheet.Title, true, false, false);
 
     //styles
     s := 'body {';
@@ -101,84 +99,84 @@ begin
       s := s +  HTMLStyleFont('F' + IntToStr(i + 20), sheet.WorkBook.Styles[i]);
     end;
 
-    _xml.WriteTag('STYLE', s, true, true, false);
-    _xml.Attributes.Add('HTTP-EQUIV', 'CONTENT-TYPE');
+    xml.WriteTag('STYLE', s, true, true, false);
+    xml.Attributes.Add('HTTP-EQUIV', 'CONTENT-TYPE');
 
     s := '';
     if trim(CodePageName) > '' then
       s := '; CHARSET=' + CodePageName;
 
-    _xml.Attributes.Add('CONTENT', 'TEXT/HTML' + s);
-    _xml.WriteTag('META', '', true, false, false);
-    _xml.WriteEndTagNode(); // HEAD
+    xml.Attributes.Add('CONTENT', 'TEXT/HTML' + s);
+    xml.WriteTag('META', '', true, false, false);
+    xml.WriteEndTagNode(); // HEAD
 
     max_width := 0.0;
     for i := 0 to sheet.ColCount - 1 do
       max_width := max_width + sheet.ColWidths[i];
 
     //BODY
-    _xml.Attributes.Clear();
-    _xml.WriteTagNode('BODY', true, true, false);
+    xml.Attributes.Clear();
+    xml.WriteTagNode('BODY', true, true, false);
 
     //Table
-    _xml.Attributes.Clear();
-    _xml.Attributes.Add('cellSpacing', '0');
-    _xml.Attributes.Add('border', '0');
-    _xml.Attributes.Add('width', FloatToStr(max_width).Replace(',', '.'));
-    _xml.WriteTagNode('TABLE', true, true, false);
+    xml.Attributes.Clear();
+    xml.Attributes.Add('cellSpacing', '0');
+    xml.Attributes.Add('border', '0');
+    xml.Attributes.Add('width', FloatToStr(max_width).Replace(',', '.'));
+    xml.WriteTagNode('TABLE', true, true, false);
 
     Att := TZAttributesH.Create();
     Att.Clear();
     for i := 0 to sheet.RowCount - 1 do begin
-      _xml.Attributes.Clear();
-      _xml.Attributes.Add('height', floattostr(sheet.RowHeights[i]).Replace(',', '.'));
-      _xml.WriteTagNode('TR', true, true, true);
-      _xml.Attributes.Clear();
+      xml.Attributes.Clear();
+      xml.Attributes.Add('height', floattostr(sheet.RowHeights[i]).Replace(',', '.'));
+      xml.WriteTagNode('TR', true, true, true);
+      xml.Attributes.Clear();
       for j := 0 to sheet.ColCount - 1 do begin
         NumTopLeft := sheet.MergeCells.InLeftTopCorner(j, i);
         NumArea    := sheet.MergeCells.InMergeRange(j, i);
         // если ячейка входит в объединённые области и не является
         // верхней левой ячейкой в этой области - пропускаем её
         if not ((NumArea >= 0) and (NumTopLeft = -1)) then begin
-          _xml.Attributes.Clear();
+          xml.Attributes.Clear();
           if NumTopLeft >= 0 then begin
             t := sheet.MergeCells.Items[NumTopLeft].Right - sheet.MergeCells.Items[NumTopLeft].Left;
             if t > 0 then
-              _xml.Attributes.Add('colspan', InttOstr(t + 1));
+              xml.Attributes.Add('colspan', InttOstr(t + 1));
             t := sheet.MergeCells.Items[NumTopLeft].Bottom - sheet.MergeCells.Items[NumTopLeft].Top;
             if t > 0 then
-              _xml.Attributes.Add('rowspan', InttOstr(t + 1));
+              xml.Attributes.Add('rowspan', InttOstr(t + 1));
           end;
           t := sheet.Cell[j, i].CellStyle;
           if sheet.WorkBook.Styles[t].Alignment.Horizontal = ZHCenter then
-            _xml.Attributes.Add('align', 'center')
+            xml.Attributes.Add('align', 'center')
           else if sheet.WorkBook.Styles[t].Alignment.Horizontal = ZHRight then
-            _xml.Attributes.Add('align', 'right')
+            xml.Attributes.Add('align', 'right')
           else if sheet.WorkBook.Styles[t].Alignment.Horizontal = ZHJustify then
-            _xml.Attributes.Add('align', 'justify');
+            xml.Attributes.Add('align', 'justify');
           numformat := sheet.WorkBook.Styles[t].NumberFormat;
-          _xml.Attributes.Add('class', 'T' + IntToStr(t + 20));
-          _xml.Attributes.Add('width', inttostr(sheet.Columns[j].WidthPix) + 'px');
+          xml.Attributes.Add('class', 'T' + IntToStr(t + 20));
+          xml.Attributes.Add('width', inttostr(sheet.Columns[j].WidthPix) + 'px');
 
-          _xml.WriteTagNode('TD', true, false, false);
-          _xml.Attributes.Clear();
+          xml.WriteTagNode('TD', true, false, false);
+          xml.Attributes.Clear();
           Att.Clear();
           Att.Add('class', 'F' + IntToStr(t + 20));
           if fsbold in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteTagNode('B', false, false, false);
+            xml.WriteTagNode('B', false, false, false);
           if fsItalic in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteTagNode('I', false, false, false);
+            xml.WriteTagNode('I', false, false, false);
           if fsUnderline in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteTagNode('U', false, false, false);
+            xml.WriteTagNode('U', false, false, false);
           if fsStrikeOut in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteTagNode('S', false, false, false);
+            xml.WriteTagNode('S', false, false, false);
 
           l := Length(sheet.Cell[j, i].Href);
           if l > 0 then begin
-            _xml.Attributes.Add('href', sheet.Cell[j, i].Href);
+            xml.Attributes.Add('href', sheet.Cell[j, i].Href);
               //target?
-            _xml.WriteTagNode('A', false, false, false);
-            _xml.Attributes.Clear();
+            xml.WriteTagNode('A', false, false, false);
+            xml.Attributes.Clear();
           end;
 
           value := sheet.Cell[j, i].Data;
@@ -204,35 +202,35 @@ begin
           strArray := value.Split([#13, #10], TStringSplitOptions.ExcludeEmpty);
           for r := 0 to Length(strArray) - 1 do begin
             if r > 0 then
-              _xml.WriteTag('BR', '');
-            _xml.WriteTag('FONT', strArray[r], Att, false, false, true);
+              xml.WriteTag('BR', '');
+            xml.WriteTag('FONT', strArray[r], Att, false, false, true);
           end;
 
           if l > 0 then
-            _xml.WriteEndTagNode(); // A
+            xml.WriteEndTagNode(); // A
 
           if fsbold in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteEndTagNode(); // B
+            xml.WriteEndTagNode(); // B
           if fsItalic in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteEndTagNode(); // I
+            xml.WriteEndTagNode(); // I
           if fsUnderline in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteEndTagNode(); // U
+            xml.WriteEndTagNode(); // U
           if fsStrikeOut in sheet.WorkBook.Styles[t].Font.Style then
-            _xml.WriteEndTagNode(); // S
-          _xml.WriteEndTagNode(); // TD
+            xml.WriteEndTagNode(); // S
+          xml.WriteEndTagNode(); // TD
         end;
 
       end;
-      _xml.WriteEndTagNode(); // TR
+      xml.WriteEndTagNode(); // TR
     end;
 
-    _xml.WriteEndTagNode(); // BODY
-    _xml.WriteEndTagNode(); // HTML
-    _xml.EndSaveTo();
+    xml.WriteEndTagNode(); // BODY
+    xml.WriteEndTagNode(); // HTML
+    xml.EndSaveTo();
     Result := Stream.DataString;
     FreeAndNil(Att);
   finally
-    FreeAndNil(_xml);
+    xml.Free();
     Stream.Free();
   end;
 end;

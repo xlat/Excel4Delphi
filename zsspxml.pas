@@ -201,7 +201,6 @@ type
     FTab: ansistring;
     FTabSymbol: ansistring;
     FTabLength: integer;
-    FDestination: byte;  //куда пишем: 0 - Stream, 1 - File, 2 - String;
     function  GetTag(num: integer): ansistring;
     function  GetTabSymbol(): ansichar;
     procedure SetAttributeQuote(Value: ansichar);
@@ -219,29 +218,8 @@ type
     procedure _AddTag(const _begin: ansistring; text: ansistring; const _end: ansistring; StartNewLine: boolean; _tab: integer = 0);
     procedure ResizeTagArray(NewSize: integer);
   public
-    constructor Create(); virtual;
+    constructor Create(Stream: TStream);
     destructor Destroy(); override;
-    /// <summary>
-    /// Begin writing to Stream.
-    /// </summary>
-    /// <returns>
-    /// True - start writing to stream. Sets InProcess True. <br />False - could not write.
-    /// </returns>
-    function BeginSaveToStream(Stream: TStream): boolean;
-    /// <summary>
-    /// egin writing to file FileName. <br />
-    /// </summary>
-    /// <returns>
-    /// True - start writing to file. Sets InProcess True. <br />False - could not write.
-    /// </returns>
-    function BeginSaveToFile(const FileName: string): boolean;
-    /// <summary>
-    /// Begin writing to string Buffer. <br />
-    /// </summary>
-    /// <returns>
-    /// True - start writing to Buffer. Sets InProcess True. <br />False - could not write.
-    /// </returns>
-    function BeginSaveToString(): boolean;
     /// <summary>
     /// End writing to string/file/stream. Sets InProcess False.
     /// </summary>
@@ -598,16 +576,6 @@ type
     property UnixNLSeparator: boolean read FUnixNLSeparator write SetUnixNLSeparator;
   end;
 
-  //Обязательные кодировки:
-  //    windows-1251
-  //    cp866
-  //    UTF-8
-  //    UTF-16
-  //Проблемы:   1. Как определить кодировку текста?
-  //            2. Как прочитать текст в многобайтной кодировке?
-  //            3. Как парсить текст в многобайтной кодировке?
-  //            4. Как обрабатывать неизвестные кодировки?
-
   /// <summary>
   /// Class-reader. Read XML from string, stream or file in CP866, Windows-1251, UTF-8 and UTF-16 (BE and LE) encodings.
   /// </summary>
@@ -679,32 +647,12 @@ type
     constructor Create(); virtual;
     destructor Destroy(); override;
     /// <summary>
-    /// Begin to read XML from a file FileName. <br />
-    /// </summary>
-    /// <returns>
-    /// <para>0 - OK</para>
-    /// <para>1 - already in reading</para>
-    /// <para>2 - error</para>
-    /// <para>3 - Stream = nil</para>
-    /// </returns>
-    function BeginReadFile(FileName: string): integer;
-    /// <summary>
-    /// Begin to read XML from Stream. <br />
+    /// Begin to read XML from Stream.
     /// </summary>
     /// <returns>
     /// 0 if no errors.
     /// </returns>
     function BeginReadStream(Stream: TStream): integer;
-    /// <summary>
-    /// Begin to read XML from string Source.
-    /// </summary>
-    /// <param name="IgnoreCodePage">
-    /// if True then Ignores encoding
-    /// </param>
-    /// <returns>
-    /// 0 if no errors.
-    /// </returns>
-    function BeginReadString(Source: ansistring; IgnoreCodePage: boolean = true): integer;
     /// <summary>
     /// Read tag.
     /// </summary>
@@ -747,14 +695,7 @@ type
     /// </summary>
     property TagValue: ansistring read FValue;
     /// <summary>
-    /// Return type of tag:
-    /// <para>0 - unknown</para>
-    /// <para>1 - &lt;?...?&gt;</para>
-    /// <para>2 - &lt;![CDATA[..]]&gt;</para>
-    /// <para>3 - &lt;!--..--&gt;</para>
-    /// <para>4 - &lt;...&gt;</para>
-    /// <para>5 - &lt;.../&gt;</para>
-    /// <para>6 - &lt;/...&gt;</para>
+    /// Return type of tag.
     /// </summary>
     property TagType: TXmlTagType read FTagType;
     /// <summary>
@@ -838,11 +779,8 @@ type
     procedure SetAttributes(Value: TZAttributesH);
   protected
   public
-    constructor Create(); virtual;
+    constructor Create(Stream: TStream);
     destructor Destroy(); override;
-    function BeginSaveToStream(Stream: TStream): boolean;      //начать запись в поток
-    function BeginSaveToFile(FileName: string): boolean;   //начать запись в файл
-    function BeginSaveToString(): boolean;                     //начать запись в Buffer
     procedure EndSaveTo();
     procedure FlushBuffer();
     procedure WriteCDATA(CDATA: string; CorrectCDATA: boolean; StartNewLine: boolean = true); overload;     //<![CDATA[ bla-bla-bla <><><>...]]>
@@ -918,13 +856,12 @@ type
     procedure SetAttributesMatch(Value: boolean);
     function GetAttributesMatch(): boolean;
     function GetIsTagStartOrClosed: boolean;
+    function GetIsTagOfData: boolean;
   protected
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
-    function BeginReadFile(FileName: string): integer;
     function BeginReadStream(Stream: TStream): integer;
-    function BeginReadString(Source: string; IgnoreCodePage: boolean = true): integer;
     function ReadTag(): boolean;
     procedure EndRead();
     function Eof(): boolean; virtual;
@@ -940,12 +877,18 @@ type
     property IsTagStart: boolean read GetIsTagStart;
     property IsTagClosed: boolean read GetIsTagClosed;
     property IsTagStartOrClosed: boolean read GetIsTagStartOrClosed;
+    property IsTagOfData: boolean read GetIsTagOfData;
     property IsTagEnd: boolean read GetIsTagEnd;
     property TagCount: integer read GetTagCount;
     property Tags[num: integer]: string read GetTag;
     property TextBeforeTag: string read GetTextBeforeTag;
     property MaxBufferLength: integer read GetMaxBufferLength write SetMaxBufferLength;
     property QuotesEqual: boolean read GetQuotesEqual write SetQuotesEqual;
+    function IsTagEndByName(tagName: string): boolean;
+    function IsTagStartByName(tagName: string): boolean;
+    function IsTagClosedByName(tagName: string): boolean;
+    function IsTagStartOrClosedByName(tagName: string): boolean;
+    function ReadToEndTagByName(tagName: string): boolean;
   end;
 
 //конец для Delphi >=2009
@@ -1959,13 +1902,17 @@ end;
 
 ////::::::::::::: TZsspXMLWriter :::::::::::::::::////
 
-constructor TZsspXMLWriter.Create();
+constructor TZsspXMLWriter.Create(Stream: TStream);
 begin
-  inherited;
+  if not assigned(Stream) then
+    raise EArgumentException.Create('Stream is null');
+
+  inherited Create();
+  FStream := Stream;
   FAttributeQuote := '"';
   FBuffer := '';
   FMaxBufferLength := 4096;
-  FInProcess := false;
+  FInProcess := true;
   FNewLine := true;
   FUnixNLSeparator := false;
   FTabLength := 0;
@@ -2115,67 +2062,13 @@ begin
   AddText(Text, UseConverter);   
 end;
 
-function TZsspXMLWriter.BeginSaveToStream(Stream: TStream): boolean;
-begin
-  if FInProcess then
-  begin
-    result := false;
-  end else
-  if Stream <> nil then
-  begin
-    FBuffer := '';
-    FStream := Stream;
-    FInProcess := true;
-    if FDestination = 111 then
-      FDestination := 1
-    else
-      FDestination := 0;
-    result := true;
-  end else
-  begin
-    FInProcess := false;
-    result := false;
-  end;
-end;
-
-function TZsspXMLWriter.BeginSaveToFile(const FileName: string): boolean;
-var Stream: TStream;
-begin
-  if InProcess then
-    result := false
-  else
-  try
-    Stream := TFileStream.Create(FileName, fmCreate);
-    FDestination := 111;
-    result := BeginSaveToStream(Stream);
-  except
-    FInProcess := false;
-    FreeAndNil(Stream);
-    result := false;
-  end;
-end;
-
-function TZsspXMLWriter.BeginSaveToString(): boolean;
-begin
-  if FInProcess then
-  begin
-    result := false;
-  end else
-  begin
-    FDestination := 2;
-    FBuffer := '';
-    FInProcess := true;
-    result := true;
-  end;
-end;
-
 //Закончить запись
 procedure TZsspXMLWriter.EndSaveTo();
 begin
   while TagCount > 0 do WriteEndTagNode();
   if NewLine then AddText(FNLSeparator, true);
   FlushBuffer();
-  if FDestination = 1 then FStream.Free();
+  //FStream.Free();
   FStream := nil;
   FInProcess := false;
 end;
@@ -2185,11 +2078,8 @@ procedure TZsspXMLWriter.FlushBuffer();
 begin
   if not FInProcess then exit;
   if FStream <> nil then
-    if FDestination <> 2 then
-    begin
-      FStream.WriteBuffer(Pointer(FBuffer)^, Length(FBuffer));
-      FBuffer := '';
-    end;  
+  FStream.WriteBuffer(Pointer(FBuffer)^, Length(FBuffer));
+  FBuffer := '';
 end;
 
 //Установить конвертер текста
@@ -2291,22 +2181,21 @@ begin
 end;
 
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; AttrArray: array of TZAttrArray; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
-var t: TZAttributes;
+var arttrib: TZAttributes;
 begin
-  t := TZAttributes.Create();
+  arttrib := TZAttributes.Create();
   try
-    t.Add(AttrArray, true);
-    WriteTagNode(TagName, t, StartNewLine, CloseTagNewLine, CheckEntity);
+    arttrib.Add(AttrArray, true);
+    WriteTagNode(TagName, arttrib, StartNewLine, CloseTagNewLine, CheckEntity);
   finally
-    FreeAndNil(t);
+    arttrib.Free();
   end;  
 end;
 
 procedure TZsspXMLWriter.WriteEndTagNode();
 begin
   if not FInProcess then exit;
-  if TagCount > 0 then
-  begin
+  if TagCount > 0 then begin
     _AddTag('</', FTags[TagCount - 1].Name, '>', FTags[TagCount - 1].CloseTagNewLine, -1);
     Dec(FTagCount);
     ResizeTagArray(FTagCount);
@@ -2376,7 +2265,6 @@ begin
     FBuffer := Fbuffer + TextConverter(Text)
   else
     FBuffer := FBuffer + Text;
-  if FDestination <> 2 then
     if Length(FBuffer) >= MaxBufferLength then
       FlushBuffer;
 end;
@@ -2563,31 +2451,6 @@ begin
     end;
 end;
 
-function TZsspXMLReader.BeginReadFile(FileName: string): integer;
-var Stream: TStream;
-begin
-  if InProcess then
-    result := 1
-  else
-  begin
-    result := 0;
-    Stream := nil;
-    try
-      try
-        Stream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyNone);
-      except
-        result := 2;
-      end;
-      if result = 0 then
-      begin
-        FSourceType := 111;
-        result := BeginReadStream(Stream);
-      end;
-    finally
-    end;
-  end;
-end;
-
 function TZsspXMLReader.BeginReadStream(Stream: TStream): integer;
 var s: ansistring;
 begin
@@ -2616,20 +2479,6 @@ begin
       s := copy(FBuffer, 1, FPlast);
       RecognizeEncoding(s);
     end;
-  end;
-end;
-
-function TZsspXMLReader.BeginReadString(Source: ansistring; IgnoreCodePage: boolean = true): integer;
-begin
-  if InProcess then
-    result := 1
-  else
-  begin
-    FBuffer := Source;
-    FInProcess := true;
-    FSourceType := 3;
-    result := 0;
-    ClearAll();
   end;
 end;
 
@@ -3488,10 +3337,10 @@ end;
 //// TZsspXMLWriterH 
 ////////////////////////////////////////////////////////////////////////////////
 
-constructor TZsspXMLWriterH.Create();
+constructor TZsspXMLWriterH.Create(Stream: TStream);
 begin
-  inherited;
-  FXMLWriter := TZsspXMLWriter.Create();
+  inherited Create();
+  FXMLWriter := TZsspXMLWriter.Create(Stream);
   FAttributes := TZAttributesH.Create();
 end;
 
@@ -3596,21 +3445,6 @@ procedure TZsspXMLWriterH.SetAttributes(Value: TZAttributesH);
 begin
   if (Value <> nil) then
     FAttributes.Assign(Value);
-end;
-
-function TZsspXMLWriterH.BeginSaveToStream(Stream: TStream): boolean;
-begin
-  result := FXMLWriter.BeginSaveToStream(Stream);
-end;
-
-function TZsspXMLWriterH.BeginSaveToFile(FileName: string): boolean;
-begin
-  result := FXMLWriter.BeginSaveToFile(FileName);
-end;
-
-function TZsspXMLWriterH.BeginSaveToString(): boolean;
-begin
-  result := FXMLWriter.BeginSaveToString();
 end;
 
 procedure TZsspXMLWriterH.EndSaveTo();
@@ -3908,6 +3742,13 @@ begin
     result := (TagType = TXmlTagType.xttEnd);
 end;
 
+function TZsspXMLReaderH.GetIsTagOfData: boolean;
+begin
+    result := (TagType = TXmlTagType.xttStart)
+           or (TagType = TXmlTagType.xttClosed)
+           or (TagType = TXmlTagType.xttEnd);
+end;
+
 function TZsspXMLReaderH.GetIsTagStart(): boolean;
 begin
     result := (TagType = TXmlTagType.xttStart);
@@ -3915,7 +3756,8 @@ end;
 
 function TZsspXMLReaderH.GetIsTagStartOrClosed: boolean;
 begin
-    result := (TagType = TXmlTagType.xttStart) or (TagType = TXmlTagType.xttClosed);
+    result := (TagType = TXmlTagType.xttStart)
+           or (TagType = TXmlTagType.xttClosed);
 end;
 
 function TZsspXMLReaderH.GetRawTextTag(): string;
@@ -3936,6 +3778,31 @@ end;
 function TZsspXMLReaderH.GetValue(): string;
 begin
   result := UTF8ToString(FXMLReader.TagValue);
+end;
+
+function TZsspXMLReaderH.IsTagClosedByName(tagName: string): boolean;
+begin
+    result := (string(FXMLReader.TagName) = tagName)
+          and (FXMLReader.TagType = TXmlTagType.xttClosed);
+end;
+
+function TZsspXMLReaderH.IsTagEndByName(tagName: string): boolean;
+begin
+    result := (string(FXMLReader.TagName) = tagName)
+          and (FXMLReader.TagType = TXmlTagType.xttEnd);
+end;
+
+function TZsspXMLReaderH.IsTagStartByName(tagName: string): boolean;
+begin
+    result := (string(FXMLReader.TagName) = tagName)
+          and (FXMLReader.TagType = TXmlTagType.xttStart);
+end;
+
+function TZsspXMLReaderH.IsTagStartOrClosedByName(tagName: string): boolean;
+begin
+    result := (string(FXMLReader.TagName) = tagName)
+          and ((FXMLReader.TagType = TXmlTagType.xttStart)
+            or (FXMLReader.TagType = TXmlTagType.xttClosed));
 end;
 
 function TZsspXMLReaderH.GetTagType(): TXmlTagType;
@@ -3984,25 +3851,25 @@ begin
   FXMLReader.IgnoreCase := Value;
 end;
 
-function TZsspXMLReaderH.BeginReadFile(FileName: string): integer;
-begin
-  result := FXMLReader.BeginReadFile(FileName);
-end;
-
 function TZsspXMLReaderH.BeginReadStream(Stream: TStream): integer;
 begin
   result := FXMLReader.BeginReadStream(Stream);
-end;
-
-function TZsspXMLReaderH.BeginReadString(Source: string; IgnoreCodePage: boolean = true): integer;
-begin
-  result := FXMLReader.BeginReadString(UTF8Encode(Source), IgnoreCodePage);
 end;
 
 function TZsspXMLReaderH.ReadTag(): boolean;
 begin
   result := FXMLReader.ReadTag();
   FAttributes.Assign(FXMLReader.Attributes);
+end;
+
+function TZsspXMLReaderH.ReadToEndTagByName(tagName: string): boolean;
+begin
+  result := not IsTagEndByName(tagName);
+  if result then
+      self.ReadTag();
+
+  if self.Eof() then
+    exit(false);
 end;
 
 procedure TZsspXMLReaderH.EndRead();

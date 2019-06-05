@@ -3,7 +3,7 @@
 interface
 
 uses
-  Classes, Sysutils, Graphics, UITypes, Math, Windows, RegularExpressions, Generics.Collections,
+  Classes, Sysutils, Graphics, UITypes, Math, Windows, RegularExpressions, Generics.Collections, System.Contnrs,
   zsspxml;
 
 var ZE_XLSX_APPLICATION: string;
@@ -257,16 +257,15 @@ type
   /// </summary>
   TZAlignment = class (TPersistent)
   private
-    FHorizontal: TZHorizontalAlignment; //горизонтальное выравнивание
-    FIndent: integer;                   //отступ
-    FRotate: TZCellTextRotate;          //угол поворота
-    FShrinkToFit: boolean;              //true - уменьшает размер шрифта, чтобы текст
-                                        //   поместился в ячейку,
+    FHorizontal: TZHorizontalAlignment;
+    FVertical: TZVerticalAlignment;
+    FIndent: integer;
+    FRotate: TZCellTextRotate;
+    FWrapText: boolean;
+    FShrinkToFit: boolean;              // true - уменьшает размер шрифта, чтобы текст поместился в ячейку,
                                         // false - текст не уменьшается
-    FVertical: TZVerticalAlignment;     //Вертикальное выравнивание
-    FVerticalText: boolean;             //true  - текст по одной букве в строке вертикально
-                                        //false - по дефолту
-    FWrapText: boolean;                 //перенос текста
+    FVerticalText: boolean;             // true  - текст по одной букве в строке вертикально
+                                        // false - по дефолту
     procedure SetHorizontal(const Value: TZHorizontalAlignment);
     procedure SetIndent(const Value: integer);
     procedure SetRotate(const Value: TZCellTextRotate);
@@ -319,7 +318,7 @@ type
   private
     FBorder: TZBorder;
     FAlignment: TZAlignment;
-    FFont: TFont;   //шрифт ячейки
+    FFont: TFont;
     FBGColor: TColor;
     FPatternColor: TColor;
     FCellPattern: TZCellPattern;
@@ -599,7 +598,6 @@ type
   private
     FOwner: TZSheet;
     FColumns: boolean;
-
     FActive: boolean;
     FTill: word;
     FFrom: word;
@@ -844,42 +842,44 @@ type
   /// <summary>
   /// Conditions
   /// </summary>
-  TZCondition = (ZCFIsTrueFormula,
-                 ZCFCellContentIsBetween,
-                 ZCFCellContentIsNotBetween,
-                 ZCFCellContentOperator,
-                 ZCFNumberValue,
-                 ZCFString,
-                 ZCFBoolTrue,
-                 ZCFBoolFalse,
-                 ZCFFormula,
-                 ZCFContainsText,
-                 ZCFNotContainsText,
-                 ZCFBeginsWithText,
-                 ZCFEndsWithText,
-                 ZCFCellIsEmpty,
-                 ZCFDuplicate,
-                 ZCFUnique,
-                 ZCFAboveAverage,
-                 ZCFBellowAverage,
-                 ZCFAboveEqualAverage,
-                 ZCFBelowEqualAverage,
-                 ZCFTopElements,
-                 ZCFBottomElements,
-                 ZCFTopPercent,
-                 ZCFBottomPercent,
-                 ZCFIsError,
-                 ZCFIsNoError
-                );
+  TZCondition = (
+    ZCFIsTrueFormula,
+    ZCFCellContentIsBetween,
+    ZCFCellContentIsNotBetween,
+    ZCFCellContentOperator,
+    ZCFNumberValue,
+    ZCFString,
+    ZCFBoolTrue,
+    ZCFBoolFalse,
+    ZCFFormula,
+    ZCFContainsText,
+    ZCFNotContainsText,
+    ZCFBeginsWithText,
+    ZCFEndsWithText,
+    ZCFCellIsEmpty,
+    ZCFDuplicate,
+    ZCFUnique,
+    ZCFAboveAverage,
+    ZCFBellowAverage,
+    ZCFAboveEqualAverage,
+    ZCFBelowEqualAverage,
+    ZCFTopElements,
+    ZCFBottomElements,
+    ZCFTopPercent,
+    ZCFBottomPercent,
+    ZCFIsError,
+    ZCFIsNoError
+  );
 
   //Оператор для условного форматирования
-  TZConditionalOperator = (ZCFOpGT,       //  > (Greater Than)
-                           ZCFOpLT,       //  < (Less Than)
-                           ZCFOpGTE,      //  >= (Greater or Equal)
-                           ZCFOpLTE,      //  <= (Less or Equal)
-                           ZCFOpEqual,    //  = (Equal)
-                           ZCFOpNotEqual  //  <> (Not Equal)
-                          );
+  TZConditionalOperator = (
+    ZCFOpGT,       //  > (Greater Than)
+    ZCFOpLT,       //  < (Less Than)
+    ZCFOpGTE,      //  >= (Greater or Equal)
+    ZCFOpLTE,      //  <= (Less or Equal)
+    ZCFOpEqual,    //  = (Equal)
+    ZCFOpNotEqual  //  <> (Not Equal)
+  );
 
   //Условное форматирование: стиль на условие (conditional formatting)
   TZConditionalStyleItem = class (TPersistent)
@@ -1061,72 +1061,72 @@ type
 
   //Possible chart types
   TZEChartType = (
-                    ZEChartTypeArea,
-                    ZEChartTypeBar,
-                    ZEChartTypeBubble,
-                    ZEChartTypeCircle,
-                    ZEChartTypeGantt,
-                    ZEChartTypeLine,
-                    ZEChartTypeRadar,
-                    ZEChartTypeRing,
-                    ZEChartTypeScatter,
-                    ZEChartTypeStock,
-                    ZEChartTypeSurface
-                 );
+    ZEChartTypeArea,
+    ZEChartTypeBar,
+    ZEChartTypeBubble,
+    ZEChartTypeCircle,
+    ZEChartTypeGantt,
+    ZEChartTypeLine,
+    ZEChartTypeRadar,
+    ZEChartTypeRing,
+    ZEChartTypeScatter,
+    ZEChartTypeStock,
+    ZEChartTypeSurface
+  );
 
   //Specifies the rendering of bars for 3D bar charts
   TZEChartSolidType = (
-                      ZEChartSolidTypeCone,
-                      ZEChartSolidTypeCuboid,
-                      ZEChartSolidTypeCylinder,
-                      ZEChartSolidTypePyramid
-                      );
+    ZEChartSolidTypeCone,
+    ZEChartSolidTypeCuboid,
+    ZEChartSolidTypeCylinder,
+    ZEChartSolidTypePyramid
+  );
 
   //Type of symbols for a data point in a chart
   TZEChartSymbolType = (
-                        ZEChartSymbolTypeNone,            //No symbol should be used
-                        ZEChartSymbolTypeAutomatic,       //Auto select from TZEChartSymbol
-                        ZEChartSymbolTypeNamedSymbol      //Use selected from TZEChartSymbol
-                        //ZEChartSymbolTypeImage          //not for now
-                       );
+    ZEChartSymbolTypeNone,            //No symbol should be used
+    ZEChartSymbolTypeAutomatic,       //Auto select from TZEChartSymbol
+    ZEChartSymbolTypeNamedSymbol      //Use selected from TZEChartSymbol
+    //ZEChartSymbolTypeImage          //not for now
+   );
 
   //Symbol to be used for a data point in a chart, used only for chart type = ZEChartSymbolTypeNamedSymbol
   TZEChartSymbol = (
-                     ZEChartSymbolArrowDown,
-                     ZEChartSymbolArrowUp,
-                     ZEChartSymbolArrowRight,
-                     ZEChartSymbolArrowLeft,
-                     ZEChartSymbolAsterisk,
-                     ZEChartSymbolCircle,
-                     ZEChartSymbolBowTie,
-                     ZEChartSymbolDiamond,
-                     ZEChartSymbolHorizontalBar,
-                     ZEChartSymbolHourglass,
-                     ZEChartSymbolPlus,
-                     ZEChartSymbolStar,
-                     ZEChartSymbolSquare,
-                     ZEChartSymbolX,
-                     ZEChartSymbolVerticalBar
-                   );
+    ZEChartSymbolArrowDown,
+    ZEChartSymbolArrowUp,
+    ZEChartSymbolArrowRight,
+    ZEChartSymbolArrowLeft,
+    ZEChartSymbolAsterisk,
+    ZEChartSymbolCircle,
+    ZEChartSymbolBowTie,
+    ZEChartSymbolDiamond,
+    ZEChartSymbolHorizontalBar,
+    ZEChartSymbolHourglass,
+    ZEChartSymbolPlus,
+    ZEChartSymbolStar,
+    ZEChartSymbolSquare,
+    ZEChartSymbolX,
+    ZEChartSymbolVerticalBar
+  );
 
   //Position of Legend in chart
   TZEChartLegendPosition = (
-                            ZELegendBottom,     //Legend below the plot area
-                            ZELegendEnd,        //Legend on the right side of the plot area
-                            ZELegendStart,      //Legend on the left side of the plot area
-                            ZELegendTop,        //Legend above the plot area
-                            ZELegendBottomEnd,  //Legend in the bottom right corner of the plot area
-                            ZELegendBottomStart,//Legend in the bottom left corner
-                            ZELegendTopEnd,     //Legend in the top right corner
-                            ZELegendTopStart    //Legend in the top left corner
-                           );
+    ZELegendBottom,     //Legend below the plot area
+    ZELegendEnd,        //Legend on the right side of the plot area
+    ZELegendStart,      //Legend on the left side of the plot area
+    ZELegendTop,        //Legend above the plot area
+    ZELegendBottomEnd,  //Legend in the bottom right corner of the plot area
+    ZELegendBottomStart,//Legend in the bottom left corner
+    ZELegendTopEnd,     //Legend in the top right corner
+    ZELegendTopStart    //Legend in the top left corner
+   );
 
   //Alignment of a legend
   TZELegendAlign = (
-                     ZELegengAlignStart,  //Legend aligned at the beginning of a plot area (left or top)
-                     ZELegendAlignCenter, //Legend aligned at the center of a plot area
-                     ZELegendAlignEnd     //Legend aligned at the end of a plot area (right or bottom)
-                   );
+    ZELegengAlignStart,  //Legend aligned at the beginning of a plot area (left or top)
+    ZELegendAlignCenter, //Legend aligned at the center of a plot area
+    ZELegendAlignEnd     //Legend aligned at the end of a plot area (right or bottom)
+  );
 
   //Range item
   TZEChartRangeItem = class (TPersistent)
@@ -1253,12 +1253,6 @@ type
     FSeriesNameRow: integer;
     FSeriesNameCol: integer;
     FRanges: TZEChartRange;
-
-    {
-    TZEChartSymbolType
-    TZEChartSymbol
-    }
-
   protected
   public
     constructor Create();
@@ -1405,7 +1399,7 @@ type
   // Store for pictures on a sheet
   TZEPictureStore = class (TPersistent)
   private
-    FItems: TList;
+    FItems: TObjectList;
     function GetCount: integer;
   protected
     function GetItem(num: integer): TZEPicture;
@@ -3614,6 +3608,7 @@ begin
     FreeAndNil(FSheets[i]);
   SetLength(FSheets, 0);
   FSheets := nil;
+  FStore := nil;
   inherited Destroy();
 end;
 
@@ -5420,7 +5415,7 @@ end;
 
 constructor TZEPictureStore.Create();
 begin
-  FItems := TList.Create();
+  FItems := TObjectList.Create(true);
 end;
 
 function TZEPictureStore.Delete(num: integer): boolean;
@@ -5435,7 +5430,7 @@ end;
 destructor TZEPictureStore.Destroy();
 begin
   Clear();
-  FreeAndNil(FItems);
+  FItems.Free();
   inherited;
 end;
 
@@ -5448,7 +5443,7 @@ function TZEPictureStore.GetItem(num: integer): TZEPicture;
 begin
   Result := nil;
   if ((num >= 0) and (num < Count)) then
-    Result := FItems[num];
+    Result := TZEPicture(FItems[num]);
 end;
 
 function TZEPictureStore.IsEqual(const Source: TPersistent): boolean;
@@ -5486,13 +5481,13 @@ end;
 
 destructor TZEDrawing.Destroy();
 begin
-  FreeAndNil(FPictureStore);
+  FPictureStore.Clear();
+  FPictureStore.Free();
   inherited;
 end;
 
 procedure TZEDrawing.Assign(Source: TPersistent);
-var tmp: TZEDrawing;
-    b: boolean;
+var tmp: TZEDrawing; b: boolean;
 begin
   b := Assigned(Source);
   if (b) then begin
