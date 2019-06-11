@@ -7,16 +7,30 @@ uses
   zeformula, zsspxml, zexmlss, zesavecommon, Generics.Collections;
 
 type
+  TRelationType = (
+    rtNone       = -1,
+    rtWorkSheet  = 0,
+    rtStyles     = 1,
+    rtSharedStr  = 2,
+    rtDoc        = 3,
+    rtCoreProp   = 4,
+    rtExtProps   = 5,
+    rtHyperlink  = 6,
+    rtComments   = 7,
+    rtVmlDrawing = 8,
+    rtDrawing    = 9
+ );
+
   TZXLSXFileItem = record
     name: string;     //путь к файлу
     nameArx: string;
     original: string; //исходная строка
-    ftype: integer;   //тип контента
+    ftype: TRelationType;   //тип контента
   end;
 
   TZXLSXRelations = record
     id: string;       //rID
-    ftype: integer;   //тип ссылки
+    ftype: TRelationType;   //тип ссылки
     target: string;   //ссылка на файла
     fileid: integer;  //ссылка на запись
     name: string;     //имя листа
@@ -158,9 +172,9 @@ type
   end;
 
   //Store link item
-  type TZEXLSXHyperLinkItem = record
+  TZEXLSXHyperLinkItem = record
     RID: integer;
-    RelType: integer;
+    RelType: TRelationType;
     CellRef: string;
     Target: string;
     ScreenTip: string;
@@ -218,7 +232,7 @@ function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConver
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDrawing(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 function ZEXLSXCreateDrawingRels(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: integer; const Target: string; const TargetMode: string = '');
+procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: TRelationType; const Target: string; const TargetMode: string = '');
 
 
 function ReadXLSXPath(var XMLSS: TZEXMLSS; DirName: string): integer;
@@ -244,37 +258,12 @@ uses AnsiStrings, StrUtils, Math, zenumberformats;
 
 const
   SCHEMA_DOC         = 'http://schemas.openxmlformats.org/officeDocument/2006';
-  SCHEMA_DOC_REL     = SCHEMA_DOC + '/relationships';
+  SCHEMA_DOC_REL     = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   SCHEMA_PACKAGE     = 'http://schemas.openxmlformats.org/package/2006';
-  SCHEMA_PACKAGE_REL = SCHEMA_PACKAGE + '/relationships';
+  SCHEMA_PACKAGE_REL = 'http://schemas.openxmlformats.org/package/2006/relationships';
   SCHEMA_SHEET_MAIN  = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
-  REL_TYPE_WORKSHEET   = 0;
-  REL_TYPE_STYLES      = 1;
-  REL_TYPE_SHARED_STR  = 2;
-  REL_TYPE_DOC         = 3;
-  REL_TYPE_CORE_PROP   = 4;
-  REL_TYPE_EXT_PROP    = 5;
-  REL_TYPE_HYPERLINK   = 6;
-  REL_TYPE_COMMENTS    = 7;
-  REL_TYPE_VML_DRAWING = 8;
-  REL_TYPE_DRAWING     = 9;
-
 type
-  TRelationType = (
-    rtWorkSheet  = 0,
-    rtStyles     = 1,
-    rtSharedStr  = 2,
-    rtDoc        = 3,
-    rtCoreProp   = 4,
-    rtExtProps   = 5,
-    rtHyperlink  = 6,
-    rtComments   = 7,
-    rtVmlDrawing = 8,
-    rtDrawing    = 9
- );
-
-  // font
   TZEXLSXFont = record
     name:      string;
     bold:      boolean;
@@ -289,6 +278,59 @@ type
   end;
 
   TZEXLSXFontArray = array of TZEXLSXFont;
+
+  TContentTypeRec=record
+    ftype: TRelationType;
+    name : string;
+    rel  : string;
+  end;
+
+const
+CONTENT_TYPES: array[0..10] of TContentTypeRec = (
+ (ftype: TRelationType.rtWorkSheet;
+    name:'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet'),
+
+ (ftype: TRelationType.rtStyles;
+    name:'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles'),
+
+ (ftype: TRelationType.rtSharedStr;
+    name:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings'),
+
+ (ftype: TRelationType.rtSharedStr;
+    name:'application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings'),
+
+ (ftype: TRelationType.rtDoc;
+    name:'application/vnd.openxmlformats-package.relationships+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument'),
+
+ (ftype: TRelationType.rtCoreProp;
+    name:'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml';
+    rel: 'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties'),
+
+ (ftype: TRelationType.rtExtProps;
+    name:'application/vnd.openxmlformats-package.core-properties+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties'),
+
+ (ftype: TRelationType.rtHyperlink;
+    name:'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink'),
+
+ (ftype: TRelationType.rtComments;
+    name:'application/vnd.openxmlformats-officedocument.vmlDrawing';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments'),
+
+ (ftype: TRelationType.rtVmlDrawing;
+    name:'application/vnd.openxmlformats-officedocument.theme+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing'),
+
+ (ftype: TRelationType.rtDrawing;
+    name:'application/vnd.openxmlformats-officedocument.drawing+xml';
+    rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing')
+);
 
 ////:::::::::::::  TZXLSXDiffFormating :::::::::::::::::////
 
@@ -731,7 +773,7 @@ begin
   end;
 
   FHyperLinks[num].RID        := GenerateRID();
-  FHyperLinks[num].RelType    := REL_TYPE_HYPERLINK;
+  FHyperLinks[num].RelType    := TRelationType.rtHyperlink;
   FHyperLinks[num].TargetMode := ATargetMode;
   FHyperLinks[num].CellRef    := ACellRef;
   FHyperLinks[num].Target     := ATarget;
@@ -753,7 +795,7 @@ begin
   end;
 
   FHyperLinks[num].RID := GenerateRID();
-  FHyperLinks[num].RelType := REL_TYPE_DRAWING;
+  FHyperLinks[num].RelType := TRelationType.rtDrawing;
   FHyperLinks[num].TargetMode := '';
   FHyperLinks[num].CellRef := '';
   FHyperLinks[num].Target := ATarget;
@@ -858,29 +900,14 @@ end;
 //  const name: string - текст отношения
 //RETURN
 //      integer - номер отношения. -1 - не определено
-function ZEXLSXGetRelationNumber(const name: string): integer;
+function ZEXLSXGetRelationNumber(const name: string): TRelationType;
+var rec: TContentTypeRec;
 begin
-  result := -1;
-  if (name = SCHEMA_DOC_REL + '/worksheet') then
-    result := 0
-  else if (name = SCHEMA_DOC_REL + '/styles') then
-    result := 1
-  else if (name = SCHEMA_DOC_REL + '/sharedStrings') then
-    result := 2
-  else if (name = SCHEMA_DOC_REL + '/officeDocument') then
-    result := 3
-  else if (name = SCHEMA_PACKAGE_REL + '/metadata/core-properties') then
-    result := 4
-  else if (name = SCHEMA_DOC_REL + '/extended-properties') then
-    result := 5
-  else if (name = SCHEMA_DOC_REL + '/hyperlink') then
-    result := 6
-  else if (name = SCHEMA_DOC_REL + '/comments') then
-    result := 7
-  else if (name = SCHEMA_DOC_REL + '/vmlDrawing') then
-    result := 8
-  else if (name = SCHEMA_DOC_REL + '/drawing') then
-    result := 9;
+  result := TRelationType.rtNone;
+  for rec in CONTENT_TYPES do begin
+    if rec.name = name then
+      exit(rec.ftype);
+  end;
 end; //ZEXLSXGetRelationNumber
 
 //Возвращает текст Relations для rels
@@ -888,20 +915,13 @@ end; //ZEXLSXGetRelationNumber
 //      num: integer - номер отношения
 //RETURN
 //      integer - номер отношения. -1 - не определено
-function ZEXLSXGetRelationName(num: integer): string;
+function ZEXLSXGetRelationName(num: TRelationType): string;
+var rec: TContentTypeRec;
 begin
   result := '';
-  case num of
-    0: result := SCHEMA_DOC_REL + '/worksheet';
-    1: result := SCHEMA_DOC_REL + '/styles';
-    2: result := SCHEMA_DOC_REL + '/sharedStrings';
-    3: result := SCHEMA_DOC_REL + '/officeDocument';
-    4: result := SCHEMA_PACKAGE_REL + '/metadata/core-properties';
-    5: result := SCHEMA_DOC_REL + '/extended-properties';
-    6: result := SCHEMA_DOC_REL + '/hyperlink';
-    7: result := SCHEMA_DOC_REL + '/comments';
-    8: result := SCHEMA_DOC_REL + '/vmlDrawing';
-    9: result := SCHEMA_DOC_REL + '/drawing';
+  for rec in CONTENT_TYPES do begin
+    if rec.ftype = num then
+      exit(rec.rel);
   end;
 end; //ZEXLSXGetRelationName
 
@@ -976,55 +996,32 @@ end; //ZEXSLXReadThema
 function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TArray<TZXLSXFileItem>; var FilesCount: integer): boolean;
 var
   xml: TZsspXMLReaderH;
-  s: string;
-  t: integer;
+  contType: string;
+  rec: TContentTypeRec;
 begin
   result := false;
   xml := TZsspXMLReaderH.Create();
   try
     xml.AttributesMatch := false;
-    if (xml.BeginReadStream(Stream) <> 0) then
+    if xml.BeginReadStream(Stream) <> 0 then
       exit;
     FilesCount := 0;
     while not xml.Eof() do begin
       xml.ReadTag();
       if xml.IsTagClosedByName('Override') then begin
-        s := xml.Attributes.ItemsByName['PartName'];
-        if (s > '') then begin
-          SetLength(FileArray, FilesCount + 1);
-          FileArray[FilesCount].name := s;
-          FileArray[FilesCount].original := s;
-          s := xml.Attributes.ItemsByName['ContentType'];
-          t := -1;
-          if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml') then
-            t := 0
-          else if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml') then
-            t := 1
-          else if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml') or
-          	 (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.template.main+xml') then
-            t := 2
-          else if (s = 'application/vnd.openxmlformats-package.relationships+xml') then
-            t := 3
-          else if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml') then
-            t := 4
-          else if (s = 'application/vnd.openxmlformats-package.core-properties+xml') then
-            t := 5
-          else if (s = 'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml') then
-            t := 6
-          else if (s = 'application/vnd.openxmlformats-officedocument.vmlDrawing') then
-            t := 7
-          else
-          if (s = 'application/vnd.openxmlformats-officedocument.theme+xml') then
-            t := 8;
-
-          FileArray[FilesCount].ftype := t;
-
-          if (t > -1) then
+        contType := xml.Attributes.ItemsByName['ContentType'];
+        for rec in CONTENT_TYPES do begin
+          if contType = rec.name then begin
+            SetLength(FileArray, FilesCount + 1);
+            FileArray[FilesCount].name     := xml.Attributes.ItemsByName['PartName'];
+            FileArray[FilesCount].original := xml.Attributes.ItemsByName['PartName'];
+            FileArray[FilesCount].ftype    := rec.ftype;
             inc(FilesCount);
+            break;
+          end;
         end;
       end;
     end;
-
     result := true;
   finally
     xml.Free();
@@ -1435,7 +1432,7 @@ var
   begin
     num := 0;
     while xml.ReadToEndTagByName('cols') do begin
-      if ((xml.TagName = 'col') and (xml.IsTagStartOrClosed)) then begin
+      if (xml.TagName = 'col') and xml.IsTagStartOrClosed then begin
         CheckCol(num + 1);
         str := xml.Attributes.ItemsByName['bestFit'];
         if (str > '') then
@@ -1541,7 +1538,7 @@ var
             str := xml.Attributes.ItemsByName['r:id'];
             //по r:id подставить ссылку
             for i := 0 to RelationsCount - 1 do
-              if ((Relations[i].id = str) and (Relations[i].ftype = 6)) then begin
+              if ((Relations[i].id = str) and (Relations[i].ftype = TRelationType.rtHyperlink)) then begin
                 currentSheet.Cell[_c, _r].Href := Relations[i].target;
                 break;
               end;
@@ -2144,8 +2141,8 @@ type
   //   1 - Top            верхняя граница
   //   2 - Right          правая граница
   //   3 - Bottom         нижняя граница
-  //   4 - DiagonalLeft   диагоняль от верхнего левого угла до нижнего правого
-  //   5 - DiagonalRight  диагоняль от нижнего левого угла до правого верхнего
+  //   4 - DiagonalLeft   диагональ от верхнего левого угла до нижнего правого
+  //   5 - DiagonalRight  диагональ от нижнего левого угла до правого верхнего
   TZXLSXBorder = array[0..5] of TZXLSXBorderItem;
   TZXLSXBordersArray = array of TZXLSXBorder;
 
@@ -3543,49 +3540,41 @@ end; //ZE_XSLXReplaceDelimiter
 //RETURN
 //      boolean - true - успешно прочитано
 function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
-var xml: TZsspXMLReaderH;
-  s: string;
-  t: integer;
+var xml: TZsspXMLReaderH; rt: TRelationType;
 begin
   result := false;
-  xml := nil;
+  xml := TZsspXMLReaderH.Create();
   RelationsCount := 0;
   isWorkSheet := false;
   try
-    xml := TZsspXMLReaderH.Create();
     xml.AttributesMatch := false;
     if (xml.BeginReadStream(Stream) <> 0) then
       exit;
 
-    while (not xml.Eof()) do begin
+    while not xml.Eof() do begin
       xml.ReadTag();
 
       if xml.IsTagClosedByName('Relationship') then begin
         SetLength(Relations, RelationsCount + 1);
         Relations[RelationsCount].id := xml.Attributes.ItemsByName['Id'];
 
-        s := xml.Attributes.ItemsByName['Type'];
-        t := ZEXLSXGetRelationNumber(s);
-
-        if ((t >= 0) and (t < 3)) then
+        rt := ZEXLSXGetRelationNumber(xml.Attributes.ItemsByName['Type']);
+        if ((rt >= rtWorkSheet) and (rt < rtDoc)) then
           isWorkSheet := true;
 
         Relations[RelationsCount].fileid := -1;
         Relations[RelationsCount].state := 0;
         Relations[RelationsCount].sheetid := 0;
         Relations[RelationsCount].name := '';
-
-        Relations[RelationsCount].ftype := t;
+        Relations[RelationsCount].ftype := rt;
         Relations[RelationsCount].target := xml.Attributes.ItemsByName['Target'];
-        if (t >= 0) then
+        if (rt >= rtWorkSheet) then
           inc(RelationsCount);
       end;
     end; //while
     result := true;
-
   finally
-    if (Assigned(xml)) then
-      FreeAndNil(xml);
+    FreeAndNil(xml);
   end;
 end; //ZE_XSLXReadRelationsips
 
@@ -3784,7 +3773,7 @@ var
     s := '';
     _stream := nil;
     for i := 0 to SheetRelationsCount - 1 do
-    if (SheetRelations[i].ftype = 7) then
+    if (SheetRelations[i].ftype = TRelationType.rtComments) then
     begin
       s := SheetRelations[i].target;
       b := true;
@@ -3800,7 +3789,7 @@ var
           delete(s, 1, 3);
       b := false;
       for i := 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = 7) then
+        if (FileArray[i].ftype = TRelationType.rtComments) then
           if (pos(s, FileArray[i].name) <> 0) then
             if (FileExists(DirName + FileArray[i].name)) then
             begin
@@ -3861,7 +3850,7 @@ begin
 
       b := false;
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 3) then begin
+      if (FileArray[i].ftype = TRelationType.rtDoc) then begin
         b := true;
         break;
       end;
@@ -3875,7 +3864,7 @@ begin
           s := '/_rels/.rels';
           FileArray[FilesCount].original := s;
           FileArray[FilesCount].name := s;
-          FileArray[FilesCount].ftype := 3;
+          FileArray[FilesCount].ftype := TRelationType.rtDoc;
           inc(FilesCount);
         end;
 
@@ -3885,7 +3874,7 @@ begin
           s := '/xl/_rels/workbook.xml.rels';
           FileArray[FilesCount].original := s;
           FileArray[FilesCount].name := s;
-          FileArray[FilesCount].ftype := 3;
+          FileArray[FilesCount].ftype := TRelationType.rtDoc;
           inc(FilesCount);
         end;
 
@@ -3893,7 +3882,7 @@ begin
       end;
 
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 3) then begin
+      if (FileArray[i].ftype = TRelationType.rtDoc) then begin
         SetLength(RelationsArray, RelationsCount + 1);
         SetLength(RelationsCounts, RelationsCount + 1);
 
@@ -3906,7 +3895,7 @@ begin
         if (b) then begin
           SheetRelationNumber := RelationsCount;
           for j := 0 to RelationsCounts[RelationsCount] - 1 do
-          if (RelationsArray[RelationsCount][j].ftype = 0) then
+          if (RelationsArray[RelationsCount][j].ftype = TRelationType.rtWorkSheet) then
             for k := 0 to FilesCount - 1 do
             if (RelationsArray[RelationsCount][j].fileid < 0) then
               if ((pos(RelationsArray[RelationsCount][j].target, FileArray[k].original)) > 0) then
@@ -3921,7 +3910,7 @@ begin
 
       //sharedStrings.xml
       for i:= 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 4) then begin
+      if (FileArray[i].ftype = TRelationType.rtCoreProp) then begin
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
         if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then begin
@@ -3933,7 +3922,7 @@ begin
 
       //тема (если есть)
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 8) then begin
+      if (FileArray[i].ftype = TRelationType.rtVmlDrawing) then begin
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
         if (not ZEXSLXReadTheme(stream, ThemaColor, ThemaColorCount)) then
@@ -3946,7 +3935,7 @@ begin
 
       //стили (styles.xml)
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 1) then begin
+      if (FileArray[i].ftype = TRelationType.rtStyles) then begin
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
         if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
@@ -3960,7 +3949,7 @@ begin
       _no_sheets := true;
       if (SheetRelationNumber > 0) then begin
         for i := 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = 2) then begin
+        if (FileArray[i].ftype = TRelationType.rtSharedStr) then begin
           FreeAndNil(stream);
           stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
           if (not ZEXSLXReadWorkBook(XMLSS, stream, RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber])) then
@@ -3988,7 +3977,7 @@ begin
       //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
       if (_no_sheets) then
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 0) then begin
+      if (FileArray[i].ftype = TRelationType.rtWorkSheet) then begin
         b := _CheckSheetRelations(FileArray[i].name);
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
@@ -4094,7 +4083,7 @@ var
     s := '';
     _stream := nil;
     for i := 0 to SheetRelationsCount - 1 do
-    if (SheetRelations[i].ftype = 7) then
+    if (SheetRelations[i].ftype = TRelationType.rtComments) then
     begin
       s := SheetRelations[i].target;
       b := true;
@@ -4110,7 +4099,7 @@ var
           delete(s, 1, 3);
       b := false;
       for i := 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = 7) then
+        if (FileArray[i].ftype = TRelationType.rtComments) then
           if (pos(s, FileArray[i].name) <> 0) then
             if (FileExists(FileArray[i].name)) then
             begin
@@ -4167,10 +4156,11 @@ begin
       SheetRelationNumber := -1;
 
       b := false;
-      for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 3) then begin
-        b := true;
-        break;
+      for i := 0 to FilesCount - 1 do begin
+        if (FileArray[i].ftype = TRelationType.rtDoc) then begin
+          b := true;
+          break;
+        end;
       end;
 
       if (not b) then begin
@@ -4179,7 +4169,7 @@ begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].original := s;
           FileArray[FilesCount].name := s;
-          FileArray[FilesCount].ftype := 3;
+          FileArray[FilesCount].ftype := TRelationType.rtDoc;
           inc(FilesCount);
         end;
 
@@ -4188,7 +4178,7 @@ begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].original := s;
           FileArray[FilesCount].name := s;
-          FileArray[FilesCount].ftype := 3;
+          FileArray[FilesCount].ftype := TRelationType.rtDoc;
           inc(FilesCount);
         end;
 
@@ -4196,7 +4186,7 @@ begin
       end;
 
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 3) then begin
+      if (FileArray[i].ftype = TRelationType.rtDoc) then begin
         SetLength(RelationsArray, RelationsCount + 1);
         SetLength(RelationsCounts, RelationsCount + 1);
         zfiles := zip.FileNames;
@@ -4209,7 +4199,7 @@ begin
         if (b) then begin
           SheetRelationNumber := RelationsCount;
           for j := 0 to RelationsCounts[RelationsCount] - 1 do
-          if (RelationsArray[RelationsCount][j].ftype = 0) then
+          if (RelationsArray[RelationsCount][j].ftype = TRelationType.rtWorkSheet) then
             for k := 0 to FilesCount - 1 do
             if (RelationsArray[RelationsCount][j].fileid < 0) then
               if ((pos(RelationsArray[RelationsCount][j].target, FileArray[k].original)) > 0) then
@@ -4224,7 +4214,7 @@ begin
 
       //sharedStrings.xml
       for i:= 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 4) then begin
+      if (FileArray[i].ftype = TRelationType.rtCoreProp) then begin
         zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
         if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then begin
           result := 3;
@@ -4236,7 +4226,7 @@ begin
 
       //тема (если есть)
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 8) then begin
+      if (FileArray[i].ftype = TRelationType.rtVmlDrawing) then begin
         zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
         if (not ZEXSLXReadTheme(stream, ThemaColor, ThemaColorCount)) then
         begin
@@ -4249,7 +4239,7 @@ begin
 
       //стили (styles.xml)
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 1) then begin
+      if (FileArray[i].ftype = TRelationType.rtStyles) then begin
         zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
         if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
           result := 5;
@@ -4263,7 +4253,7 @@ begin
       _no_sheets := true;
       if (SheetRelationNumber > 0) then begin
         for i := 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = 2) then begin
+        if (FileArray[i].ftype = TRelationType.rtSharedStr) then begin
           zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
           if (not ZEXSLXReadWorkBook(XMLSS, stream, RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber])) then
           begin
@@ -4288,17 +4278,20 @@ begin
             _no_sheets := false;
           end; //if
       end;
+
       //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
-      if (_no_sheets) then
-      for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = 0) then begin
-        b := _CheckSheetRelations(FileArray[i].name);
-        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-        if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
-          result := result or 4;
-        if (b) then
-            _ReadComments();
-        FreeAndNil(stream);
+      if _no_sheets then begin
+        for i := 0 to FilesCount - 1 do begin
+          if FileArray[i].ftype = TRelationType.rtWorkSheet then begin
+            b := _CheckSheetRelations(FileArray[i].name);
+            zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+            if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+              result := result or 4;
+            if (b) then
+              _ReadComments();
+            FreeAndNil(stream);
+          end;
+        end;
       end;
     except
       result := 2;
@@ -4409,12 +4402,10 @@ var xml: TZsspXMLWriterH; s: string;
 
     for i := 0 to XMLSS.DrawingCount - 1 do begin
       _drawing := XMLSS.GetDrawing(i);
-      if Assigned(_drawing) and (_drawing.PictureStore.Count > 0) then
-      begin
+      if Assigned(_drawing) and (_drawing.PictureStore.Count > 0) then begin
         _WriteOverride('/xl/drawings/drawing' + IntToStr(_drawing.Id) + '.xml', 9);
         _WriteOverride('/xl/drawings/_rels/drawing' + IntToStr(_drawing.Id) + '.xml.rels', 3);
-        for ii := 0 to _drawing.PictureStore.Count - 1 do
-        begin
+        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
           _picture := _drawing.PictureStore.Items[ii];
           // image/ override
           xml.Attributes.Clear();
@@ -5947,7 +5938,7 @@ end; //ZEXLSXCreateStyles
 //      ridType: integer      - rIdType (0..8)
 //  const Target: string      -
 //  const TargetMode: string  -
-procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: integer; const Target: string; const TargetMode: string = '');
+procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: TRelationType; const Target: string; const TargetMode: string = '');
 begin
   xml.Attributes.Clear();
   xml.Attributes.Add('Id', rid);
@@ -5980,9 +5971,9 @@ begin
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     xml.WriteTagNode('Relationships', true, true, false);
 
-    ZEAddRelsRelation(xml, 'rId1', 3, 'xl/workbook.xml');
-    ZEAddRelsRelation(xml, 'rId2', 5, 'docProps/app.xml');
-    ZEAddRelsRelation(xml, 'rId3', 4, 'docProps/core.xml');
+    ZEAddRelsRelation(xml, 'rId1', TRelationType.rtDoc,      'xl/workbook.xml');
+    ZEAddRelsRelation(xml, 'rId2', TRelationType.rtExtProps, 'docProps/app.xml');
+    ZEAddRelsRelation(xml, 'rId3', TRelationType.rtCoreProp, 'docProps/core.xml');
 
     xml.WriteEndTagNode(); //Relationships
   finally
@@ -6014,12 +6005,12 @@ begin
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     xml.WriteTagNode('Relationships', true, true, false);
 
-    ZEAddRelsRelation(xml, 'rId1', 1, 'styles.xml');
+    ZEAddRelsRelation(xml, 'rId1', TRelationType.rtStyles, 'styles.xml');
 
     for i := 0 to PageCount - 1 do
-      ZEAddRelsRelation(xml, 'rId' + IntToStr(i + 2), 0, 'worksheets/sheet' + IntToStr(i + 1) + '.xml');
+      ZEAddRelsRelation(xml, 'rId' + IntToStr(i + 2), TRelationType.rtWorkSheet, 'worksheets/sheet' + IntToStr(i + 1) + '.xml');
 
-    ZEAddRelsRelation(xml, 'rId' + IntToStr(PageCount + 2), 2, 'sharedStrings.xml');
+    ZEAddRelsRelation(xml, 'rId' + IntToStr(PageCount + 2), TRelationType.rtSharedStr, 'sharedStrings.xml');
 
     xml.WriteEndTagNode(); //Relationships
 
