@@ -905,7 +905,7 @@ var rec: TContentTypeRec;
 begin
   result := TRelationType.rtNone;
   for rec in CONTENT_TYPES do begin
-    if rec.name = name then
+    if rec.rel = name then
       exit(rec.ftype);
   end;
 end; //ZEXLSXGetRelationNumber
