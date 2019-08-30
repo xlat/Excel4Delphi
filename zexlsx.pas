@@ -1172,9 +1172,13 @@ end; //ZEXLSX_getCFCondition
 //      ReadHelper: TZEXLSXReadHelper   -
 //RETURN
 //      boolean - true - страница прочиталась успешно
-function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string;
-                         var StrArray: TStringDynArray; StrCount: integer;
-                         var Relations: TZXLSXRelationsArray; RelationsCount: integer;
+function ZEXSLXReadSheet(var XMLSS: TZEXMLSS;
+                         var Stream: TStream;
+                         const SheetName: string;
+                         var StrArray: TStringDynArray;
+                         StrCount: integer;
+                         var Relations: TZXLSXRelationsArray;
+                         RelationsCount: integer;
                          ReadHelper: TZEXLSXReadHelper): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -3254,9 +3258,6 @@ var
     end;
   end; //_ApplyStyle
 
-  //I hate this f*****g format!
-  //  Sometimes in styles.xml there are no <Colors> .. </Colors>! =_="
-  //  Using standart colors.
   procedure _CheckIndexedColors();
   const
     _standart: array [0..63] of string = (
@@ -3468,9 +3469,8 @@ var
   t: integer;
 begin
   result := false;
-  xml := nil;
+  xml := TZsspXMLReaderH.Create();
   try
-    xml := TZsspXMLReaderH.Create();
     if (xml.BeginReadStream(Stream) <> 0) then
       exit;
 
@@ -3505,8 +3505,7 @@ begin
     end; //while
     result := true;
   finally
-    if (Assigned(xml)) then
-      FreeAndNil(xml);
+    xml.Free();
   end;
 end; //ZEXSLXReadWorkBook
 
@@ -3729,13 +3728,12 @@ var
   //RETURN
   //      boolean - true - прочитал успешно
   function _CheckSheetRelations(const fname: string): boolean;
-  var _rstream: TStream;
+  var rstream: TStream;
     s: string;
     i, num: integer;
     b: boolean;
   begin
     result := false;
-    _rstream := nil;
     SheetRelationsCount := 0;
     num := -1;
     b := false;
@@ -3752,13 +3750,13 @@ var
       break;
     end;
 
-    if (num > 0) then
-    try
-      _rstream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
-      result := ZE_XSLXReadRelationships(_rstream, SheetRelations, SheetRelationsCount, b, false);
-    finally
-      if (Assigned(_rstream)) then
-        FreeAndNil(_rstream);
+    if (num > 0) then begin
+      rstream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
+      try
+        result := ZE_XSLXReadRelationships(rstream, SheetRelations, SheetRelationsCount, b, false);
+      finally
+        rstream.Free();
+      end;
     end;
   end; //_CheckSheetRelations
 
@@ -3767,11 +3765,10 @@ var
   var i, l: integer;
     s: string;
     b: boolean;
-    _stream: TStream;
+    stream: TStream;
   begin
     b := false;
     s := '';
-    _stream := nil;
     for i := 0 to SheetRelationsCount - 1 do
     if (SheetRelations[i].ftype = TRelationType.rtComments) then
     begin
@@ -3781,8 +3778,7 @@ var
     end;
 
     //Если найдены примечания
-    if (b) then
-    begin
+    if (b) then begin
       l := length(s);
       if (l >= 3) then
         if ((s[1] = '.') and (s[2] = '.')) then
@@ -3791,8 +3787,7 @@ var
       for i := 0 to FilesCount - 1 do
         if (FileArray[i].ftype = TRelationType.rtComments) then
           if (pos(s, FileArray[i].name) <> 0) then
-            if (FileExists(DirName + FileArray[i].name)) then
-            begin
+            if (FileExists(DirName + FileArray[i].name)) then begin
               s := DirName + FileArray[i].name;
               b := true;
               break;
@@ -3800,18 +3795,18 @@ var
       //Если файл не найден
       if (not b) then begin
         s := DirName + 'xl' + PathDelim + s;
-        if (FileExists(s)) then
+        if FileExists(s) then
           b := true;
       end;
 
       //Файл с примечаниями таки присутствует!
-      if (b) then
-      try
-        _stream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
-        ZEXSLXReadComments(XMLSS, _stream);
-      finally
-        if (Assigned(_stream)) then
-          FreeAndNil(_stream);
+      if (b) then begin
+        stream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
+        try
+          ZEXSLXReadComments(XMLSS, stream);
+        finally
+          stream.Free();
+        end;
       end;
     end;
   end; //_ReadComments
