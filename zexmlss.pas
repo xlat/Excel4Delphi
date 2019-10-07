@@ -510,6 +510,7 @@ type
     FSize: real;
     FAuto: boolean;
     FBreaked: boolean;
+    FOutlineLevel: integer;
   protected
     function  GetAuto(): boolean;
     procedure SetAuto(Value: boolean);
@@ -534,6 +535,8 @@ type
     /// Page break after column or row. <br />False (no break) by default.
     /// </summary>
     property Breaked: boolean read FBreaked write FBreaked default false;
+
+    property OutlineLevel: integer read FOutlineLevel write FOutlineLevel;
   end;
 
   /// <summary>
@@ -1463,6 +1466,11 @@ type
     FCharts: TZEChartStore;
     FDrawing: TZEDrawing;
     FViewMode: TZViewMode;
+    FSummaryBelow: boolean;
+    FSummaryRight: boolean;
+    FApplyStyles: boolean;
+    FOutlineLevelRow: integer;
+    FOutlineLevelCol: integer;
     FRowBreaks:TArray<integer>;
     FColBreaks:TArray<integer>;
     FConditionalFormatting: TZConditionalFormatting;
@@ -1551,6 +1559,14 @@ type
     property Protect: boolean read FProtect write FProtect default false;
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
     property FitToPage: Boolean read FFitToPage write FFitToPage default false;
+
+    property SummaryBelow: boolean read FSummaryBelow write FSummaryBelow;
+    property SummaryRight: boolean read FSummaryRight write FSummaryRight;
+    property ApplyStyles: boolean read FApplyStyles write FApplyStyles;
+
+    property OutlineLevelRow: integer read FOutlineLevelRow write FOutlineLevelRow;
+    property OutlineLevelCol: integer read FOutlineLevelCol write FOutlineLevelCol;
+
     /// <summary>
     /// Sheet title.
     /// </summary>
@@ -2860,6 +2876,7 @@ begin
   FAuto    := true;
   FStyleID := -1;
   FBreaked := false;
+  FOutlineLevel := 0;
 end;
 
 procedure TZRowColOptions.Assign(Source: TPersistent);
@@ -2870,6 +2887,7 @@ begin
     FSize    := (Source as TZRowColOptions).FSize;
     FAuto    := (Source as TZRowColOptions).FAuto;
     FBreaked := (Source as TZRowColOptions).Breaked;
+    FOutlineLevel := (Source as TZRowColOptions).FOutlineLevel;
   end else
     inherited Assign(Source);
 end;
@@ -3124,6 +3142,11 @@ begin
   FProtect := false;
   FRightToLeft := false;
   FSelected := false;
+  FSummaryBelow := true;
+  FSummaryRight := true;
+  FApplyStyles := false;
+  FOutlineLevelRow := 0;
+  FOutlineLevelCol := 0;
   SetLength(FRows, FRowCount);
   SetLength(FColumns, FColCount);
   for i := 0 to FColCount - 1 do begin
@@ -3188,6 +3211,12 @@ begin
     FRowBreaks := zSource.FRowBreaks;
     FColBreaks := zSource.FColBreaks;
     FViewMode  := zSource.FViewMode;
+
+    FSummaryBelow    := zSource.FSummaryBelow;
+    FSummaryRight    := zSource.FSummaryRight;
+    FApplyStyles     := zSource.FApplyStyles;
+    FOutlineLevelRow := zSource.FOutlineLevelRow;
+    FOutlineLevelCol := zSource.FOutlineLevelCol;
 
     for i := 0 to RowCount - 1 do
       Rows[i] := ZSource.Rows[i];

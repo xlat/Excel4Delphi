@@ -1320,7 +1320,9 @@ var
           currentSheet.Rows[currentRow].HeightMM := tempReal;
         end;
 
-        //s := xml.Attributes.ItemsByName['outlineLevel'];
+        str := xml.Attributes.ItemsByName['outlineLevel'];
+        currentSheet.Rows[currentRow].OutlineLevel := StrToIntDef(str, 0);
+
         //s := xml.Attributes.ItemsByName['ph'];
 
         str := xml.Attributes.ItemsByName['s']; //номер стиля
@@ -1453,7 +1455,8 @@ var
           currentSheet.Columns[num].WidthMM := t;
         end;
 
-        //s := xml.Attributes.ItemsByName['outlineLevel'];
+        str := xml.Attributes.ItemsByName['outlineLevel'];
+        currentSheet.Columns[num].OutlineLevel := StrToIntDef(str, 0);
         //s := xml.Attributes.ItemsByName['phonetic'];
         //s := xml.Attributes.ItemsByName['style'];
         //s := xml.Attributes.ItemsByName['collapsed'];
@@ -1564,6 +1567,12 @@ var
 
       if xml.TagName = 'pageSetUpPr' then
         currentSheet.FitToPage := ZEStrToBoolean(xml.Attributes.ItemsByName['fitToPage']);
+
+      if xml.TagName = 'outlinePr' then begin
+        currentSheet.ApplyStyles := ZEStrToBoolean(xml.Attributes.ItemsByName['applyStyles']);
+        currentSheet.SummaryBelow := xml.Attributes.ItemsByName['summaryBelow'] <> '0';
+        currentSheet.SummaryRight := xml.Attributes.ItemsByName['summaryRight'] <> '0';
+      end;
     end;
   end; //_ReadSheetPr();
 
@@ -4730,6 +4739,12 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.WriteEmptyTag('tabColor', true, false);
 
     xml.Attributes.Clear();
+    if sheet.ApplyStyles      then xml.Attributes.Add('applyStyles', '1');
+    if not sheet.SummaryBelow then xml.Attributes.Add('summaryBelow', '0');
+    if not sheet.SummaryRight then xml.Attributes.Add('summaryRight', '0');
+    xml.WriteEmptyTag('outlinePr', true, false);
+
+    xml.Attributes.Clear();
     xml.Attributes.Add('fitToPage', XLSXBoolToStr(sheet.FitToPage));
     xml.WriteEmptyTag('pageSetUpPr', true, false);
 
@@ -4742,7 +4757,17 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.Attributes.Add('ref', s);
     xml.WriteEmptyTag('dimension', true, false);
 
-
+    {$REGION 'write sheetFormatPr'}
+    if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add('defaultRowHeight', '15');
+        if (sheet.OutlineLevelCol > 0) then
+            xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
+        if (sheet.OutlineLevelRow > 0) then
+            xml.Attributes.Add('outlineLevelRow', IntToStr(sheet.OutlineLevelRow));
+        xml.WriteEmptyTag('sheetFormatPr', true, false);
+    end;
+    {$ENDREGION}
 
     xml.Attributes.Clear();
     xml.WriteTagNode('sheetViews', true, true, true);
@@ -4878,6 +4903,8 @@ var xml: TZsspXMLWriterH;    //писатель
       xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', ProcessedColumn.WidthMM * 5.14509803921569 / 10)), false);
       if ProcessedColumn.AutoFitWidth then
         xml.Attributes.Add('bestFit', '1', false);
+      if sheet.Columns[i].OutlineLevel > 0 then
+        xml.Attributes.Add('outlineLevel', IntToStr(sheet.Columns[i].OutlineLevel));
       xml.WriteEmptyTag('col', true, false);
     end;
     xml.WriteEndTagNode(); //cols
@@ -4899,7 +4926,8 @@ var xml: TZsspXMLWriterH;    //писатель
       xml.Attributes.Add('customHeight', XLSXBoolToStr((abs(sheet.DefaultRowHeight - sheet.Rows[i].Height) > 0.001)){'true'}, false); //?
       xml.Attributes.Add('hidden', XLSXBoolToStr(sheet.Rows[i].Hidden), false);
       xml.Attributes.Add('ht', ZEFloatSeparator(FormatFloat('0.##', sheet.Rows[i].HeightMM * 2.835)), false);
-      xml.Attributes.Add('outlineLevel', '0', false);
+      if sheet.Rows[i].OutlineLevel > 0 then
+        xml.Attributes.Add('outlineLevel', IntToStr(sheet.Rows[i].OutlineLevel), false);
       xml.Attributes.Add('r', IntToStr(i + 1), false);
       xml.WriteTagNode('row', true, true, false);
       for j := 0 to n do begin
