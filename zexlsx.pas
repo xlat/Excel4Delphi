@@ -381,7 +381,9 @@ begin
   if (ACount >= FMaxCount) then begin
     FMaxCount := ACount + 20;
     SetLength(FItems, FMaxCount);
-    for i := FCount to FMaxCount - 1 do
+    //Здесь FCount + 1, потому что иначе затирается последний элемент.
+    //В результате утечки и потеря считанного форматирования.
+    for i := FCount + 1 to FMaxCount - 1 do
       FItems[i] := TZXLSXDiffFormattingItem.Create();
   end;
   FCount := ACount;
@@ -4036,6 +4038,7 @@ var
   _no_sheets: boolean;
   RH: TZEXLSXReadHelper;
   zip: TZipFile;
+  encoding: TEncoding;
   zipHdr: TZipHeader;
   zfiles: TArray<string>;
 
@@ -4131,6 +4134,8 @@ begin
   FilesCount := 0;
   FileArray := nil;
   zip := TZipFile.Create();
+  encoding := TEncoding.GetEncoding(437);
+  zip.Encoding := encoding;
 
   XMLSS.Styles.Clear();
   XMLSS.Sheets.Count := 0;
@@ -4140,16 +4145,16 @@ begin
   ThemaColor := nil;
   RH := TZEXLSXReadHelper.Create();
   FileList := TList<TZXLSXFileItem>.Create();
-  stream := TStream.Create();
+  stream := nil;
   try
     zip.Open(zipStream, zmRead);
     try
+      zip.Read('[Content_Types].xml', stream, zipHdr);
       try
-        zip.Read('[Content_Types].xml', stream, zipHdr);
         if (not ZEXSLXReadContentTypes(stream,  FileArray, FilesCount)) then
           raise Exception.Create('Could not read [Content_Types].xml');
       finally
-        stream.Free();
+        FreeAndNil(stream);
       end;
 
       ZE_XSLXReplaceDelimiter(FileArray, FilesCount);
@@ -4163,9 +4168,11 @@ begin
         end;
       end;
 
-      if (not b) then begin
+      if (not b) then 
+      begin
         s := '/_rels/.rels';
-        if zip.IndexOf(s.Substring(1)) > -1 then begin
+        if zip.IndexOf(s.Substring(1)) > -1 then 
+        begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].original := s;
           FileArray[FilesCount].name := s;
@@ -4174,7 +4181,8 @@ begin
         end;
 
         s := '/xl/_rels/workbook.xml.rels';
-        if zip.IndexOf(s.Substring(1)) > -1 then begin
+        if zip.IndexOf(s.Substring(1)) > -1 then 
+        begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].original := s;
           FileArray[FilesCount].name := s;
@@ -4186,119 +4194,149 @@ begin
       end;
 
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = TRelationType.rtDoc) then begin
-        SetLength(RelationsArray, RelationsCount + 1);
-        SetLength(RelationsCounts, RelationsCount + 1);
-        zfiles := zip.FileNames;
-        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-        if (not ZE_XSLXReadRelationships(stream, RelationsArray[RelationsCount], RelationsCounts[RelationsCount], b, true)) then
+        if (FileArray[i].ftype = TRelationType.rtDoc) then
         begin
-          result := 4;
-          exit;
+          SetLength(RelationsArray, RelationsCount + 1);
+          SetLength(RelationsCounts, RelationsCount + 1);
+          zfiles := zip.FileNames;
+          zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+          try
+            if (not ZE_XSLXReadRelationships(stream, RelationsArray[RelationsCount], RelationsCounts[RelationsCount], b, true)) then
+            begin
+              result := 4;
+              exit;
+            end;
+            if (b) then 
+            begin
+              SheetRelationNumber := RelationsCount;
+              for j := 0 to RelationsCounts[RelationsCount] - 1 do
+                if (RelationsArray[RelationsCount][j].ftype = TRelationType.rtWorkSheet) then
+                  for k := 0 to FilesCount - 1 do
+                    if (RelationsArray[RelationsCount][j].fileid < 0) then
+                      if ((pos(RelationsArray[RelationsCount][j].target, FileArray[k].original)) > 0) then
+                      begin
+                        RelationsArray[RelationsCount][j].fileid := k;
+                        break;
+                      end;
+            end; //if
+          finally
+            FreeAndNil(stream);
+          end;
+          inc(RelationsCount);
         end;
-        if (b) then begin
-          SheetRelationNumber := RelationsCount;
-          for j := 0 to RelationsCounts[RelationsCount] - 1 do
-          if (RelationsArray[RelationsCount][j].ftype = TRelationType.rtWorkSheet) then
-            for k := 0 to FilesCount - 1 do
-            if (RelationsArray[RelationsCount][j].fileid < 0) then
-              if ((pos(RelationsArray[RelationsCount][j].target, FileArray[k].original)) > 0) then
-              begin
-                RelationsArray[RelationsCount][j].fileid := k;
-                break;
-              end;
-        end; //if
-        FreeAndNil(stream);
-        inc(RelationsCount);
-      end;
 
       //sharedStrings.xml
       for i:= 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = TRelationType.rtCoreProp) then begin
-        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-        if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then begin
-          result := 3;
-          exit;
+        if (FileArray[i].ftype = TRelationType.rtCoreProp) then 
+        begin
+          zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+          try
+            if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then 
+            begin
+              result := 3;
+              exit;
+            end;
+          finally
+            FreeAndNil(stream);
+          end;
+          break;
         end;
-        FreeAndNil(stream);
-        break;
-      end;
 
       //тема (если есть)
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = TRelationType.rtVmlDrawing) then begin
-        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-        if (not ZEXSLXReadTheme(stream, ThemaColor, ThemaColorCount)) then
+        if (FileArray[i].ftype = TRelationType.rtVmlDrawing) then 
         begin
-          result := 6;
-          exit;
+          zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+          try
+            if (not ZEXSLXReadTheme(stream, ThemaColor, ThemaColorCount)) then
+            begin
+              result := 6;
+              exit;
+            end;
+          finally
+            FreeAndNil(stream);
+          end;
+          break;
         end;
-        FreeAndNil(stream);
-        break;
-      end;
 
       //стили (styles.xml)
       for i := 0 to FilesCount - 1 do
-      if (FileArray[i].ftype = TRelationType.rtStyles) then begin
-        zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-        if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
-          result := 5;
-          exit;
-        end else
-          b := true;
-        FreeAndNil(stream);
-      end;
+        if (FileArray[i].ftype = TRelationType.rtStyles) then
+        begin
+          zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+          try
+            if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
+              result := 5;
+              exit;
+            end
+            else
+              b := true;
+          finally
+            FreeAndNil(stream);
+          end;
+        end;
 
       //чтение страниц
       _no_sheets := true;
-      if (SheetRelationNumber > 0) then begin
+      if (SheetRelationNumber > 0) then 
+      begin
         for i := 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = TRelationType.rtSharedStr) then begin
-          zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-          if (not ZEXSLXReadWorkBook(XMLSS, stream, RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber])) then
+          if (FileArray[i].ftype = TRelationType.rtSharedStr) then 
           begin
-            result := 3;
-            exit;
-          end;
-          break;
-          FreeAndNil(stream);
-        end; //if
+            zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
+            try
+              if (not ZEXSLXReadWorkBook(XMLSS, stream, RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber])) then
+              begin
+                result := 3;
+                exit;
+              end;
+            finally
+              FreeAndNil(stream);
+            end;
+            break;
+          end; //if
 
         //for i := 1 to RelationsCounts[SheetRelationNumber] do
         XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
         for j := 0 to RelationsCounts[SheetRelationNumber] - 1 do
-          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then begin
+          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then 
+          begin
             b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
             zip.Read(FileArray[RelationsArray[SheetRelationNumber][j].fileid].original.Substring(1), stream, zipHdr);
-            if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
-              result := result or 4;
-            if (b) then
-              _ReadComments();
-            FreeAndNil(stream);
+            try
+              if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+                result := result or 4;
+              if (b) then
+                _ReadComments();
+            finally
+              FreeAndNil(stream);
+            end;
             _no_sheets := false;
           end; //if
       end;
 
       //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
-      if _no_sheets then begin
-        for i := 0 to FilesCount - 1 do begin
-          if FileArray[i].ftype = TRelationType.rtWorkSheet then begin
+      if _no_sheets then 
+        for i := 0 to FilesCount - 1 do 
+          if FileArray[i].ftype = TRelationType.rtWorkSheet then 
+          begin
             b := _CheckSheetRelations(FileArray[i].name);
             zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
-            if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
-              result := result or 4;
-            if (b) then
-              _ReadComments();
-            FreeAndNil(stream);
+            try
+              if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+                result := result or 4;
+              if (b) then
+                _ReadComments();
+            finally
+              FreeAndNil(stream);
+            end;
           end;
-        end;
-      end;
     except
       result := 2;
     end;
   finally
     zip.Free();
-    stream.Free();
+    encoding.Free;
     FileList.Free();
 
     SetLength(FileArray, 0);
