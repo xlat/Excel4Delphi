@@ -907,7 +907,7 @@ var rec: TContentTypeRec;
 begin
   result := TRelationType.rtNone;
   for rec in CONTENT_TYPES do begin
-    if rec.name = name then
+    if rec.rel = name then
       exit(rec.ftype);
   end;
 end; //ZEXLSXGetRelationNumber
@@ -1174,9 +1174,13 @@ end; //ZEXLSX_getCFCondition
 //      ReadHelper: TZEXLSXReadHelper   -
 //RETURN
 //      boolean - true - страница прочиталась успешно
-function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string;
-                         var StrArray: TStringDynArray; StrCount: integer;
-                         var Relations: TZXLSXRelationsArray; RelationsCount: integer;
+function ZEXSLXReadSheet(var XMLSS: TZEXMLSS;
+                         var Stream: TStream;
+                         const SheetName: string;
+                         var StrArray: TStringDynArray;
+                         StrCount: integer;
+                         var Relations: TZXLSXRelationsArray;
+                         RelationsCount: integer;
                          ReadHelper: TZEXLSXReadHelper): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -1318,7 +1322,9 @@ var
           currentSheet.Rows[currentRow].HeightMM := tempReal;
         end;
 
-        //s := xml.Attributes.ItemsByName['outlineLevel'];
+        str := xml.Attributes.ItemsByName['outlineLevel'];
+        currentSheet.Rows[currentRow].OutlineLevel := StrToIntDef(str, 0);
+
         //s := xml.Attributes.ItemsByName['ph'];
 
         str := xml.Attributes.ItemsByName['s']; //номер стиля
@@ -1451,7 +1457,8 @@ var
           currentSheet.Columns[num].WidthMM := t;
         end;
 
-        //s := xml.Attributes.ItemsByName['outlineLevel'];
+        str := xml.Attributes.ItemsByName['outlineLevel'];
+        currentSheet.Columns[num].OutlineLevel := StrToIntDef(str, 0);
         //s := xml.Attributes.ItemsByName['phonetic'];
         //s := xml.Attributes.ItemsByName['style'];
         //s := xml.Attributes.ItemsByName['collapsed'];
@@ -1562,6 +1569,12 @@ var
 
       if xml.TagName = 'pageSetUpPr' then
         currentSheet.FitToPage := ZEStrToBoolean(xml.Attributes.ItemsByName['fitToPage']);
+
+      if xml.TagName = 'outlinePr' then begin
+        currentSheet.ApplyStyles := ZEStrToBoolean(xml.Attributes.ItemsByName['applyStyles']);
+        currentSheet.SummaryBelow := xml.Attributes.ItemsByName['summaryBelow'] <> '0';
+        currentSheet.SummaryRight := xml.Attributes.ItemsByName['summaryRight'] <> '0';
+      end;
     end;
   end; //_ReadSheetPr();
 
@@ -3256,9 +3269,6 @@ var
     end;
   end; //_ApplyStyle
 
-  //I hate this f*****g format!
-  //  Sometimes in styles.xml there are no <Colors> .. </Colors>! =_="
-  //  Using standart colors.
   procedure _CheckIndexedColors();
   const
     _standart: array [0..63] of string = (
@@ -3470,9 +3480,8 @@ var
   t: integer;
 begin
   result := false;
-  xml := nil;
+  xml := TZsspXMLReaderH.Create();
   try
-    xml := TZsspXMLReaderH.Create();
     if (xml.BeginReadStream(Stream) <> 0) then
       exit;
 
@@ -3507,8 +3516,7 @@ begin
     end; //while
     result := true;
   finally
-    if (Assigned(xml)) then
-      FreeAndNil(xml);
+    xml.Free();
   end;
 end; //ZEXSLXReadWorkBook
 
@@ -3731,13 +3739,12 @@ var
   //RETURN
   //      boolean - true - прочитал успешно
   function _CheckSheetRelations(const fname: string): boolean;
-  var _rstream: TStream;
+  var rstream: TStream;
     s: string;
     i, num: integer;
     b: boolean;
   begin
     result := false;
-    _rstream := nil;
     SheetRelationsCount := 0;
     num := -1;
     b := false;
@@ -3754,13 +3761,13 @@ var
       break;
     end;
 
-    if (num > 0) then
-    try
-      _rstream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
-      result := ZE_XSLXReadRelationships(_rstream, SheetRelations, SheetRelationsCount, b, false);
-    finally
-      if (Assigned(_rstream)) then
-        FreeAndNil(_rstream);
+    if (num > 0) then begin
+      rstream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
+      try
+        result := ZE_XSLXReadRelationships(rstream, SheetRelations, SheetRelationsCount, b, false);
+      finally
+        rstream.Free();
+      end;
     end;
   end; //_CheckSheetRelations
 
@@ -3769,11 +3776,10 @@ var
   var i, l: integer;
     s: string;
     b: boolean;
-    _stream: TStream;
+    stream: TStream;
   begin
     b := false;
     s := '';
-    _stream := nil;
     for i := 0 to SheetRelationsCount - 1 do
     if (SheetRelations[i].ftype = TRelationType.rtComments) then
     begin
@@ -3783,8 +3789,7 @@ var
     end;
 
     //Если найдены примечания
-    if (b) then
-    begin
+    if (b) then begin
       l := length(s);
       if (l >= 3) then
         if ((s[1] = '.') and (s[2] = '.')) then
@@ -3793,8 +3798,7 @@ var
       for i := 0 to FilesCount - 1 do
         if (FileArray[i].ftype = TRelationType.rtComments) then
           if (pos(s, FileArray[i].name) <> 0) then
-            if (FileExists(DirName + FileArray[i].name)) then
-            begin
+            if (FileExists(DirName + FileArray[i].name)) then begin
               s := DirName + FileArray[i].name;
               b := true;
               break;
@@ -3802,18 +3806,18 @@ var
       //Если файл не найден
       if (not b) then begin
         s := DirName + 'xl' + PathDelim + s;
-        if (FileExists(s)) then
+        if FileExists(s) then
           b := true;
       end;
 
       //Файл с примечаниями таки присутствует!
-      if (b) then
-      try
-        _stream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
-        ZEXSLXReadComments(XMLSS, _stream);
-      finally
-        if (Assigned(_stream)) then
-          FreeAndNil(_stream);
+      if (b) then begin
+        stream := TFileStream.Create(s, fmOpenRead or fmShareDenyNone);
+        try
+          ZEXSLXReadComments(XMLSS, stream);
+        finally
+          stream.Free();
+        end;
       end;
     end;
   end; //_ReadComments
@@ -4040,7 +4044,7 @@ var
   zip: TZipFile;
   encoding: TEncoding;
   zipHdr: TZipHeader;
-  zfiles: TArray<string>;
+  //zfiles: TArray<string>;
 
   function _CheckSheetRelations(const fname: string): boolean;
   var rstream: TStream;
@@ -4335,10 +4339,10 @@ begin
       result := 2;
     end;
   finally
+    zip.Close();
     zip.Free();
     encoding.Free;
     FileList.Free();
-
     SetLength(FileArray, 0);
     FileArray := nil;
     SetLength(StrArray, 0);
@@ -4773,6 +4777,12 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.WriteEmptyTag('tabColor', true, false);
 
     xml.Attributes.Clear();
+    if sheet.ApplyStyles      then xml.Attributes.Add('applyStyles', '1');
+    if not sheet.SummaryBelow then xml.Attributes.Add('summaryBelow', '0');
+    if not sheet.SummaryRight then xml.Attributes.Add('summaryRight', '0');
+    xml.WriteEmptyTag('outlinePr', true, false);
+
+    xml.Attributes.Clear();
     xml.Attributes.Add('fitToPage', XLSXBoolToStr(sheet.FitToPage));
     xml.WriteEmptyTag('pageSetUpPr', true, false);
 
@@ -4785,7 +4795,17 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.Attributes.Add('ref', s);
     xml.WriteEmptyTag('dimension', true, false);
 
-
+    {$REGION 'write sheetFormatPr'}
+    if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add('defaultRowHeight', '15');
+        if (sheet.OutlineLevelCol > 0) then
+            xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
+        if (sheet.OutlineLevelRow > 0) then
+            xml.Attributes.Add('outlineLevelRow', IntToStr(sheet.OutlineLevelRow));
+        xml.WriteEmptyTag('sheetFormatPr', true, false);
+    end;
+    {$ENDREGION}
 
     xml.Attributes.Clear();
     xml.WriteTagNode('sheetViews', true, true, true);
@@ -4921,6 +4941,8 @@ var xml: TZsspXMLWriterH;    //писатель
       xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', ProcessedColumn.WidthMM * 5.14509803921569 / 10)), false);
       if ProcessedColumn.AutoFitWidth then
         xml.Attributes.Add('bestFit', '1', false);
+      if sheet.Columns[i].OutlineLevel > 0 then
+        xml.Attributes.Add('outlineLevel', IntToStr(sheet.Columns[i].OutlineLevel));
       xml.WriteEmptyTag('col', true, false);
     end;
     xml.WriteEndTagNode(); //cols
@@ -4942,7 +4964,8 @@ var xml: TZsspXMLWriterH;    //писатель
       xml.Attributes.Add('customHeight', XLSXBoolToStr((abs(sheet.DefaultRowHeight - sheet.Rows[i].Height) > 0.001)){'true'}, false); //?
       xml.Attributes.Add('hidden', XLSXBoolToStr(sheet.Rows[i].Hidden), false);
       xml.Attributes.Add('ht', ZEFloatSeparator(FormatFloat('0.##', sheet.Rows[i].HeightMM * 2.835)), false);
-      xml.Attributes.Add('outlineLevel', '0', false);
+      if sheet.Rows[i].OutlineLevel > 0 then
+        xml.Attributes.Add('outlineLevel', IntToStr(sheet.Rows[i].OutlineLevel), false);
       xml.Attributes.Add('r', IntToStr(i + 1), false);
       xml.WriteTagNode('row', true, true, false);
       for j := 0 to n do begin

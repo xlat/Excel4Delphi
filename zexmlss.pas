@@ -510,6 +510,7 @@ type
     FSize: real;
     FAuto: boolean;
     FBreaked: boolean;
+    FOutlineLevel: integer;
   protected
     function  GetAuto(): boolean;
     procedure SetAuto(Value: boolean);
@@ -534,6 +535,8 @@ type
     /// Page break after column or row. <br />False (no break) by default.
     /// </summary>
     property Breaked: boolean read FBreaked write FBreaked default false;
+
+    property OutlineLevel: integer read FOutlineLevel write FOutlineLevel;
   end;
 
   /// <summary>
@@ -1376,7 +1379,6 @@ type
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     function IsEqual(const Source: TPersistent): boolean; override;
-
     procedure AssignFromFile(AFileName: string);
     procedure AssignFromStream(AStream: TStream);
   published
@@ -1391,7 +1393,6 @@ type
     property Row: Integer read FRow write FRow;
     property Col: Integer read FCol write FCol;
     property CellAnchor: TZCellAnchor read FCellAnchor write FCellAnchor;
-
     property Hidden: Boolean read FHidden write FHidden;
     property DataStream: TStream read FDataStream;
   end;
@@ -1462,11 +1463,14 @@ type
     FSheetOptions: TZSheetOptions;
     FSelected: boolean;
     FPrintRows, FPrintCols: TZSheetPrintTitles;
-
     FCharts: TZEChartStore;
     FDrawing: TZEDrawing;
-
     FViewMode: TZViewMode;
+    FSummaryBelow: boolean;
+    FSummaryRight: boolean;
+    FApplyStyles: boolean;
+    FOutlineLevelRow: integer;
+    FOutlineLevelCol: integer;
     FRowBreaks:TArray<integer>;
     FColBreaks:TArray<integer>;
     FConditionalFormatting: TZConditionalFormatting;
@@ -1520,7 +1524,13 @@ type
     /// Specifies various properties of the Row num.
     /// </summary>
     property Rows[num: integer]: TZRowOptions read GetRow write SetRow;
+    /// <summary>
+    /// Specifies various properties of the Cells range.
+    /// </summary>
     property Range[AC1,AR1,AC2,AR2: integer]: TZRange read GetRange{ write SetRange};
+    /// <summary>
+    /// Specifies various properties of the Cells range.
+    /// </summary>
     property RangeRef[AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer]: TZRange read GetRangeRef{ write SetRangeRef};
     /// <summary>
     /// Get or set the height (in points) of row num in the sheet.
@@ -1538,6 +1548,9 @@ type
     /// Cell at the intersection of column ACol and row ARow.
     /// </summary>
     property Cell[ACol, ARow: integer]: TZCell read GetCell write SetCell; default;
+    /// <summary>
+    /// Cell at the intersection of column by "A1" reference.
+    /// </summary>
     property CellRef[ACol: string; ARow: integer]: TZCell read GetCellRef write SetCellRef;
     property AutoFilter: string read FAutoFilter write FAutoFilter;
     /// <summary>
@@ -1546,10 +1559,21 @@ type
     property Protect: boolean read FProtect write FProtect default false;
     property TabColor: TColor read FTabColor write FTabColor default ClWindow;
     property FitToPage: Boolean read FFitToPage write FFitToPage default false;
+
+    property SummaryBelow: boolean read FSummaryBelow write FSummaryBelow;
+    property SummaryRight: boolean read FSummaryRight write FSummaryRight;
+    property ApplyStyles: boolean read FApplyStyles write FApplyStyles;
+
+    property OutlineLevelRow: integer read FOutlineLevelRow write FOutlineLevelRow;
+    property OutlineLevelCol: integer read FOutlineLevelCol write FOutlineLevelCol;
+
     /// <summary>
     /// Sheet title.
     /// </summary>
     property Title: string read FTitle write FTitle;
+    /// <summary>
+    /// Sheet index in the workbook.
+    /// </summary>
     property SheetIndex: integer read GetSheetIndex;
     /// <summary>
     /// Specifies the number of rows in the sheet.
@@ -1613,6 +1637,10 @@ type
     /// Document's sheet num.
     /// </summary>
     property Sheet[num: integer]: TZSheet read GetSheet write SetSheet; default;
+    /// <summary>
+    /// Add new sheet to the workbook.
+    /// </summary>
+    function Add(title: string = ''): TZSheet;
   end;
 
   TZRange = class(TPersistent)
@@ -1774,36 +1802,47 @@ function ARGBToColor(value: string): TColor;
 /// </summary>
 function PixelToPoint(inPixel: integer; PixelSizeMM: real = 0.265): real;
 
-//Перевести типографский пункт (point) в пиксели
+/// <summary>
+/// Convert typographical point to pixels.
+/// </summary>
 function PointToPixel(inPoint: real; PixelSizeMM: real = 0.265): integer;
 
-//Перевести типографский пункт (point) в мм
+/// <summary>
+/// Convert typographical point to mm.
+/// </summary>
 function PointToMM(inPoint: real): real;
 
-//Перевести мм в типографский пункт (point)
+/// <summary>
+/// Convert mm to typographical point.
+/// </summary>
 function MMToPoint(inMM: real): real;
 
+/// <summary>
+/// Checks is Font1 equal Font2
+/// </summary>
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 
-//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
+/// <summary>
+/// Convert datetime value to string (YYYY-MM-DDTHH:MM:SS[.mmm]).
+/// </summary>
 function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 
-//YYYY-MM-DDTHH:MM:SS[.mmm] to DateTime
+/// <summary>
+/// Try convert string (YYYY-MM-DDTHH:MM:SS[.mmm]) to datetime
+/// </summary>
 function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
 
+/// <summary>
+/// Convert the number to string min count NullCount
+/// </summary>
 function IntToStrN(value: integer; NullCount: integer): string;
 
 implementation
 
 uses zeformula;
 
-//Переводит число в строку минимальной длины NullCount
-//TODO: надо глянуть что с функциями в FlyLogReader-е
-//INPUT
-//      value: integer     - число
-//      NullCount: integer - кол-во знаков в строке
-//RETURN
-//      string
+var invariantFormatSertting: TFormatSettings;
+
 function IntToStrN(value: integer; NullCount: integer): string;
 var t, k: integer;
 begin
@@ -1820,10 +1859,6 @@ begin
     result := '0' + result;
 end; //IntToStrN
 
-//Переводит дату в строку для XML (YYYY-MM-DDTHH:MM:SS[.mmm])
-//INPUT
-//      ATime: TDateTime - нужная дата/время
-//      Addmms: boolean  - need add ms to result
 function ZEDateTimeToStr(ATime: TDateTime; Addmms: boolean = false): string;
 var HH, MM, SS, MS: word;
 begin
@@ -1835,12 +1870,6 @@ begin
     Result := Result + '.' + IntToStrN(MS, 3);
 end;
 
-//Try convert string (YYYY-MM-DDTHH:MM:SS[.mmm]) to datetime
-//INPUT
-//  const AStrDateTime: string  - string with datetime
-//  out retDateTime: TDateTime  - returns on success datetime
-//RETURN
-//      boolean - true - ok
 function TryZEStrToDateTime(const AStrDateTime: string; out retDateTime: TDateTime): boolean;
 var a: array [0..10] of word;
   i, l: integer;
@@ -2042,12 +2071,6 @@ begin
   end;
 end; //TryZEStrToDateTime
 
-//Checks is Font1 equal Font2
-//INPUT
-//  const Font1: TFont
-//  const Font2: TFont
-//RETURN
-//    boolean - true - fonts are equals
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 begin
   Result := Assigned(Font1) and (Assigned(Font2));
@@ -2140,10 +2163,6 @@ begin
   end;
 end;
 
-//Перевести пиксели в типографский пункт (point) ###
-//Input
-//      inPixel: integer          - размер в пикселях
-//      PixelSizeMM: real = 0.265 - размер пикселя
 function PixelToPoint(inPixel: integer; PixelSizeMM: real = 0.265): real;
 begin
   result := inPixel * PixelSizeMM / _PointToMM;
@@ -2151,26 +2170,16 @@ begin
   result := round(result * 100) / 100;
 end;
 
-//Перевести типографский пункт (point) в пиксели ###
-//Input
-//      inPoint: integer          - размер в пикселях
-//      PixelSizeMM: real = 0.265 - размер пикселя
 function PointToPixel(inPoint: real; PixelSizeMM: real = 0.265): integer;
 begin
   result := round(inPoint * _PointToMM / PixelSizeMM);
 end;
 
-//Перевести типографский пункт (point) в мм  ###
-//Input
-//      inPoint: integer - размер в пунктах
 function PointToMM(inPoint: real): real;
 begin
   result := round(inPoint * _PointToMM * 100) / 100;
 end;
 
-//Перевести мм в типографский пункт (point)###
-//Input
-//      inMM: integer - размер в пунктах
 function MMToPoint(inMM: real): real;
 begin
   result := round(inMM / _PointToMM * 100) / 100;
@@ -2273,14 +2282,12 @@ begin
   Result := True;
 end;
 
-//установить стиль границы
 procedure TZBorder.SetBorder(Num: TZBordersPos; Const Value: TZBorderStyle);
 begin
   if (Num >= bpLeft) and (Num <= bpDiagonalRight) then
     Border[num].Assign(Value);
 end;
 
-//прочитать стиль границы
 function TZBorder.GetBorder(Num: TZBordersPos): TZBorderStyle;
 begin
   if (Num >= bpLeft) and (Num <= bpDiagonalRight) then
@@ -2532,14 +2539,14 @@ begin
 end;
 
 procedure TZStyles.Assign(Source: TPersistent);
-var zzz: TZStyles; i: integer;
+var srcStyles: TZStyles; i: integer;
 begin
   if (Source is TZStyles) then begin
-    zzz := Source as TZStyles;
-    FDefaultStyle.Assign(zzz.DefaultStyle);
-    Count := zzz.Count;
+    srcStyles := Source as TZStyles;
+    FDefaultStyle.Assign(srcStyles.DefaultStyle);
+    Count := srcStyles.Count;
     for i := 0 to Count - 1 do
-      FStyles[i].Assign(zzz[i]);
+      FStyles[i].Assign(srcStyles[i]);
   end else
     inherited Assign(Source);
 end;
@@ -2678,22 +2685,9 @@ begin
 end;
 
 procedure TZCell.SetDataAsDouble(const Value: double);
-var s: String; ss: ShortString;
 begin
-  if Value = 0 then
-    SetDataAsInteger(0) // work around Excel 2010 weird XLSX bug
-  else begin
-    Str(Value, ss); // need old-school to ignore regional settings
-    s := string(ss); // make XE2 happy
-    s := UpperCase(Trim(s));
-    // UpperCase for exponent w.r.t OpenXML format
-    // Trim for leading space w.r.t XML SS format
-    FData := s;
-    CellType := ZENumber;
-    // Seem natural and logical thing to do w.r.t further export...
-    // Seem out of "brain-dead no-automation overall aproach of a component...
-    // Correct choice? dunno. I prefer making export better
-  end
+  CellType := ZENumber;
+  FData := FloatToStr(value, invariantFormatSertting).ToUpper;
 end;
 
 procedure TZCell.SetDataAsString(const Value: string);
@@ -2775,10 +2769,10 @@ function TZMergeCells.AddRect(Rct:TRect): byte;
 var i: integer;
 function usl(rct1, rct2: TRect): boolean;
 begin
-  result := (((rct1.Left >= rct2.Left) and (rct1.Left <= rct2.Right)) or
-      ((rct1.right >= rct2.Left) and (rct1.right <= rct2.Right))) and
-     (((rct1.Top >= rct2.Top) and (rct1.Top <= rct2.Bottom)) or
-      ((rct1.Bottom >= rct2.Top) and (rct1.Bottom <= rct2.Bottom)));
+  result :=(((rct1.Left   >= rct2.Left) and (rct1.Left   <= rct2.Right))  or
+            ((rct1.Right  >= rct2.Left) and (rct1.Right  <= rct2.Right))) and
+           (((rct1.Top    >= rct2.Top)  and (rct1.Top    <= rct2.Bottom)) or
+            ((rct1.Bottom >= rct2.Top)  and (rct1.Bottom <= rct2.Bottom)));
 end;
 
 begin
@@ -2843,7 +2837,7 @@ function TZMergeCells.IsCrossWithArea(AID, AC1, AR1, AC2, AR2: integer): Boolean
 begin
   result :=
     (((Items[AID].Left    >= AC1) and (Items[AID].Left   <= AC2)) or
-      ((Items[AID].right  >= AC1) and (Items[AID].right  <= AC2))) and
+      ((Items[AID].Right  >= AC1) and (Items[AID].Right  <= AC2))) and
      (((Items[AID].Top    >= AR1) and (Items[AID].Top    <= AR2)) or
       ((Items[AID].Bottom >= AR1) and (Items[AID].Bottom <= AR2)));
 end;
@@ -2882,6 +2876,7 @@ begin
   FAuto    := true;
   FStyleID := -1;
   FBreaked := false;
+  FOutlineLevel := 0;
 end;
 
 procedure TZRowColOptions.Assign(Source: TPersistent);
@@ -2892,6 +2887,7 @@ begin
     FSize    := (Source as TZRowColOptions).FSize;
     FAuto    := (Source as TZRowColOptions).FAuto;
     FBreaked := (Source as TZRowColOptions).Breaked;
+    FOutlineLevel := (Source as TZRowColOptions).FOutlineLevel;
   end else
     inherited Assign(Source);
 end;
@@ -2939,9 +2935,8 @@ function TZRowOptions.GetSizePix(): integer;
 var t: real;
 begin
   t := 0.265;
-  if FSheet <> nil then
-    if FSheet.FStore <> nil then
-      t := FSheet.FStore.HorPixelSize;
+  if assigned(FSheet) and assigned(FSheet.FStore) then
+    t := FSheet.FStore.HorPixelSize;
   result := PointToPixel(FSize, t);
 end;
 
@@ -2950,9 +2945,8 @@ var t: real;
 begin
   if Value < 0 then  exit;
   t := 0.265;
-  if FSheet <> nil then
-    if FSheet.FStore <> nil then
-      t := FSheet.FStore.HorPixelSize;
+  if assigned(FSheet) and assigned(FSheet.FStore) then
+    t := FSheet.FStore.HorPixelSize;
   FSize := PixelToPoint(Value, t);
 end;
 
@@ -2968,9 +2962,8 @@ function TZColOptions.GetSizePix(): integer;
 var t: real;
 begin
   t := 0.265;
-  if FSheet <> nil then
-    if FSheet.FStore <> nil then
-      t := FSheet.FStore.VertPixelSize;
+  if assigned(FSheet) and assigned(FSheet.FStore) then
+    t := FSheet.FStore.VertPixelSize;
   result := PointToPixel(FSize, t);
 end;
 
@@ -2979,9 +2972,8 @@ var t: real;
 begin
   if Value < 0 then  exit;
   t := 0.265;
-  if FSheet <> nil then
-    if FSheet.FStore <> nil then
-      t := FSheet.FStore.VertPixelSize;
+  if assigned(FSheet) and assigned(FSheet.FStore) then
+    t := FSheet.FStore.VertPixelSize;
   FSize := PixelToPoint(Value, t);
 end;
 
@@ -3150,6 +3142,11 @@ begin
   FProtect := false;
   FRightToLeft := false;
   FSelected := false;
+  FSummaryBelow := true;
+  FSummaryRight := true;
+  FApplyStyles := false;
+  FOutlineLevelRow := 0;
+  FOutlineLevelCol := 0;
   SetLength(FRows, FRowCount);
   SetLength(FColumns, FColCount);
   for i := 0 to FColCount - 1 do begin
@@ -3197,7 +3194,6 @@ end;
 
 procedure TZSheet.Assign(Source: TPersistent);
 var zSource: TZSheet; i, j: integer;
-
 begin
   if (Source is TZSheet) then begin
     ZSource     := Source as TZSheet;
@@ -3215,6 +3211,12 @@ begin
     FRowBreaks := zSource.FRowBreaks;
     FColBreaks := zSource.FColBreaks;
     FViewMode  := zSource.FViewMode;
+
+    FSummaryBelow    := zSource.FSummaryBelow;
+    FSummaryRight    := zSource.FSummaryRight;
+    FApplyStyles     := zSource.FApplyStyles;
+    FOutlineLevelRow := zSource.FOutlineLevelRow;
+    FOutlineLevelCol := zSource.FOutlineLevelCol;
 
     for i := 0 to RowCount - 1 do
       Rows[i] := ZSource.Rows[i];
@@ -3284,6 +3286,7 @@ begin
     end else begin
       FRows[r] := FRows[r - ACount];
     end;
+
     // reloc cells
     for c := 0 to ColCount-1 do begin
       if (r - ACount) < ARow then begin
@@ -3309,7 +3312,7 @@ end;
 procedure TZSheet.CopyRows(ARowDst, ARowSrc, ACount: Integer);
 var r, c, delta: integer;
 begin
-  // copy row's and cell's info
+  // copy row and cell info
   for r := 0 to ACount-1 do begin
     FRows[ARowDst+r].Assign( FRows[ARowSrc+r] );
     for c := 0 to FColCount-1 do begin
@@ -3333,7 +3336,7 @@ end;
 
 procedure TZSheet.SetSheetOptions(Value: TZSheetOptions);
 begin
-  if Value <> nil then
+  if Assigned(Value) then
    FSheetOptions.Assign(Value);
 end;
 
@@ -3614,6 +3617,11 @@ begin
   inherited Destroy();
 end;
 
+function TZSheets.Add(title: string): TZSheet;
+begin
+    result := nil;
+end;
+
 procedure TZSheets.Assign(Source: TPersistent);
 var t: TZSheets; i: integer;
 begin
@@ -3776,7 +3784,7 @@ end;
 
 procedure TZEXMLSS.SetDefaultSheetOptions(Value: TZSheetOptions);
 begin
-  if Value <> nil then
+  if Assigned(Value) then
    FDefaultSheetOptions.Assign(Value);
 end;
 
@@ -3832,7 +3840,7 @@ end;
 { TZSheetPrintTitles }
 
 procedure TZSheetPrintTitles.Assign(Source: TPersistent);
-var f, t: word;  a: boolean;
+var f, t: word; a: boolean;
 begin
   if Source is TZSheetPrintTitles then begin
       F := TZSheetPrintTitles(Source).From;
@@ -5872,5 +5880,10 @@ begin
     style.Alignment.WrapText := Value;
   end);
 end;
+
+initialization
+    invariantFormatSertting := TFormatSettings.Create();
+    invariantFormatSertting.DecimalSeparator := '.';
+    //invariantFormatSertting.
 
 end.
