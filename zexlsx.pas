@@ -4136,7 +4136,6 @@ var
 begin
   result := 0;
   FilesCount := 0;
-  FileArray := nil;
   zip := TZipFile.Create();
   encoding := TEncoding.GetEncoding(437);
   zip.Encoding := encoding;
@@ -4146,7 +4145,6 @@ begin
   RelationsCount := 0;
   ThemaColorCount := 0;
   SheetRelationsCount := 0;
-  ThemaColor := nil;
   RH := TZEXLSXReadHelper.Create();
   FileList := TList<TZXLSXFileItem>.Create();
   stream := nil;
@@ -4202,7 +4200,6 @@ begin
         begin
           SetLength(RelationsArray, RelationsCount + 1);
           SetLength(RelationsCounts, RelationsCount + 1);
-          zfiles := zip.FileNames;
           zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
           try
             if (not ZE_XSLXReadRelationships(stream, RelationsArray[RelationsCount], RelationsCounts[RelationsCount], b, true)) then
@@ -4339,26 +4336,9 @@ begin
       result := 2;
     end;
   finally
-    zip.Close();
     zip.Free();
     encoding.Free;
     FileList.Free();
-    SetLength(FileArray, 0);
-    FileArray := nil;
-    SetLength(StrArray, 0);
-    StrArray := nil;
-    for i := 0 to RelationsCount - 1 do begin
-      Setlength(RelationsArray[i], 0);
-      RelationsArray[i] := nil;
-    end;
-    SetLength(RelationsCounts, 0);
-    RelationsCounts := nil;
-    SetLength(RelationsArray, 0);
-    RelationsArray := nil;
-    SetLength(ThemaColor, 0);
-    ThemaColor := nil;
-    SetLength(SheetRelations, 0);
-    SheetRelations := nil;
     RH.Free();
   end;
 end; //ReadXLSXPath
