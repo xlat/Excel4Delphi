@@ -4041,7 +4041,7 @@ var
   RH: TZEXLSXReadHelper;
   zip: TZipFile;
   zipHdr: TZipHeader;
-  zfiles: TArray<string>;
+  //zfiles: TArray<string>;
 
   function _CheckSheetRelations(const fname: string): boolean;
   var rstream: TStream;
@@ -4144,7 +4144,6 @@ begin
   ThemaColor := nil;
   RH := TZEXLSXReadHelper.Create();
   FileList := TList<TZXLSXFileItem>.Create();
-  stream := TStream.Create();
   try
     zip.Open(zipStream, zmRead);
     try
@@ -4193,7 +4192,7 @@ begin
       if (FileArray[i].ftype = TRelationType.rtDoc) then begin
         SetLength(RelationsArray, RelationsCount + 1);
         SetLength(RelationsCounts, RelationsCount + 1);
-        zfiles := zip.FileNames;
+        //zfiles := zip.FileNames;
         zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
         if (not ZE_XSLXReadRelationships(stream, RelationsArray[RelationsCount], RelationsCounts[RelationsCount], b, true)) then
         begin
@@ -4301,10 +4300,10 @@ begin
       result := 2;
     end;
   finally
+    zip.Close();
     zip.Free();
-    stream.Free();
+    //stream.Free();
     FileList.Free();
-
     SetLength(FileArray, 0);
     FileArray := nil;
     SetLength(StrArray, 0);

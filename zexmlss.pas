@@ -5504,7 +5504,7 @@ begin
       tmp := Source as TZEDrawing;
 
       self.FId := tmp.FId;
-      self.FPictureStore := TZEPictureStore.Create();
+      //self.FPictureStore := TZEPictureStore.Create();
       self.FPictureStore.Assign(tmp.FPictureStore);
     end;
   end;
