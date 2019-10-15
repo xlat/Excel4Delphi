@@ -3233,7 +3233,9 @@ begin
       MergeCells.AddRect(ZSource.MergeCells.GetItem(i));
 
     ConditionalFormatting.Assign(zSource.ConditionalFormatting);
-    FDrawing := TZEDrawing.Create();
+    //На этой строке перезаписывается указатель на объект TZEDrawing,
+    //но старый объект не удаляется, т.е. происходит утечка памяти.
+    //FDrawing := TZEDrawing.Create();
     FDrawing.Assign(zSource.FDrawing);
     RowsToRepeat.Assign(zSource.RowsToRepeat);
     ColsToRepeat.Assign(zSource.ColsToRepeat);
@@ -5496,7 +5498,9 @@ begin
       tmp := Source as TZEDrawing;
 
       self.FId := tmp.FId;
-      self.FPictureStore := TZEPictureStore.Create();
+      //На этой строке перезаписывается указатель на объект TZEPictureStore,
+      //но старый объект не удаляется, т.е. происходит утечка памяти.
+      //self.FPictureStore := TZEPictureStore.Create();
       self.FPictureStore.Assign(tmp.FPictureStore);
     end;
   end;
