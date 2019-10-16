@@ -4138,7 +4138,9 @@ begin
   FilesCount := 0;
   zip := TZipFile.Create();
   encoding := TEncoding.GetEncoding(437);
+{$IFDEF VER330}
   zip.Encoding := encoding;
+{$ENDIF}
 
   XMLSS.Styles.Clear();
   XMLSS.Sheets.Count := 0;
