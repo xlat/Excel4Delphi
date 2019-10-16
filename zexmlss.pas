@@ -1439,6 +1439,7 @@ type
   end;
 
   TZRange = class;
+  IZRange = interface;
 
   /// <summary>
   /// Inherited from TPersistent. Contains a sheet of the document.
@@ -1499,9 +1500,9 @@ type
     procedure SetRowCount(const Value: integer); virtual;
     function  GetColCount: integer; virtual;
     procedure SetColCount(const Value: integer); virtual;
-    function  GetRange(AC1,AR1,AC2,AR2: integer): TZRange; virtual;
+    function  GetRange(AC1,AR1,AC2,AR2: integer): IZRange; virtual;
     //procedure SetRange(AC1,AR1,AC2,AR2: integer; const Value: TZRange); virtual;
-    function  GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange; virtual;
+    function  GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): IZRange; virtual;
     //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
     function GetSheetIndex(): integer;
   public
@@ -1527,11 +1528,11 @@ type
     /// <summary>
     /// Specifies various properties of the Cells range.
     /// </summary>
-    property Range[AC1,AR1,AC2,AR2: integer]: TZRange read GetRange{ write SetRange};
+    property Range[AC1,AR1,AC2,AR2: integer]: IZRange read GetRange{ write SetRange};
     /// <summary>
     /// Specifies various properties of the Cells range.
     /// </summary>
-    property RangeRef[AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer]: TZRange read GetRangeRef{ write SetRangeRef};
+    property RangeRef[AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer]: IZRange read GetRangeRef{ write SetRangeRef};
     /// <summary>
     /// Get or set the height (in points) of row num in the sheet.
     /// </summary>
@@ -1643,7 +1644,51 @@ type
     function Add(title: string = ''): TZSheet;
   end;
 
-  TZRange = class(TPersistent)
+  IZRange = interface(IInterface)
+    function HasStyle: Boolean;
+    procedure ApplyStyleValue(proc: TProc<TZStyle>);
+    function GetVerticalAlignment(): TZVerticalAlignment;
+    procedure SetVerticalAlignment(const Value: TZVerticalAlignment);
+    function GetHorizontalAlignment(): TZHorizontalAlignment;
+    procedure SetHorizontalAlignment(const Value: TZHorizontalAlignment);
+    function GetBgColor(): TColor;
+    procedure SetBgColor(const Value: TColor);
+    function GetFontColor(): TColor;
+    procedure SetFontColor(const Value: TColor);
+    function GetFontSize(): Byte;
+    procedure SetFontSize(const Value: Byte);
+    function GetFontStyle(): TFontStyles;
+    procedure SetFontStyle(const Value: TFontStyles);
+    function GetBorderStyle(Num: TZBordersPos): TZBorderType;
+    procedure SetBorderStyle(Num: TZBordersPos; const Value: TZBorderType);
+    function GetBorderWidht(Num: TZBordersPos): Byte;
+    procedure SetBorderWidht(Num: TZBordersPos; const Value: Byte);
+    function GetBorderColor(Num: TZBordersPos): TColor;
+    procedure SetBorderColor(Num: TZBordersPos; const Value: TColor);
+    function GetWrapText(): Boolean;
+    procedure SetWrapText(const Value: Boolean);
+    function GetVerticalText(): Boolean;
+    procedure SetVerticalText(const Value: Boolean);
+    function GetNumberFormat(): string;
+    procedure SetNumberFormat(const Value: string);
+    //
+    property VerticalAlignment: TZVerticalAlignment read GetVerticalAlignment write SetVerticalAlignment;
+    property HorizontalAlignment: TZHorizontalAlignment read GetHorizontalAlignment write SetHorizontalAlignment;
+    property BgColor: TColor read GetBgColor write SetBgColor;
+    property FontColor: TColor read GetFontColor write SetFontColor;
+    property FontSize: Byte read GetFontSize write SetFontSize;
+    property FontStyle: TFontStyles read GetFontStyle write SetFontStyle;
+    property BorderStyle[num: TZBordersPos]: TZBorderType read GetBorderStyle write SetBorderStyle;
+    property BorderWidht[num: TZBordersPos]: Byte read GetBorderWidht write SetBorderWidht;
+    property BorderColor[num: TZBordersPos]: TColor read GetBorderColor write SetBorderColor;
+    property WrapText: Boolean read GetWrapText write SetWrapText;
+    property VerticalText: Boolean read GetVerticalText write SetVerticalText;
+    property NumberFormat: string read GetNumberFormat write SetNumberFormat;
+    procedure Merge();
+    procedure Clear();
+  end;
+
+  TZRange = class(TInterfacedObject, IZRange)
   private
     FSheet: TZSheet;
     FC1,FR1,FC2,FR2: Integer;
@@ -1677,7 +1722,7 @@ type
   protected
   public
     constructor Create(ASheet: TZSheet; AFC1, AFR1, AFC2, AFR2: Integer); virtual;
-    procedure Assign(Source: TPersistent); override;
+    procedure Assign(Source: TZRange);// override;
     destructor Destroy(); override;
     property VerticalAlignment: TZVerticalAlignment read GetVerticalAlignment write SetVerticalAlignment;
     property HorizontalAlignment: TZHorizontalAlignment read GetHorizontalAlignment write SetHorizontalAlignment;
@@ -2802,7 +2847,7 @@ begin
   //если надо, увеличиваем кол-во строк/столбцов в хранилище
   if (FSheet <> nil) then begin
     if Rct.Right > FSheet.ColCount - 1 then FSheet.ColCount := Rct.Right {+ 1};
-    if Rct.Bottom > FSheet.RowCount - 1 then FSheet.RowCount := Rct.Bottom {+ 1};  
+    if Rct.Bottom > FSheet.RowCount - 1 then FSheet.RowCount := Rct.Bottom {+ 1};
   end;
   inc(FCount);
   setlength(FMergeArea, FCount);
@@ -3404,12 +3449,12 @@ begin
 end;
 }
 
-function TZSheet.GetRange(AC1,AR1,AC2,AR2: integer): TZRange;
+function TZSheet.GetRange(AC1,AR1,AC2,AR2: integer): IZRange;
 begin
   Result := TZRange.Create(Self, AC1,AR1,AC2,AR2);
 end;
 
-function TZSheet.GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): TZRange;
+function TZSheet.GetRangeRef(AFromCol: string; AFromRow: Integer; AToCol: string; AToRow: integer): IZRange;
 var AC1,AR1,AC2,AR2: Integer;
 begin
   AC1 := ZEGetColByA1(AFromCol);
@@ -5596,7 +5641,7 @@ GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES); //вертикаль
 }
 
 { TZRange }
-procedure TZRange.Assign(Source: TPersistent);
+procedure TZRange.Assign(Source: TZRange);
 var src: TZRange; r,c,id: Integer; style: TZStyle; rect: TRect;
 begin
   inherited;
@@ -5610,19 +5655,23 @@ begin
     if FSheet.ColCount <= Max(src.FC2, FC2) then
       FSheet.ColCount := Max(src.FC2, FC2);
 
-    // copy cells and styles
-    for c := 0 to src.FC2-src.FC1 do begin
-      for r := 0 to src.FR2-src.FR1 do begin
-        FSheet.Cell[FC1+c, FR1+r].Assign(src.FSheet.Cell[src.FC1+c, src.FR1+r]);
-        id := FSheet.Cell[FC1+c, FR1+r].CellStyle;
-        if id > -1 then begin
-          style := TZStyle.Create();
-          // style must copy from source sheet
-          style.Assign( src.FSheet.WorkBook.Styles[id] );
-          id := FSheet.WorkBook.Styles.Add(style, true);
-          FSheet.Cell[FC1+c, FR1+r].CellStyle := id;
+    style := TZStyle.Create();
+    try
+      // copy cells and styles
+      for c := 0 to src.FC2-src.FC1 do begin
+        for r := 0 to src.FR2-src.FR1 do begin
+          FSheet.Cell[FC1+c, FR1+r].Assign(src.FSheet.Cell[src.FC1+c, src.FR1+r]);
+          id := FSheet.Cell[FC1+c, FR1+r].CellStyle;
+          if id > -1 then begin
+            // style must copy from source sheet
+            style.Assign( src.FSheet.WorkBook.Styles[id] );
+            id := FSheet.WorkBook.Styles.Add(style, true);
+            FSheet.Cell[FC1+c, FR1+r].CellStyle := id;
+          end;
         end;
       end;
+    finally
+       style.Free();
     end;
 
     // remove cross merges
@@ -5686,16 +5735,20 @@ begin
   for col := FC1 to FC2 do begin
     for row := FR1 to FR2 do begin
       style := TZStyle.Create();
-      id := FSheet.Cell[col, row].CellStyle;
-      if id > -1 then
-         style.Assign(FSheet.FStore.Styles[id])
-      else if (FSheet.FStore.Styles.Count > 0) then
-         style.Assign(FSheet.FStore.Styles[0]);
+      try
+        id := FSheet.Cell[col, row].CellStyle;
+        if id > -1 then
+          style.Assign(FSheet.FStore.Styles[id])
+        else if (FSheet.FStore.Styles.Count > 0) then
+          style.Assign(FSheet.FStore.Styles[0]);
 
-      proc(style);
+        proc(style);
 
-      id := FSheet.FStore.Styles.Add(style, true);
-      FSheet.Cell[col, row].CellStyle := id;
+        id := FSheet.FStore.Styles.Add(style, true);
+        FSheet.Cell[col, row].CellStyle := id;
+      finally
+        style.Free();
+      end;
     end;
   end;
 end;
