@@ -2416,9 +2416,7 @@ var
           if (TryStrToInt(s, t)) then
             FontArray[_currFont].fontsize := t;
         end else if xml.IsTagClosedByName('u') then begin
-          if (s > '') then
-            if (s <> 'none') then
-              FontArray[_currFont].underline := true;
+          FontArray[_currFont].underline := true;
         end else if xml.IsTagClosedByName('vertAlign') then
         begin
         end;
