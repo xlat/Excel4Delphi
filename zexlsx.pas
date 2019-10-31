@@ -1619,7 +1619,7 @@ var
     result := false;
     if (str > '') then begin
       retFloat := ZETryStrToFloat(st, -1);
-      if (retFloat > 0) then begin
+      if (retFloat > -1) then begin
         result := true;
         retFloat := retFloat * ZE_MMinInch;
       end;
