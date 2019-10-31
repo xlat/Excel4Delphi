@@ -814,6 +814,7 @@ type
     procedure WriteTagNode(TagName: string; SAttributes: TZAttributesH); overload;
     procedure WriteTagNode(TagName: string; AttrArray: array of TZAttrArrayH); overload;
     procedure WriteTagNode(TagName: string); overload;
+    procedure WriteHeader(CodePageName: string; BOM: AnsiString);
     property Attributes: TZAttributesH read FAttributes write SetAttributes;
     property AttributeQuote: char read GetAttributeQuote write SetAttributeQuote;
     property Buffer: string read GetXMLBuffer;
@@ -3528,6 +3529,19 @@ end;
 procedure TZsspXMLWriterH.WriteEndTagNode(isForce: boolean; CloseTagNewLine: boolean);
 begin
   FXMLWriter.WriteEndTagNode(isForce, CloseTagNewLine);
+end;
+
+procedure TZsspXMLWriterH.WriteHeader(CodePageName: string; BOM: AnsiString);
+begin
+  WriteRaw(BOM, false, false);
+  Attributes.Clear();
+
+  Attributes.Add('version', '1.0');
+  if (CodePageName > '') then
+    Attributes.Add('encoding', CodePageName);
+  WriteInstruction('xml', false);
+
+  Attributes.Clear();
 end;
 
 procedure TZsspXMLWriterH.WriteInstruction(InstructionName: string; SAttributes: TZAttributesH; StartNewLine: boolean; CheckEntity: boolean = true);
