@@ -4851,18 +4851,6 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.Attributes.Add('ref', s);
     xml.WriteEmptyTag('dimension', true, false);
 
-    {$REGION 'write sheetFormatPr'}
-    if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
-        xml.Attributes.Clear();
-        xml.Attributes.Add('defaultRowHeight', '15');
-        if (sheet.OutlineLevelCol > 0) then
-            xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
-        if (sheet.OutlineLevelRow > 0) then
-            xml.Attributes.Add('outlineLevelRow', IntToStr(sheet.OutlineLevelRow));
-        xml.WriteEmptyTag('sheetFormatPr', true, false);
-    end;
-    {$ENDREGION}
-
     xml.Attributes.Clear();
     xml.WriteTagNode('sheetViews', true, true, true);
 
@@ -4891,6 +4879,18 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.Attributes.Add('zoomScaleNormal', '100', false);
     xml.Attributes.Add('zoomScalePageLayoutView', '100', false);
     xml.WriteTagNode('sheetView', true, true, false);
+
+    {$REGION 'write sheetFormatPr'}
+    if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add('defaultRowHeight', '15');
+        if (sheet.OutlineLevelCol > 0) then
+            xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
+        if (sheet.OutlineLevelRow > 0) then
+            xml.Attributes.Add('outlineLevelRow', IntToStr(sheet.OutlineLevelRow));
+        xml.WriteEmptyTag('sheetFormatPr', true, false);
+    end;
+    {$ENDREGION}
 
     sheetOptions := sheet.SheetOptions;
 
