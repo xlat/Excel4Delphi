@@ -1692,7 +1692,6 @@ var
   procedure _ReadSheetPr();
   begin
     while xml.ReadToEndTagByName('sheetPr') do begin
-      //if xml.IsTagEndOrClosedByName('tabColor') then
       if xml.TagName = 'tabColor' then
         currentSheet.TabColor := ARGBToColor(xml.Attributes.ItemsByName['rgb']);
 
@@ -2138,8 +2137,7 @@ begin
     currentSheet := XMLSS.Sheets[currentPage];
     currentSheet.Title := SheetName;
 
-    while not xml.Eof() do begin
-      xml.ReadTag();
+    while xml.ReadTag() do begin
       if xml.IsTagStartByName('sheetData') then
         _ReadSheetData()
       else

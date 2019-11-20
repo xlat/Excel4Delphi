@@ -3872,18 +3872,20 @@ end;
 
 function TZsspXMLReaderH.ReadTag(): boolean;
 begin
+  if FXMLReader.Eof then
+    exit(false);
   result := FXMLReader.ReadTag();
   FAttributes.Assign(FXMLReader.Attributes);
 end;
 
 function TZsspXMLReaderH.ReadToEndTagByName(tagName: string): boolean;
 begin
+  if self.Eof() then
+    exit(false);
+
   result := not IsTagEndByName(tagName);
   if result then
       self.ReadTag();
-
-  if self.Eof() then
-    exit(false);
 end;
 
 procedure TZsspXMLReaderH.EndRead();
