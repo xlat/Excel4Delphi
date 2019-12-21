@@ -1,43 +1,4 @@
-﻿//****************************************************************
-// Routines for formulas.
-// Author:  Ruslan V. Neborak
-// e-mail:  avemey@tut.by
-// URL:     http://avemey.com
-// License: zlib
-// Last update: 2013.11.05
-//----------------------------------------------------------------
-{
- Copyright (C) 2012 Ruslan Neborak
-
-  This software is provided 'as-is', without any express or implied
- warranty. In no event will the authors be held liable for any damages
- arising from the use of this software.
-
- Permission is granted to anyone to use this software for any purpose,
- including commercial applications, and to alter it and redistribute it
- freely, subject to the following restrictions:
-
-    1. The origin of this software must not be misrepresented; you must not
-    claim that you wrote the original software. If you use this software
-    in a product, an acknowledgment in the product documentation would be
-    appreciated but is not required.
-
-    2. Altered source versions must be plainly marked as such, and must not be
-    misrepresented as being the original software.
-
-    3. This notice may not be removed or altered from any source
-    distribution.
-}
-//****************************************************************
-
-unit zeformula;
-
-{$I zexml.inc}
-{$I compver.inc}
-
-{$IFDEF FPC}
-  {$mode objfpc}{$H+}
-{$ENDIF}
+﻿unit zeformula;
 
 interface
 
@@ -51,16 +12,13 @@ const
   ZE_RTA_NO_ABSOLUTE    =   4;  //все абсолютные ссылки заменять на относительные (R1C1 => A1) (относительные не меняет)
   ZE_RTA_ONLY_ABSOLUTE  =   8;  //все относительные ссылки заменять на абсолютные (R[1]C[1] => $C$3) (абсолютные не меняет)
   ZE_RTA_ODF_NO_BRACKET = $10;  //Для ODF, но не добавлять квадратные скобки, разделитель лист/ячейка - точка ".".
-
-  //ZE_ATR = ZE A1 to R1C1
   ZE_ATR_DEL_PREFIX     =   1;  //Удалять все символы до первого '='
 
 function ZEGetA1byCol(ColNum: integer; StartZero: boolean = true): string;
+function ZERangeToRow(range: string): integer;
 function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
-
 function ZER1C1ToA1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
 function ZEA1ToR1C1(const formula: string; CurCol, CurRow: integer; options: integer; StartZero: boolean = true): string;
-
 function ZEGetCellCoords(const cell: string; out column, row: integer; StartZero: boolean = true): boolean;
 
 implementation
@@ -205,11 +163,7 @@ var
     begin
       if (isNumber) then
       begin
-        {$IFDEF DELPHI_UNICODE}
         if (not CharInSet(ch, ['-', '0'..'9', ']', '[', ''''])) then
-        {$ELSE}
-        if (not (ch in ['-', '0'..'9', ']', '[', ''''])) then
-        {$ENDIF}
         begin
           if (not (isC xor isR)) then
           begin
@@ -232,11 +186,7 @@ var
       end else //if (isNumber)
       begin
         //если адрес: RC (без чисел - нули)
-        {$IFDEF DELPHI_UNICODE}
         if (isR and CharInSet(ch, ['C', 'c'])) then
-        {$ELSE}
-        if (isR and (ch in ['C', 'c'])) then
-        {$ENDIF}
         begin
           _getR(0);
           s := '';
@@ -308,8 +258,7 @@ var
 
 begin
   result := '';
-  if (TryStrToInt(st, t)) then
-  begin
+  if (TryStrToInt(st, t)) then begin
     result := st;
     exit;
   end;
@@ -332,8 +281,7 @@ begin
   is_no_absolute := (options and ZE_RTA_NO_ABSOLUTE = ZE_RTA_NO_ABSOLUTE);
   is_only_absolute := (options and ZE_RTA_ONLY_ABSOLUTE = ZE_RTA_ONLY_ABSOLUTE);
   isODF := (options and ZE_RTA_ODF = ZE_RTA_ODF);
-  for i := 1 to kol do
-  begin
+  for i := 1 to kol do begin
     _checksymbol(st[i]);
     if (not isOk) then
       break;
@@ -343,15 +291,13 @@ begin
   if ((kol <= 0) or (_num = 0)) then
     isOk := false;
   _checksymbol(';');
-  if (not isOk) then
-  begin
+  if (not isOk) then begin
     result := st;
     exit;
   end;
   result := retTxt + _c + _r + s;
   _use_bracket := not (options and ZE_RTA_ODF_NO_BRACKET = ZE_RTA_ODF_NO_BRACKET);
-  if (isODF and _use_bracket) then
-  begin
+  if (isODF and _use_bracket) then begin
     if (not isList) then
       result := '.' + result;
     result := '[' + result + ']';  
@@ -524,11 +470,7 @@ var
 
   procedure _CheckSymbol(ch: char);
   begin
-    {$IFDEF DELPHI_UNICODE}
     if (not CharInSet(ch, ['0'..'9'])) then
-    {$ELSE}
-    if (not (ch in ['0'..'9'])) then
-    {$ENDIF}
       if (not isApos) then
       begin
         if (_startNumber) then
@@ -619,10 +561,8 @@ var
          begin
            if (isApos) then
              s := s + ch
-           else
-           begin
-             if ((not _startNumber) and (not isC)) then //первая цифирка
-             begin
+           else begin
+             if ((not _startNumber) and (not isC)) then begin
                _GetColumn();
                s := '';
              end;
@@ -638,10 +578,7 @@ var
 
   //Проверяет, с какого символа в строке начать
   procedure FindStartNumber(out num: integer);
-  var
-    i: integer;
-    z: boolean;
-
+  var i: integer; z: boolean;
   begin
     num := 1;
     z := false;
@@ -653,8 +590,7 @@ var
             z := not z;
           end;
         '!', '.':
-           if (not z) then
-           begin
+           if (not z) then begin
              num := i;
              exit;
            end;
@@ -671,8 +607,7 @@ begin
   kol := length(st);
   if (kol >= 1) then
     if (st[1] <> '$') then
-      if (TryStrToInt(st, t)) then
-      begin
+      if (TryStrToInt(st, t)) then begin
         result := st;
         exit;
       end;
@@ -683,8 +618,7 @@ begin
   column := '';
   isNotlast := true;
   isC := false;
-  while (i <= kol) do
-  begin
+  while (i <= kol) do begin
     _CheckSymbol(st[i]);
     inc(i);
   end; //while
@@ -723,16 +657,12 @@ var
         begin;
           if (isApos) then
             s := s + ch
-          else
-          begin
-            if (isQuote) then
-            begin
+          else begin
+            if (isQuote) then begin
               retFormula := retFormula + s + ch;
               s := '';
-            end else
-            begin
-              if (s > '') then
-              begin
+            end else begin
+              if (s > '') then begin
                 //O_o Странно
                 retFormula := retFormula + ReturnR1C1(s, CurCol, CurRow, StartZero);
                 s := '';
@@ -752,15 +682,10 @@ var
         begin
           if (isQuote or isApos) then
             s := s + ch
-          else
-          begin
+          else begin
             retFormula := retFormula + ReturnR1C1(s, CurCol, CurRow, StartZero);
             if (isNotLast) then
-              {$IFDEF DELPHI_UNICODE}
               if (not CharInSet(ch, ['[',']'])) then
-              {$ELSE}
-              if (not (ch in ['[', ']'])) then
-              {$ENDIF}
                 retFormula := retFormula + ch;
             s := '';
           end;
@@ -771,13 +696,10 @@ var
   end; //_CheckSymbol
 
   procedure FindStartNum(var start_num: integer);
-  var
-    i: integer;
-
+  var i: integer;
   begin
     for i := 1 to l do
-      if (formula[i] = '=') then
-      begin
+      if (formula[i] = '=') then begin
         start_num := i;
         exit;
       end;
@@ -810,6 +732,17 @@ begin
   result := retFormula;
 end; //ZEA1ToR1C1
 
+function ZERangeToRow(range: string): integer;
+var i: integer;
+begin
+    for I := 1 to Length(range)-1 do begin
+        if CharInSet(range.Chars[i], ['0'..'9']) then begin
+            exit(StrToInt(range.Substring(i)));
+        end;
+    end;
+    raise Exception.Create('Не удалось вычислить номер строки из формулы: ' + range);
+end;
+
 //Возвращает номер столбца по буквенному обозначению
 //INPUT
 //  const AA: string      - буквенное обозначение столбца
@@ -817,18 +750,14 @@ end; //ZEA1ToR1C1
 //RETURN
 //      integer -   -1 - не удалось преобразовать
 function ZEGetColByA1(AA: string; StartZero: boolean = true): integer;
-var
-  i: integer;
-  num, t, kol, s: integer;
-
+var i: integer; num, t, kol, s: integer;
 begin
   result := -1;
   num := 0;
   AA := UpperCase(AA);
   kol := length(AA);
   s := 1;
-  for i := kol downto 1 do
-  begin
+  for i := kol downto 1 do begin
     if not CharInSet(AA[I], ['A'..'Z']) then
         continue;
     t := ord(AA[i]) - ord('A');
@@ -847,18 +776,14 @@ end; //ZEGetColByAA
 //      ColNum: integer     - номер столбца
 //      StartZero: boolean  - если true, то счёт начинается с 0, в противном случае - с 1.
 function ZEGetA1byCol(ColNum: integer; StartZero: boolean = true): string;
-var
-  t, n: integer;
-  s: string;
-
+var t, n: integer; s: string;
 begin
   t := ColNum;
   if (not StartZero) then
     dec(t);
   result := '';
   s := '';
-  while t >= 0 do
-  begin
+  while t >= 0 do begin
     n := t mod 26;
     t := (t div 26) - 1;
     //ХЗ как там с кодировками будет
