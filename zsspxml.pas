@@ -814,6 +814,7 @@ type
     procedure WriteTagNode(TagName: string; SAttributes: TZAttributesH); overload;
     procedure WriteTagNode(TagName: string; AttrArray: array of TZAttrArrayH); overload;
     procedure WriteTagNode(TagName: string); overload;
+    procedure WriteHeader(CodePageName: string; BOM: AnsiString);
     property Attributes: TZAttributesH read FAttributes write SetAttributes;
     property AttributeQuote: char read GetAttributeQuote write SetAttributeQuote;
     property Buffer: string read GetXMLBuffer;
@@ -3530,6 +3531,19 @@ begin
   FXMLWriter.WriteEndTagNode(isForce, CloseTagNewLine);
 end;
 
+procedure TZsspXMLWriterH.WriteHeader(CodePageName: string; BOM: AnsiString);
+begin
+  WriteRaw(BOM, false, false);
+  Attributes.Clear();
+
+  Attributes.Add('version', '1.0');
+  if (CodePageName > '') then
+    Attributes.Add('encoding', CodePageName);
+  WriteInstruction('xml', false);
+
+  Attributes.Clear();
+end;
+
 procedure TZsspXMLWriterH.WriteInstruction(InstructionName: string; SAttributes: TZAttributesH; StartNewLine: boolean; CheckEntity: boolean = true);
 begin
   FXMLWriter.WriteInstruction(UTF8Encode(InstructionName), SAttributes.FAttributes, StartNewLine, CheckEntity);
@@ -3858,18 +3872,20 @@ end;
 
 function TZsspXMLReaderH.ReadTag(): boolean;
 begin
+  if FXMLReader.Eof then
+    exit(false);
   result := FXMLReader.ReadTag();
   FAttributes.Assign(FXMLReader.Attributes);
 end;
 
 function TZsspXMLReaderH.ReadToEndTagByName(tagName: string): boolean;
 begin
+  if self.Eof() then
+    exit(false);
+
   result := not IsTagEndByName(tagName);
   if result then
       self.ReadTag();
-
-  if self.Eof() then
-    exit(false);
 end;
 
 procedure TZsspXMLReaderH.EndRead();

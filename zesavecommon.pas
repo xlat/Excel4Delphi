@@ -19,9 +19,6 @@ function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boo
 //заменяет все запятые на точки
 function ZEFloatSeparator(st: string): string;
 
-//BOM<?xml version="1.0" encoding="CodePageName"?>
-procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
-
 //Проверяет заголовки страниц, при необходимости корректирует
 function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; out _pages: TIntegerDynArray;
@@ -253,22 +250,6 @@ begin
       result := result + '.'
     else
       result := result + st[k];
-end;
-
-//BOM<?xml version="1.0" encoding="CodePageName"?>
-//INPUT
-//    xml: TZsspXMLWriterH      - писатель
-//  const CodePageName: string  - имя кодировки
-//  const BOM: ansistring       - BOM
-procedure ZEWriteHeaderCommon(xml: TZsspXMLWriterH; const CodePageName: string; const BOM: ansistring);
-begin
-  //with xml do begin
-  xml.WriteRaw(BOM, false, false);
-  xml.Attributes.Add('version', '1.0');
-  if (CodePageName > '') then
-    xml.Attributes.Add('encoding', CodePageName);
-  xml.WriteInstruction('xml', false);
-  xml.Attributes.Clear();
 end;
 
 //Очищает массивы

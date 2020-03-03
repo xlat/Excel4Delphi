@@ -230,8 +230,8 @@ function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter
 function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
-function ZEXLSXCreateDrawing(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-function ZEXLSXCreateDrawingRels(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+function ZEXLSXCreateDrawing(sheet: TZSheet; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+function ZEXLSXCreateDrawingRels(sheet: TZSheet; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 procedure ZEAddRelsRelation(xml: TZsspXMLWriterH; const rid: string; ridType: TRelationType; const Target: string; const TargetMode: string = '');
 
 
@@ -860,7 +860,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
 
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
@@ -1167,6 +1167,135 @@ begin
   end;
 end; //ZEXLSX_getCFCondition
 
+function ZEXLSXReadDrawingRels(sheet: TZSheet; Stream: TStream): boolean;
+var xml: TZsspXMLReaderH;
+    target: string;
+    I, id: Integer;
+begin
+  result := false;
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(Stream) <> 0) then
+      exit;
+
+    while xml.ReadToEndTagByName('Relationships') do begin
+      if xml.IsTagClosedByName('Relationship') then begin
+        id := StrToInt(xml.Attributes.ItemsByName['Id'].Substring(3));
+        target := xml.Attributes.ItemsByName['Target'];
+
+        for I := 0 to sheet.Drawing.Count-1 do begin
+           if sheet.Drawing[i].RelId = id then
+              sheet.Drawing[i].Name := target.Substring(9);
+        end;
+      end;
+    end;
+    result := true;
+  finally
+    xml.Free();
+  end;
+end;
+
+function ZEXLSXReadDrawing(sheet: TZSheet; Stream: TStream): boolean;
+var xml: TZsspXMLReaderH;
+    picture: TZEPicture;
+
+    procedure ReadFrom();
+    begin
+      while xml.ReadToEndTagByName('xdr:from') do begin
+        if xml.IsTagEndByName('xdr:col') then
+          picture.FromCol := StrToInt(xml.TextBeforeTag)
+        else if xml.IsTagEndByName('xdr:colOff') then
+          picture.FromColOff := StrToInt(xml.TextBeforeTag)
+        else if xml.IsTagEndByName('xdr:row') then
+          picture.FromRow := StrToInt(xml.TextBeforeTag)
+        else if xml.IsTagEndByName('xdr:rowOff') then
+          picture.FromRowOff := StrToInt(xml.TextBeforeTag);
+      end;
+    end;
+
+    procedure ReadTo();
+    begin
+      while xml.ReadToEndTagByName('xdr:to') do begin
+        if xml.IsTagEndByName('xdr:col') then
+          picture.ToCol := StrToInt(xml.TextBeforeTag)
+        else if xml.IsTagEndByName('xdr:colOff') then
+          picture.ToColOff := StrToInt(xml.TextBeforeTag)
+        else if xml.IsTagEndByName('xdr:row') then
+          picture.ToRow := StrToInt(xml.TextBeforeTag)
+        else if xml.IsTagEndByName('xdr:rowOff') then
+          picture.ToRowOff := StrToInt(xml.TextBeforeTag);
+      end;
+    end;
+
+    procedure ReadPic();
+    begin
+      while xml.ReadToEndTagByName('xdr:pic') do begin
+        if xml.IsTagClosedByName('xdr:cNvPr') then begin
+          picture.Description := xml.Attributes['descr'];
+          picture.Title := xml.Attributes['name'];
+          picture.Id := StrToInt(xml.Attributes['id']);
+        end;// else
+        if xml.IsTagStartOrClosedByName('a:blip') then begin
+          picture.RelId := StrToInt(xml.Attributes['r:embed'].Substring(3)); // skip "rId"
+        end;
+
+        if xml.IsTagStartByName('a:xfrm') then begin
+          while xml.ReadToEndTagByName('a:xfrm') do begin
+            if xml.IsTagClosedByName('a:off') then begin
+              picture.FrmOffX := StrToInt(xml.Attributes['x']);
+              picture.FrmOffY := StrToInt(xml.Attributes['y']);
+            end
+            else if xml.IsTagClosedByName('a:ext') then begin
+              picture.FrmExtCX := StrToInt(xml.Attributes['cx']);
+              picture.FrmExtCY := StrToInt(xml.Attributes['cy']);
+            end
+          end;
+        end;
+      end;
+    end;
+
+    procedure ReadImageItem();
+    begin
+      picture := sheet.Drawing.Add();
+      if xml.Attributes['editAs'] = 'absolute' then
+        picture.CellAnchor := ZAAbsolute
+      else
+        picture.CellAnchor := ZACell;
+
+      while xml.ReadToEndTagByName('xdr:twoCellAnchor') do begin
+        if xml.IsTagStartByName('xdr:from') then begin
+          ReadFrom();
+        end;// else
+
+        if xml.IsTagStartByName('xdr:to') then begin
+          ReadTo();
+        end;// else
+
+        if xml.IsTagStartByName('xdr:pic') then begin
+          ReadPic();
+        end
+      end;
+    end;
+begin
+  result := false;
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(Stream) <> 0) then
+      exit;
+    picture := nil;
+
+    while xml.ReadToEndTagByName('xdr:wsDr') do begin
+      if xml.IsTagStartByName('xdr:twoCellAnchor') then begin
+        ReadImageItem();
+      end;
+    end;
+  finally
+    xml.Free();
+  end;
+end;
+
 //Читает страницу документа
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
@@ -1257,7 +1386,7 @@ var
           if xml.IsTagEndByName('v') or xml.IsTagEndByName('t') then begin
             if (_num > 0) then
               v := v + sLineBreak;
-            v := v + xml.TextBeforeTag;  
+            v := v + xml.TextBeforeTag;
             inc(_num);
           end else if xml.IsTagEndByName('f') then
             currentCell.Formula := ZEReplaceEntity(xml.TextBeforeTag);
@@ -1377,7 +1506,7 @@ var
       if (not TryStrToInt(s2, y)) then
         result := false
       else
-        dec(y);  
+        dec(y);
       b := result;
     end; //_GetCoords
 
@@ -1495,7 +1624,7 @@ var
     result := false;
     if (str > '') then begin
       retFloat := ZETryStrToFloat(st, -1);
-      if (retFloat > 0) then begin
+      if (retFloat > -1) then begin
         result := true;
         retFloat := retFloat * ZE_MMinInch;
       end;
@@ -1568,7 +1697,6 @@ var
   procedure _ReadSheetPr();
   begin
     while xml.ReadToEndTagByName('sheetPr') do begin
-      //if xml.IsTagEndOrClosedByName('tabColor') then
       if xml.TagName = 'tabColor' then
         currentSheet.TabColor := ARGBToColor(xml.Attributes.ItemsByName['rgb']);
 
@@ -2014,8 +2142,7 @@ begin
     currentSheet := XMLSS.Sheets[currentPage];
     currentSheet.Title := SheetName;
 
-    while not xml.Eof() do begin
-      xml.ReadTag();
+    while xml.ReadTag() do begin
       if xml.IsTagStartByName('sheetData') then
         _ReadSheetData()
       else
@@ -2028,6 +2155,9 @@ begin
       if xml.IsTagStartByName('cols') then
         _ReadCols()
       else
+      if xml.IsTagClosedByName('drawing') then begin
+         currentSheet.DrawingRid := StrtoIntDef(xml.Attributes.ItemsByName['r:id'].Substring(3), 0);
+      end else
       if xml.IsTagClosedByName('pageMargins') then begin
         str := xml.Attributes.ItemsByName['bottom'];
         if (_StrToMM(str, tempReal)) then
@@ -2059,7 +2189,7 @@ begin
         if (str > '') then
           if (TryStrToInt(str, tempInt)) then
             currentSheet.SheetOptions.StartPageNumber := tempInt;
-            
+
         str := xml.Attributes.ItemsByName['fitToHeight'];
         if (str > '') then
           if (TryStrToInt(str, tempInt)) then
@@ -2078,7 +2208,7 @@ begin
           if (str = 'portrait') then
             currentSheet.SheetOptions.PortraitOrientation := true;
         end;
-        
+
         //str := xml.Attributes.ItemsByName['pageOrder'];
 
         str := xml.Attributes.ItemsByName['paperSize'];
@@ -2421,13 +2551,11 @@ var
           if (TryStrToInt(s, t)) then
             FontArray[_currFont].fontsize := t;
         end else if xml.IsTagClosedByName('u') then begin
-          if (s > '') then
-            if (s <> 'none') then
-              FontArray[_currFont].underline := true;
+          FontArray[_currFont].underline := true;
         end else if xml.IsTagClosedByName('vertAlign') then
         begin
         end;
-      end; //if  
+      end; //if
       //Тэги настройки шрифта
       //*b - bold
       //*charset
@@ -2929,7 +3057,7 @@ var
           2: h := (_b - _r) / _delta + 2;
           3: h := (_r - _g) / _delta + 4;
         end;
-        
+
         h := h / 6;
     end;
   end; //ZRGBToHSL
@@ -3620,7 +3748,7 @@ var xml: TZsspXMLReaderH;
         XMLSS.Sheets[page].ColCount := _c + 1;
       if (_r >= XMLSS.Sheets[page].RowCount) then
         XMLSS.Sheets[page].RowCount := _r + 1;
-        
+
       if (TryStrToInt(xml.Attributes.ItemsByName['authorId'], _a)) then
         if (_a >= 0) and (_a < authors.Count) then
           XMLSS.Sheets[page].Cell[_c, _r].CommentAuthor := authors[_a];
@@ -3642,7 +3770,7 @@ var xml: TZsspXMLReaderH;
       end; //while
       XMLSS.Sheets[page].Cell[_c, _r].Comment := _comment;
       XMLSS.Sheets[page].Cell[_c, _r].ShowComment := true;
-    end //if  
+    end //if
   end; //_ReadComment();
 
 begin
@@ -4049,6 +4177,7 @@ var
   zip: TZipFile;
   encoding: TEncoding;
   zipHdr: TZipHeader;
+  buff: TBytes;
   //zfiles: TArray<string>;
 
   function _CheckSheetRelations(const fname: string): boolean;
@@ -4160,7 +4289,7 @@ begin
     try
       zip.Read('[Content_Types].xml', stream, zipHdr);
       try
-        if (not ZEXSLXReadContentTypes(stream,  FileArray, FilesCount)) then
+        if (not ZEXSLXReadContentTypes(stream, FileArray, FilesCount)) then
           raise Exception.Create('Could not read [Content_Types].xml');
       finally
         FreeAndNil(stream);
@@ -4177,10 +4306,10 @@ begin
         end;
       end;
 
-      if (not b) then 
+      if (not b) then
       begin
         s := '/_rels/.rels';
-        if zip.IndexOf(s.Substring(1)) > -1 then 
+        if zip.IndexOf(s.Substring(1)) > -1 then
         begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].original := s;
@@ -4190,7 +4319,7 @@ begin
         end;
 
         s := '/xl/_rels/workbook.xml.rels';
-        if zip.IndexOf(s.Substring(1)) > -1 then 
+        if zip.IndexOf(s.Substring(1)) > -1 then
         begin
           SetLength(FileArray, FilesCount + 1);
           FileArray[FilesCount].original := s;
@@ -4214,7 +4343,7 @@ begin
               result := 4;
               exit;
             end;
-            if (b) then 
+            if (b) then
             begin
               SheetRelationNumber := RelationsCount;
               for j := 0 to RelationsCounts[RelationsCount] - 1 do
@@ -4235,11 +4364,11 @@ begin
 
       //sharedStrings.xml
       for i:= 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = TRelationType.rtCoreProp) then 
+        if (FileArray[i].ftype = TRelationType.rtCoreProp) then
         begin
           zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
           try
-            if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then 
+            if (not ZEXSLXReadSharedStrings(stream, StrArray, StrCount)) then
             begin
               result := 3;
               exit;
@@ -4252,7 +4381,7 @@ begin
 
       //тема (если есть)
       for i := 0 to FilesCount - 1 do
-        if (FileArray[i].ftype = TRelationType.rtVmlDrawing) then 
+        if (FileArray[i].ftype = TRelationType.rtVmlDrawing) then
         begin
           zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
           try
@@ -4286,10 +4415,10 @@ begin
 
       //чтение страниц
       _no_sheets := true;
-      if (SheetRelationNumber > 0) then 
+      if (SheetRelationNumber > 0) then
       begin
         for i := 0 to FilesCount - 1 do
-          if (FileArray[i].ftype = TRelationType.rtSharedStr) then 
+          if (FileArray[i].ftype = TRelationType.rtSharedStr) then
           begin
             zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
             try
@@ -4307,7 +4436,7 @@ begin
         //for i := 1 to RelationsCounts[SheetRelationNumber] do
         XLSXSortRelationArray(RelationsArray[SheetRelationNumber], RelationsCounts[SheetRelationNumber]);
         for j := 0 to RelationsCounts[SheetRelationNumber] - 1 do
-          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then 
+          if (RelationsArray[SheetRelationNumber][j].sheetid > 0) then
           begin
             b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
             zip.Read(FileArray[RelationsArray[SheetRelationNumber][j].fileid].original.Substring(1), stream, zipHdr);
@@ -4324,10 +4453,9 @@ begin
       end;
 
       //если прочитано 0 листов - пробуем прочитать все (не удалось прочитать workbook/rel)
-      if _no_sheets then 
-        for i := 0 to FilesCount - 1 do 
-          if FileArray[i].ftype = TRelationType.rtWorkSheet then 
-          begin
+      if _no_sheets then begin
+        for i := 0 to FilesCount - 1 do begin
+          if FileArray[i].ftype = TRelationType.rtWorkSheet then begin
             b := _CheckSheetRelations(FileArray[i].name);
             zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
             try
@@ -4339,6 +4467,39 @@ begin
               FreeAndNil(stream);
             end;
           end;
+        end;
+      end;
+
+      // drawings
+      for I := 0 to XMLSS.Sheets.Count-1 do begin
+        if XMLSS.Sheets[i].DrawingRid > 0 then begin
+          // load images
+          s := 'xl/drawings/drawing'+IntToStr(i+1)+'.xml';
+          zip.Read(s, stream, zipHdr);
+          try
+            ZEXLSXReadDrawing(XMLSS.Sheets[i], stream);
+          finally
+            stream.Free();
+          end;
+
+          // read drawing rels
+          s := 'xl/drawings/_rels/drawing'+IntToStr(i+1)+'.xml.rels';
+          zip.Read(s, stream, zipHdr);
+          try
+            ZEXLSXReadDrawingRels(XMLSS.Sheets[i], stream);
+          finally
+            stream.Free();
+          end;
+
+          // read img file
+          for j := 0 to XMLSS.Sheets[i].Drawing.Count-1 do begin
+              s := XMLSS.Sheets[i].Drawing[j].Name;
+              zip.Read('xl/media/' + s, buff);
+              // only unique content
+              XMLSS.AddMediaContent(s, buff, true);
+          end;
+        end;
+      end;
     except
       result := 2;
     end;
@@ -4354,7 +4515,7 @@ end; //ReadXLSXPath
 /////////////                    запись                         /////////////
 /////////////////////////////////////////////////////////////////////////////
 
-//Создаёт [Content_Types].xml 
+//Создаёт [Content_Types].xml
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
@@ -4391,29 +4552,22 @@ var xml: TZsspXMLWriterH; s: string;
     xml.WriteEmptyTag('Override', true);
   end; //_WriteOverride
 
-  procedure _WriteTypes();
-  var i, ii: integer;
-    _drawing: TZEDrawing;
-    _picture: TZEPicture;
+  procedure _WriteTypeDefault(extension, contentType: string);
   begin
     xml.Attributes.Clear();
-    xml.Attributes.Add('Extension', 'rels');
-    xml.Attributes.Add('ContentType', 'application/vnd.openxmlformats-package.relationships+xml', false);
+    xml.Attributes.Add('Extension', extension);
+    xml.Attributes.Add('ContentType', contentType, false);
     xml.WriteEmptyTag('Default', true);
-    xml.Attributes.Clear();
-    xml.Attributes.Add('Extension', 'xml');
-    xml.Attributes.Add('ContentType', 'application/xml', false);
-    xml.WriteEmptyTag('Default', true);
+  end;
 
-    xml.Attributes.Clear();
-    xml.Attributes.Add('Extension', 'png');
-    xml.Attributes.Add('ContentType', 'image/png', false);
-    xml.WriteEmptyTag('Default', true);
-
-    xml.Attributes.Clear();
-    xml.Attributes.Add('Extension', 'jpeg');
-    xml.Attributes.Add('ContentType', 'image/jpeg', false);
-    xml.WriteEmptyTag('Default', true);
+  procedure _WriteTypes();
+  var i: integer;
+  begin
+    _WriteTypeDefault('rels', 'application/vnd.openxmlformats-package.relationships+xml');
+    _WriteTypeDefault('xml',  'application/xml');
+    _WriteTypeDefault('png',  'image/png');
+    _WriteTypeDefault('jpeg', 'image/jpeg');
+    _WriteTypeDefault('wmf',  'image/x-wmf');
 
     //Страницы
     //_WriteOverride('/_rels/.rels', 3);
@@ -4429,19 +4583,18 @@ var xml: TZsspXMLWriterH; s: string;
       _WriteOverride('/xl/comments' + IntToStr(PagesComments[i] + 1) + '.xml', 6);
     end;
 
-    for i := 0 to XMLSS.DrawingCount - 1 do begin
-      _drawing := XMLSS.GetDrawing(i);
-      if Assigned(_drawing) and (_drawing.PictureStore.Count > 0) then begin
-        _WriteOverride('/xl/drawings/drawing' + IntToStr(_drawing.Id) + '.xml', 9);
-        _WriteOverride('/xl/drawings/_rels/drawing' + IntToStr(_drawing.Id) + '.xml.rels', 3);
-        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
-          _picture := _drawing.PictureStore.Items[ii];
-          // image/ override
-          xml.Attributes.Clear();
-          xml.Attributes.Add('PartName', '/xl/media/' + _picture.Name);
-          xml.Attributes.Add('ContentType', 'image/' + Copy(ExtractFileExt(_picture.Name), 2, 99), false);
-          xml.WriteEmptyTag('Override', true);
-        end;
+    for i := 0 to XMLSS.Sheets.Count - 1 do begin
+      if Assigned(XMLSS.Sheets[i].Drawing) and (XMLSS.Sheets[i].Drawing.Count > 0) then begin
+        _WriteOverride('/xl/drawings/drawing' + IntToStr(i+1) + '.xml', 9);
+        //_WriteOverride('/xl/drawings/_rels/drawing' + IntToStr(i+1) + '.xml.rels', 3);
+//        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
+//          _picture := _drawing.PictureStore.Items[ii];
+//          // image/ override
+//          xml.Attributes.Clear();
+//          xml.Attributes.Add('PartName', '/xl/media/' + _picture.Name);
+//          xml.Attributes.Add('ContentType', 'image/' + Copy(ExtractFileExt(_picture.Name), 2, 99), false);
+//          xml.WriteEmptyTag('Override', true);
+//        end;
       end;
     end;
 
@@ -4459,7 +4612,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE + '/content-types');
     xml.WriteTagNode('Types', true, true, true);
@@ -4470,110 +4623,27 @@ begin
   end;
 end; //ZEXLSXCreateContentTypes
 
-function ZEXLSXCreateDrawing(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+function ZEXLSXCreateDrawing(sheet: TZSheet; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 var xml: TZsspXMLWriterH;
-    SheetNum: integer;
     pic: TZEPicture;
-
-  function PtToStr(Value: Real): string;
-  begin
-    Result := IntToStr(Trunc(Value * 1000));
-  end;
-
-  procedure _WriteCellForXY(PageNum: Integer; X, Y: Real);
-  var
-    sh: TZSheet;
-    n: Integer;
-    Total: Real;
-  begin
-    sh := XMLSS.Sheets.Sheet[PageNum];
-    if not Assigned(sh) then Exit;
-    xml.Attributes.Clear();
-
-    // column
-    n := 0;
-    Total := 0;
-    while (n < sh.ColCount) and (Total < X) do begin
-      Total := Total + sh.ColWidths[n];
-      Inc(n);
-    end;
-    xml.WriteTag('xdr:col', IntToStr(n), false, false);
-    xml.WriteTag('xdr:colOff', PtToStr(Total), false, false);
-
-    // row
-    n := 0;
-    Total := 0;
-    while (n < sh.RowCount) and (Total < Y) do begin
-      Total := Total + sh.RowHeights[n];
-      Inc(n);
-    end;
-    xml.WriteTag('xdr:row', IntToStr(n), false, false);
-    xml.WriteTag('xdr:rowOff', PtToStr(Total), false, false);
-  end;
-
-  procedure _WriteCellForRowCol(PageNum, Row, Col: Integer; Width, Height: Real);
-  var sh: TZSheet;
-      n: Integer;
-      Total, X, Y: Real;
-  begin
-    sh := XMLSS.Sheets.Sheet[PageNum];
-    if not Assigned(sh) then Exit;
-    xml.Attributes.Clear();
-
-    // column
-    n := 0;
-    Total := 0;
-    while (n < sh.ColCount) and (n < Col) do begin
-      Total := Total + sh.ColWidths[n];
-      Inc(n);
-    end;
-    // plus width
-    X := Total + Width - 0.1;
-    while (n < sh.ColCount) and (Total < X) do begin
-      Total := Total + sh.ColWidths[n];
-      Inc(n);
-    end;
-    xml.WriteTag('xdr:col', IntToStr(n), false, false);
-    xml.WriteTag('xdr:colOff', PtToStr(Total), false, false);
-
-    // row
-    n := 0;
-    Total := 0;
-    while (n < sh.RowCount) and (n < Row) do begin
-      Total := Total + sh.RowHeights[n];
-      Inc(n);
-    end;
-    // plus height
-    Y := Total + Height - 0.1;
-    while (n < sh.ColCount) and (Total < Y) do begin
-      Total := Total + sh.RowHeights[n];
-      Inc(n);
-    end;
-    xml.WriteTag('xdr:row', IntToStr(n), false, false);
-    xml.WriteTag('xdr:rowOff', PtToStr(Total), false, false);
-  end;
-
-var i: Integer;
+    i: integer;
 begin
   result := 0;
-  if not Assigned(Drawing) then
-    Exit;
-  SheetNum := XMLSS.GetDrawingSheetNum(Drawing);
   xml := TZsspXMLWriterH.Create(Stream);
   try
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
     xml.NewLine := false;
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns:xdr', 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing');
     xml.Attributes.Add('xmlns:a', 'http://schemas.openxmlformats.org/drawingml/2006/main');
     xml.Attributes.Add('xmlns:r', SCHEMA_DOC_REL, false);
     xml.WriteTagNode('xdr:wsDr', false, false, false);
 
-    for i := 0 to Drawing.PictureStore.Count - 1 do begin
-      pic := Drawing.PictureStore.Items[i];
+    for i := 0 to sheet.Drawing.Count - 1 do begin
+      pic := sheet.Drawing.Items[i];
       // cell anchor
       xml.Attributes.Clear();
       if pic.CellAnchor = ZAAbsolute then
@@ -4585,19 +4655,18 @@ begin
       // - xdr:from
       xml.Attributes.Clear();
       xml.WriteTagNode('xdr:from', false, false, false);
-      if (pic.CellAnchor = ZACell) then
-        _WriteCellForRowCol(SheetNum, pic.Row, pic.Col, 0, 0)
-      else
-        _WriteCellForXY(SheetNum, pic.X, pic.Y);
+      xml.WriteTag('xdr:col',    IntToStr(pic.FromCol), false, false);
+      xml.WriteTag('xdr:colOff', IntToStr(pic.FromColOff), false, false);
+      xml.WriteTag('xdr:row',    IntToStr(pic.FromRow), false, false);
+      xml.WriteTag('xdr:rowOff', IntToStr(pic.FromRowOff), false, false);
       xml.WriteEndTagNode(); // xdr:from
       // - xdr:to
       xml.Attributes.Clear();
       xml.WriteTagNode('xdr:to', false, false, false);
-      if (pic.CellAnchor = ZACell) then
-        _WriteCellForRowCol(SheetNum, pic.Row, pic.Col, pic.Width, pic.Height)
-      else
-        _WriteCellForXY(SheetNum, (pic.X + pic.Width), (pic.Y + pic.Height));
-      xml.Attributes.Clear();
+      xml.WriteTag('xdr:col',    IntToStr(pic.ToCol), false, false);
+      xml.WriteTag('xdr:colOff', IntToStr(pic.ToColOff), false, false);
+      xml.WriteTag('xdr:row',    IntToStr(pic.ToRow), false, false);
+      xml.WriteTag('xdr:rowOff', IntToStr(pic.ToRowOff), false, false);
       xml.WriteEndTagNode(); // xdr:from
       // - xdr:pic
       xml.WriteTagNode('xdr:pic', false, false, false);
@@ -4606,8 +4675,8 @@ begin
       // --- xdr:cNvPr
       xml.Attributes.Clear();
       xml.Attributes.Add('descr', pic.Description);
-      xml.Attributes.Add('name', pic.Name);
-      xml.Attributes.Add('id', IntToStr(pic.RelId));  // 1
+      xml.Attributes.Add('name', pic.Title);
+      xml.Attributes.Add('id', IntToStr(pic.Id));  // 1
       xml.WriteEmptyTag('xdr:cNvPr', false);
       // --- xdr:cNvPicPr
       xml.Attributes.Clear();
@@ -4619,7 +4688,7 @@ begin
       xml.WriteTagNode('xdr:blipFill', false, false, false);
       // --- a:blip
       xml.Attributes.Clear();
-      xml.Attributes.Add('r:embed', pic.RelIdStr); // rId1
+      xml.Attributes.Add('r:embed', 'rId' + IntToStr(pic.RelId)); // rId1
       xml.WriteEmptyTag('a:blip', false);
       // --- a:stretch
       xml.Attributes.Clear();
@@ -4633,13 +4702,13 @@ begin
       xml.WriteTagNode('a:xfrm', false, false, false);
       // ----
       xml.Attributes.Clear();
-      xml.Attributes.Add('x', PtToStr(pic.X));
-      xml.Attributes.Add('y', PtToStr(pic.Y));
+      xml.Attributes.Add('x', IntToStr(pic.FrmOffX));
+      xml.Attributes.Add('y', IntToStr(pic.FrmOffY));
       xml.WriteEmptyTag('a:off', false);
       // ----
       xml.Attributes.Clear();
-      xml.Attributes.Add('cx', PtToStr(pic.X + pic.Width));
-      xml.Attributes.Add('cy', PtToStr(pic.Y + pic.Height));
+      xml.Attributes.Add('cx', IntToStr(pic.FrmExtCX));
+      xml.Attributes.Add('cy', IntToStr(pic.FrmExtCY));
       xml.WriteEmptyTag('a:ext', false);
       xml.Attributes.Clear();
       xml.WriteEndTagNode(); // --- a:xfrm
@@ -4671,36 +4740,39 @@ begin
   end;
 end;
 
-function ZEXLSXCreateDrawingRels(var XMLSS: TZEXMLSS; Stream: TStream; Drawing: TZEDrawing; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
+function ZEXLSXCreateDrawingRels(sheet: TZSheet; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
 var xml: TZsspXMLWriterH;
-    pic: TZEPicture;
     i: integer;
+    dic: TDictionary<integer, string>;
+    pair: TPair<integer, string>;
 begin
   result := 0;
-  if not Assigned(Drawing) then
-    Exit;
-
+  dic := TDictionary<integer, string>.Create();
   xml := TZsspXMLWriterH.Create(Stream);
   try
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL, false);
     xml.WriteTagNode('Relationships', false, false, false);
 
-    for i := 0 to Drawing.PictureStore.Count - 1 do begin
-      pic := Drawing.PictureStore[i];
+    for i := 0 to sheet.Drawing.Count - 1 do begin
+      dic.AddOrSetValue(sheet.Drawing[i].RelId, sheet.Drawing[i].Name);
+    end;
+
+    for pair in dic do begin
       xml.Attributes.Clear();
-      xml.Attributes.Add('Id', pic.RelIdStr);
+      xml.Attributes.Add('Id', 'rId' + IntToStr(pair.Key));
       xml.Attributes.Add('Type', SCHEMA_DOC_REL + '/image');
-      xml.Attributes.Add('Target', '../media/' + pic.Name);
+      xml.Attributes.Add('Target', '../media/' + pair.Value);
       xml.WriteEmptyTag('Relationship', false, true);
     end;
     xml.WriteEndTagNode(); // Relationships
   finally
     xml.Free();
+    dic.Free();
   end;
 end;
 
@@ -4782,18 +4854,6 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.Attributes.Add('ref', s);
     xml.WriteEmptyTag('dimension', true, false);
 
-    {$REGION 'write sheetFormatPr'}
-    if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
-        xml.Attributes.Clear();
-        xml.Attributes.Add('defaultRowHeight', '15');
-        if (sheet.OutlineLevelCol > 0) then
-            xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
-        if (sheet.OutlineLevelRow > 0) then
-            xml.Attributes.Add('outlineLevelRow', IntToStr(sheet.OutlineLevelRow));
-        xml.WriteEmptyTag('sheetFormatPr', true, false);
-    end;
-    {$ENDREGION}
-
     xml.Attributes.Clear();
     xml.WriteTagNode('sheetViews', true, true, true);
 
@@ -4822,6 +4882,18 @@ var xml: TZsspXMLWriterH;    //писатель
     xml.Attributes.Add('zoomScaleNormal', '100', false);
     xml.Attributes.Add('zoomScalePageLayoutView', '100', false);
     xml.WriteTagNode('sheetView', true, true, false);
+
+    {$REGION 'write sheetFormatPr'}
+    if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add('defaultRowHeight', '15');
+        if (sheet.OutlineLevelCol > 0) then
+            xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
+        if (sheet.OutlineLevelRow > 0) then
+            xml.Attributes.Add('outlineLevelRow', IntToStr(sheet.OutlineLevelRow));
+        xml.WriteEmptyTag('sheetFormatPr', true, false);
+    end;
+    {$ENDREGION}
 
     sheetOptions := sheet.SheetOptions;
 
@@ -4896,7 +4968,7 @@ var xml: TZsspXMLWriterH;    //писатель
     _AddSelection('A1', 'bottomLeft');
     _AddSelection('F16', 'topLeft');
     }
-    
+
     s := ZEGetA1byCol(sheet.SheetOptions.ActiveCol) + IntToSTr(sheet.SheetOptions.ActiveRow + 1);
     xml.Attributes.Clear();
     xml.Attributes.Add('activeCell', s);
@@ -5141,7 +5213,7 @@ var xml: TZsspXMLWriterH;    //писатель
     // drawings
     if (not sheet.Drawing.IsEmpty) then begin
       // rels to helper
-      rId := WriteHelper.AddDrawing('../drawings/drawing' + IntToStr(sheet.Drawing.Id) + '.xml');
+      rId := WriteHelper.AddDrawing('../drawings/drawing' + IntToStr(sheet.SheetIndex + 1) + '.xml');
       xml.Attributes.Clear();
       xml.Attributes.Add('r:id', 'rId' + IntToStr(rId));
       xml.WriteEmptyTag('drawing');
@@ -5155,9 +5227,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
-
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN);
     xml.Attributes.Add('xmlns:r', SCHEMA_DOC_REL);
@@ -5218,7 +5288,7 @@ begin
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
 
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
 
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN);
@@ -5268,7 +5338,7 @@ begin
   end;
 end; //ZEXLSXCreateWorkBook
 
-//Создаёт styles.xml 
+//Создаёт styles.xml
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
@@ -5712,7 +5782,7 @@ var
       ZEHair:
         begin
           s1 := 'hair';
-        end; 
+        end;
       ZEDash:
         begin
           if (_border.Weight = 1) then
@@ -5938,7 +6008,7 @@ var
   //<cellStyles> ... </cellStyles>
   procedure WriteCellStyles();
   begin
-  end; //WriteCellStyles 
+  end; //WriteCellStyles
 
 begin
   result := 0;
@@ -5950,7 +6020,7 @@ begin
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
 
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     _StylesCount := XMLSS.Styles.Count;
 
     xml.Attributes.Clear();
@@ -6014,8 +6084,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
-    xml.Attributes.Clear();
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     xml.WriteTagNode('Relationships', true, true, false);
 
@@ -6029,7 +6098,7 @@ begin
   end;
 end; //ZEXLSXCreateRelsMain
 
-//Создаёт xl/_rels/workbook.xml.rels   
+//Создаёт xl/_rels/workbook.xml.rels
 //INPUT
 //    PageCount: integer                - кол-во страниц
 //    Stream: TStream                   - поток для записи
@@ -6047,8 +6116,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns', SCHEMA_PACKAGE_REL);
     xml.WriteTagNode('Relationships', true, true, false);
@@ -6085,7 +6153,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('count', '0');
     xml.Attributes.Add('uniqueCount', '0', false);
@@ -6117,7 +6185,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns',    SCHEMA_DOC + '/extended-properties');
     xml.Attributes.Add('xmlns:vt', SCHEMA_DOC + '/docPropsVTypes', false);
@@ -6132,7 +6200,7 @@ begin
   end;
 end; //ZEXLSXCreateDocPropsApp
 
-//Создаёт app.xml 
+//Создаёт app.xml
 //INPUT
 //  var XMLSS: TZEXMLSS                 - хранилище
 //    Stream: TStream                   - поток для записи
@@ -6150,7 +6218,7 @@ begin
     xml.TabLength := 1;
     xml.TextConverter := TextConverter;
     xml.TabSymbol := ' ';
-    ZEWriteHeaderCommon(xml, CodePageName, BOM);
+    xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
     xml.Attributes.Add('xmlns:cp', SCHEMA_PACKAGE + '/metadata/core-properties');
     xml.Attributes.Add('xmlns:dc', 'http://purl.org/dc/elements/1.1/', false);
@@ -6190,15 +6258,15 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string; const Sheets
 var
   _pages: TIntegerDynArray;      //номера страниц
   _names: TStringDynArray;      //названия страниц
-  kol, i, ii: integer;
+  kol, i{, ii}: integer;
   Stream: TStream;
   _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   s: string;
-  iDrawingsCount: Integer;
-  path_draw, path_draw_rel, path_media: string;
-  _drawing: TZEDrawing;
-  _pic: TZEPicture;
+  //iDrawingsCount: Integer;
+  //path_draw, path_draw_rel, path_media: string;
+  //_drawing: TZEDrawing;
+  //_pic: TZEPicture;
 begin
   Result := 0;
   Stream := nil;
@@ -6239,7 +6307,7 @@ begin
     ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
     FreeAndNil(Stream);
 
-    // xl/_rels/workbook.xml.rels 
+    // xl/_rels/workbook.xml.rels
     path_relsw := path_xl + '_rels' + PathDelim;
     if (not DirectoryExists(path_relsw)) then
       ForceDirectories(path_relsw);
@@ -6251,7 +6319,7 @@ begin
     if (not DirectoryExists(path_sheets)) then
       ForceDirectories(path_sheets);
 
-    iDrawingsCount := XMLSS.DrawingCount();
+    //iDrawingsCount := XMLSS.DrawingCount();
 
     // sheets of workbook
     for i := 0 to kol - 1 do begin
@@ -6271,51 +6339,51 @@ begin
     end; //for i
 
     //iDrawingsCount := XMLSS.DrawingCount();
-    if iDrawingsCount <> 0 then begin
-      path_draw := path_xl + 'drawings' + PathDelim;
-      if (not DirectoryExists(path_draw)) then
-        ForceDirectories(path_draw);
-
-      path_draw_rel := path_draw + '_rels' + PathDelim;
-      if (not DirectoryExists(path_draw_rel)) then
-        ForceDirectories(path_draw_rel);
-
-      path_media := path_xl + 'media' + PathDelim;
-      if (not DirectoryExists(path_media)) then
-        ForceDirectories(path_media);
-
-      for i := 0 to iDrawingsCount - 1 do begin
-        _drawing := XMLSS.GetDrawing(i);
-        // drawings/drawingN.xml
-        Stream := TFileStream.Create(path_draw + 'drawing' + IntToStr(_drawing.Id) + '.xml', fmCreate);
-        try
-          ZEXLSXCreateDrawing(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
-        finally
-          FreeAndNil(Stream);
-        end;
-
-        // drawings/_rels/drawingN.xml.rels
-        Stream := TFileStream.Create(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels', fmCreate);
-        try
-          ZEXLSXCreateDrawingRels(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
-        finally
-          FreeAndNil(Stream);
-        end;
-
-        // media/imageN.png
-        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
-          _pic := _drawing.PictureStore[ii];
-          if not Assigned(_pic.DataStream) then Continue;
-          Stream := TFileStream.Create(path_media + _pic.Name, fmCreate);
-          try
-            _pic.DataStream.Position := 0;
-            Stream.CopyFrom(_pic.DataStream, _pic.DataStream.Size);
-          finally
-            FreeAndNil(Stream);
-          end;
-        end;
-      end;
-    end;
+//    if iDrawingsCount <> 0 then begin
+//      path_draw := path_xl + 'drawings' + PathDelim;
+//      if (not DirectoryExists(path_draw)) then
+//        ForceDirectories(path_draw);
+//
+//      path_draw_rel := path_draw + '_rels' + PathDelim;
+//      if (not DirectoryExists(path_draw_rel)) then
+//        ForceDirectories(path_draw_rel);
+//
+//      path_media := path_xl + 'media' + PathDelim;
+//      if (not DirectoryExists(path_media)) then
+//        ForceDirectories(path_media);
+//
+//      for i := 0 to iDrawingsCount - 1 do begin
+//        _drawing := XMLSS.GetDrawing(i);
+//        // drawings/drawingN.xml
+//        Stream := TFileStream.Create(path_draw + 'drawing' + IntToStr(_drawing.Id) + '.xml', fmCreate);
+//        try
+//          ZEXLSXCreateDrawing(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
+//        finally
+//          FreeAndNil(Stream);
+//        end;
+//
+//        // drawings/_rels/drawingN.xml.rels
+//        Stream := TFileStream.Create(path_draw_rel + 'drawing' + IntToStr(i + 1) + '.xml.rels', fmCreate);
+//        try
+//          ZEXLSXCreateDrawingRels(XMLSS, Stream, _drawing, TextConverter, CodePageName, BOM);
+//        finally
+//          FreeAndNil(Stream);
+//        end;
+//
+//        // media/imageN.png
+//        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
+//          _pic := _drawing.PictureStore[ii];
+//          if not Assigned(_pic.DataStream) then Continue;
+//          Stream := TFileStream.Create(path_media + _pic.Name, fmCreate);
+//          try
+//            _pic.DataStream.Position := 0;
+//            Stream.CopyFrom(_pic.DataStream, _pic.DataStream.Size);
+//          finally
+//            FreeAndNil(Stream);
+//          end;
+//        end;
+//      end;
+//    end;
 
     //workbook.xml - list of shhets
     Stream := TFileStream.Create(path_xl + 'workbook.xml', fmCreate);
@@ -6407,12 +6475,10 @@ function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; zipStream: TStream; const SheetsNu
 var
   _pages: TIntegerDynArray; // numbers of sheets
   _names: TStringDynArray;  // names of sheets
-  kol, i, j, drwCount: integer;
+  kol, i: integer;
   zip: TZipFile;
   stream: TStream;
   writeHelper: TZEXLSXWriteHelper;
-  drawing: TZEDrawing;
-  pic: TZEPicture;
 begin
   Result := 0;
   zip := TZipFile.Create();
@@ -6487,16 +6553,14 @@ begin
       end;
     end; //for i
 
-    drwCount := XMLSS.DrawingCount();
-    if drwCount <> 0 then begin
-      for i := 0 to drwCount - 1 do begin
-        drawing := XMLSS.GetDrawing(i);
+    for i := 0 to XMLSS.Sheets.Count - 1 do begin
+      if not XMLSS.Sheets[i].Drawing.IsEmpty then begin
         // drawings/drawingN.xml
         stream := TMemoryStream.Create();
         try
-          ZEXLSXCreateDrawing(XMLSS, stream, drawing, TextConverter, CodePageName, BOM);
+          ZEXLSXCreateDrawing(XMLSS.Sheets[i], stream, TextConverter, CodePageName, BOM);
           stream.Position := 0;
-          zip.Add(stream, 'xl/drawings/drawing' + IntToStr(drawing.Id) + '.xml');
+          zip.Add(stream, 'xl/drawings/drawing' + IntToStr(i+1) + '.xml');
         finally
           FreeAndNil(stream);
         end;
@@ -6504,28 +6568,18 @@ begin
         // drawings/_rels/drawingN.xml.rels
         stream := TMemoryStream.Create();
         try
-          ZEXLSXCreateDrawingRels(XMLSS, stream, drawing, TextConverter, CodePageName, BOM);
+          ZEXLSXCreateDrawingRels(XMLSS.Sheets[i], stream, TextConverter, CodePageName, BOM);
           stream.Position := 0;
-          zip.Add(stream, 'xl/drawings/_rels/drawing' + IntToStr(drawing.Id) + '.xml.rels');
+          zip.Add(stream, 'xl/drawings/_rels/drawing' + IntToStr(i+1) + '.xml.rels');
         finally
           FreeAndNil(stream);
         end;
-
-        // media/imageN.png
-        for j := 0 to drawing.PictureStore.Count - 1 do begin
-          pic := drawing.PictureStore[j];
-          if Assigned(pic.DataStream) then begin
-            stream := TMemoryStream.Create();
-            try
-              pic.DataStream.Position := 0;
-              stream.CopyFrom(pic.DataStream, pic.DataStream.Size);
-              zip.Add(stream, 'xl/media/' + pic.Name);
-            finally
-              FreeAndNil(stream);
-            end;
-          end;
-        end;
       end;
+    end;
+
+    // media/imageN.png
+    for I := 0 to High(XMLSS.MediaList) do begin
+      zip.Add(XMLSS.MediaList[i].Content, 'xl/media/' + XMLSS.MediaList[i].FileName);
     end;
 
     //workbook.xml - sheets count

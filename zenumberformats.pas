@@ -34,8 +34,7 @@ const
   ZETag_number_seconds        = 'number:seconds';
   ZETag_number_day_of_week    = 'number:day-of-week';
   ZETag_number_textual        = 'number:textual';
-  ZETag_number_possessive_form = 'number:possessive-form';
-
+  ZETag_number_possessive_form= 'number:possessive-form';
   ZETag_number_am_pm          = 'number:am-pm';
   ZETag_number_quarter        = 'number:quarter';
   ZETag_number_week_of_year   = 'number:week-of-year';
