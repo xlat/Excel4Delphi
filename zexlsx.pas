@@ -254,7 +254,7 @@ function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 
 implementation
 
-uses AnsiStrings, StrUtils, Math, zenumberformats;
+uses AnsiStrings, StrUtils, Math, zenumberformats, NetEncoding;
 
 const
   SCHEMA_DOC         = 'http://schemas.openxmlformats.org/officeDocument/2006';
@@ -696,11 +696,16 @@ end;
 procedure TZEXLSXNumberFormats.ReadNumFmts(const xml: TZsspXMLReaderH);
 var temp: integer;
 begin
-  while xml.ReadToEndTagByName('numFmts') do begin
-    if (xml.TagName = 'numFmt') then
-      if (TryStrToInt(xml.Attributes['numFmtId'], temp)) then
-        Format[temp] := xml.Attributes['formatCode'];
-  end;
+  with THTMLEncoding.Create do
+    try
+      while xml.ReadToEndTagByName('numFmts') do begin
+        if (xml.TagName = 'numFmt') then
+          if (TryStrToInt(xml.Attributes['numFmtId'], temp)) then
+            Format[temp] := Decode(xml.Attributes['formatCode']);
+      end;
+    finally
+      Free;
+    end;
 end;
 
 procedure TZEXLSXNumberFormats.SetStyleFMTID(num: integer; const value: integer);
