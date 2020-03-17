@@ -224,10 +224,10 @@ type
 //Дополнительные функции для экспорта отдельных файлов
 function ZEXLSXCreateStyles(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray; const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; var SharedStrings: TStringDynArray; const SharedStringsDictionary: TDictionary<string, integer>; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateContentTypes(var XMLSS: TZEXMLSS; Stream: TStream; PageCount: integer; CommentCount: integer; const PagesComments: TIntegerDynArray; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 function ZEXLSXCreateRelsMain(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
-function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; const SharedStrings: TStringDynArray; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsApp(Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDocPropsCore(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
 function ZEXLSXCreateDrawing(sheet: TZSheet; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
@@ -4778,17 +4778,19 @@ end;
 
 //Создаёт лист документа (sheet*.xml)
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
-//    Stream: TStream                   - поток для записи
-//    SheetNum: integer                 - номер листа в документе
-//    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
-//    CodePageName: string              - название кодовой страници
-//    BOM: ansistring                   - BOM
-//  var isHaveComments: boolean         - возвращает true, если были комментарии (чтобы создать comments*.xml)
-//  const WriteHelper: TZEXLSXWriteHelper - additional data
+//    XMLSS: TZEXMLSS                                       - хранилище
+//    Stream: TStream                                       - поток для записи
+//    SheetNum: integer                                     - номер листа в документе
+//    SharedStrings: TStringDynArray                        - общие строки
+//    SharedStringsDictionary: TDictionary<string, integer> - словарь для определения дубликатов строк
+//    TextConverter: TAnsiToCPConverter                     - конвертер из локальной кодировки в нужную
+//    CodePageName: string                                  - название кодовой страници
+//    BOM: ansistring                                       - BOM
+//    isHaveComments: boolean                               - возвращает true, если были комментарии (чтобы создать comments*.xml)
+//    WriteHelper: TZEXLSXWriteHelper                       - additional data
 //RETURN
 //      integer
-function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; TextConverter: TAnsiToCPConverter;
+function ZEXLSXCreateSheet(var XMLSS: TZEXMLSS; Stream: TStream; SheetNum: integer; var SharedStrings: TStringDynArray; const SharedStringsDictionary: TDictionary<string, integer>; TextConverter: TAnsiToCPConverter;
                                      CodePageName: String; BOM: ansistring; const WriteHelper: TZEXLSXWriteHelper): integer;
 var xml: TZsspXMLWriterH;    //писатель
   sheet: TZSheet;
@@ -5012,6 +5014,7 @@ var xml: TZsspXMLWriterH;    //писатель
     b: boolean;
     s: string;
     _r: TRect;
+    strIndex: integer;
   begin
     xml.Attributes.Clear();
     xml.WriteTagNode('sheetData', true, true, true);
@@ -5051,7 +5054,28 @@ var xml: TZsspXMLWriterH;    //писатель
           ZENumber:   s := 'n';
           ZEDateTime: s := 'd'; //??
           ZEBoolean:  s := 'b';
-          ZEString:   s := 'str';
+          ZEString:
+          begin
+            //А.А.Валуев Общие строки пишем только, если в строке есть
+            //определённые символы. Хотя можно писать и всё подряд.
+            if sheet.Cell[j, i].Data.StartsWith(' ')
+                or sheet.Cell[j, i].Data.EndsWith(' ')
+                or (sheet.Cell[j, i].Data.IndexOfAny([#10, #13]) >= 0) then
+            begin
+              //А.А.Валуев С помощью словаря пытаемся находить дубликаты строк.
+              if SharedStringsDictionary.ContainsKey(sheet.Cell[j, i].Data) then
+                strIndex := SharedStringsDictionary[sheet.Cell[j, i].Data]
+              else
+              begin
+                strIndex := Length(SharedStrings);
+                Insert(sheet.Cell[j, i].Data, SharedStrings, strIndex);
+                SharedStringsDictionary.Add(sheet.Cell[j, i].Data, strIndex);
+              end;
+              s := 's';
+            end
+            else
+              s := 'str';
+          end;
           ZEError:    s := 'e';
         end;
 
@@ -5069,7 +5093,10 @@ var xml: TZsspXMLWriterH;    //писатель
           end;
           if (sheet.Cell[j, i].Data > '') then begin
             xml.Attributes.Clear();
-            xml.WriteTag('v', sheet.Cell[j, i].Data, true, false, true);
+            if s = 's' then
+              xml.WriteTag('v', strIndex.ToString, true, false, true)
+            else
+              xml.WriteTag('v', sheet.Cell[j, i].Data, true, false, true);
           end;
           xml.WriteEndTagNode();
         end else
@@ -6135,17 +6162,18 @@ begin
   end;
 end; //ZEXLSXCreateRelsWorkBook
 
-//Создаёт sharedStrings.xml (пока не реализовано)
+//Создаёт sharedStrings.xml
 //INPUT
-//  var XMLSS: TZEXMLSS                 - хранилище
+//    XMLSS: TZEXMLSS                   - хранилище
 //    Stream: TStream                   - поток для записи
+//    SharedStrings: TStringDynArray    - общие строки
 //    TextConverter: TAnsiToCPConverter - конвертер из локальной кодировки в нужную
 //    CodePageName: string              - название кодовой страници
 //    BOM: ansistring                   - BOM
 //RETURN
 //      integer
-function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
-var xml: TZsspXMLWriterH;
+function ZEXLSXCreateSharedStrings(var XMLSS: TZEXMLSS; Stream: TStream; const SharedStrings: TStringDynArray; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring): integer;
+var xml: TZsspXMLWriterH; i, count: integer; str: string;
 begin
   result := 0;
   xml := TZsspXMLWriterH.Create(Stream);
@@ -6155,12 +6183,25 @@ begin
     xml.TabSymbol := ' ';
     xml.WriteHeader(CodePageName, BOM);
     xml.Attributes.Clear();
-    xml.Attributes.Add('count', '0');
-    xml.Attributes.Add('uniqueCount', '0', false);
+    count := Length(SharedStrings);
+    xml.Attributes.Add('count', count.ToString);
+    xml.Attributes.Add('uniqueCount', count.ToString, false);
     xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN, false);
     xml.WriteTagNode('sst', true, true, false);
 
-    //Пока не заполняется
+    {- Write out the content of Shared Strings: <si><t>Value</t></si> }
+    for i := 0 to Pred(count) do begin
+      xml.Attributes.Clear();
+      xml.WriteTagNode('si', false, false, false);
+      str := SharedStrings[i];
+      xml.Attributes.Clear();
+      if str.StartsWith(' ') or str.EndsWith(' ') then
+        //А.А.Валуев Чтобы ведущие и последние пробелы не терялись,
+        //добавляем атрибут xml:space="preserve".
+        xml.Attributes.Add('xml:space', 'preserve', false);
+      xml.WriteTag('t', str);
+      xml.WriteEndTagNode();
+    end;
 
     xml.WriteEndTagNode(); //Relationships
   finally
@@ -6263,6 +6304,8 @@ var
   _WriteHelper: TZEXLSXWriteHelper;
   path_xl, path_sheets, path_relsmain, path_relsw, path_docprops: string;
   s: string;
+  SharedStrings: TStringDynArray;
+  SharedStringsDictionary: TDictionary<string, integer>;
   //iDrawingsCount: Integer;
   //path_draw, path_draw_rel, path_media: string;
   //_drawing: TZEDrawing;
@@ -6272,6 +6315,8 @@ begin
   Stream := nil;
   _WriteHelper := nil;
   kol := 0;
+  SharedStrings := [];
+  SharedStringsDictionary := TDictionary<string, integer>.Create;
   try
     if (not TDirectory.Exists(PathName)) then begin
       result := 3;
@@ -6291,29 +6336,41 @@ begin
 
     // styles
     Stream := TFileStream.Create(path_xl + 'styles.xml', fmCreate);
-    ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
+    try
+      ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
+    finally
+      FreeAndNil(Stream);
+    end;
 
     // sharedStrings.xml
     Stream := TFileStream.Create(path_xl + 'sharedStrings.xml', fmCreate);
-    ZEXLSXCreateSharedStrings(XMLSS, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
+    try
+      ZEXLSXCreateSharedStrings(XMLSS, Stream, SharedStrings, TextConverter, CodePageName, BOM);
+    finally
+      FreeAndNil(Stream);
+    end;
 
     // _rels/.rels
     path_relsmain := PathName + PathDelim + '_rels' + PathDelim;
     if (not DirectoryExists(path_relsmain)) then
       ForceDirectories(path_relsmain);
     Stream := TFileStream.Create(path_relsmain + '.rels', fmCreate);
-    ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
+    try
+      ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
+    finally
+      FreeAndNil(Stream);
+    end;
 
     // xl/_rels/workbook.xml.rels
     path_relsw := path_xl + '_rels' + PathDelim;
     if (not DirectoryExists(path_relsw)) then
       ForceDirectories(path_relsw);
     Stream := TFileStream.Create(path_relsw + 'workbook.xml.rels', fmCreate);
-    ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
-    FreeAndNil(Stream);
+    try
+      ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
+    finally
+      FreeAndNil(Stream);
+    end;
 
     path_sheets := path_xl + 'worksheets' + PathDelim;
     if (not DirectoryExists(path_sheets)) then
@@ -6324,8 +6381,11 @@ begin
     // sheets of workbook
     for i := 0 to kol - 1 do begin
       Stream := TFileStream.Create(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml', fmCreate);
-      ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], TextConverter, CodePageName, BOM, _WriteHelper);
-      FreeAndNil(Stream);
+      try
+        ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, _WriteHelper);
+      finally
+        FreeAndNil(Stream);
+      end;
 
       if (_WriteHelper.HyperLinksCount > 0) then begin
         _WriteHelper.AddSheetHyperlink(i);
@@ -6333,8 +6393,11 @@ begin
         if (not DirectoryExists(s)) then
           ForceDirectories(s);
         Stream := TFileStream.Create(s + 'sheet' + IntToStr(i + 1) + '.xml.rels', fmCreate);
-        _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
-        FreeAndNil(Stream);
+        try
+          _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
+        finally
+          FreeAndNil(Stream);
+        end;
       end;
     end; //for i
 
@@ -6426,6 +6489,7 @@ begin
     if (Assigned(Stream)) then
       FreeAndNil(Stream);
     FreeAndNil(_WriteHelper);
+    SharedStringsDictionary.Free;
   end;
 end; //SaveXmlssToXLSXPath
 
@@ -6479,152 +6543,163 @@ var
   zip: TZipFile;
   stream: TStream;
   writeHelper: TZEXLSXWriteHelper;
+  SharedStrings: TStringDynArray;
+  SharedStringsDictionary: TDictionary<string, integer>;
 begin
   Result := 0;
+  SharedStrings := [];
   zip := TZipFile.Create();
-  writeHelper := TZEXLSXWriteHelper.Create();
   try
-    if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
-      exit(2);
-
-    zip.Open(zipStream, zmReadWrite);
-
-    // styles
-    stream := TMemoryStream.Create();
+    writeHelper := TZEXLSXWriteHelper.Create();
     try
-      ZEXLSXCreateStyles(XMLSS, stream, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, 'xl/styles.xml');
-    finally
-      FreeAndNil(stream);
-    end;
-
-    // sharedStrings.xml
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateSharedStrings(XMLSS, stream, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, 'xl/sharedStrings.xml');
-    finally
-      FreeAndNil(stream);
-    end;
-
-    // _rels/.rels
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateRelsMain(stream, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, '_rels/.rels');
-    finally
-      FreeAndNil(stream);
-    end;
-
-    // xl/_rels/workbook.xml.rels
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateRelsWorkBook(kol, stream, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, 'xl/_rels/workbook.xml.rels');
-    finally
-      FreeAndNil(stream);
-    end;
-
-    // sheets of workbook
-    for i := 0 to kol - 1 do begin
-      stream := TMemoryStream.Create();
+      SharedStringsDictionary := TDictionary<string, integer>.Create;
       try
-        ZEXLSXCreateSheet(XMLSS, stream, _pages[i], TextConverter, CodePageName, BOM, writeHelper);
-        stream.Position := 0;
-        zip.Add(stream, 'xl/worksheets/sheet' + IntToStr(i + 1) + '.xml');
+        if (not ZECheckTablesTitle(XMLSS, SheetsNumbers, SheetsNames, _pages, _names, kol)) then
+          exit(2);
+
+        zip.Open(zipStream, zmReadWrite);
+
+        // styles
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateStyles(XMLSS, stream, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, 'xl/styles.xml');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        // _rels/.rels
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateRelsMain(stream, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, '_rels/.rels');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        // xl/_rels/workbook.xml.rels
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateRelsWorkBook(kol, stream, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, 'xl/_rels/workbook.xml.rels');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        // sheets of workbook
+        for i := 0 to kol - 1 do begin
+          stream := TMemoryStream.Create();
+          try
+            ZEXLSXCreateSheet(XMLSS, stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, writeHelper);
+            stream.Position := 0;
+            zip.Add(stream, 'xl/worksheets/sheet' + IntToStr(i + 1) + '.xml');
+          finally
+            FreeAndNil(stream);
+          end;
+
+          if (writeHelper.HyperLinksCount > 0) then begin
+            writeHelper.AddSheetHyperlink(i);
+            stream := TMemoryStream.Create();
+            try
+              writeHelper.CreateSheetRels(stream, TextConverter, CodePageName, BOM);
+              stream.Position := 0;
+              zip.Add(stream, 'xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
+            finally
+              FreeAndNil(stream);
+            end;
+          end;
+        end; //for i
+
+        // sharedStrings.xml
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateSharedStrings(XMLSS, stream, SharedStrings, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, 'xl/sharedStrings.xml');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        for i := 0 to XMLSS.Sheets.Count - 1 do begin
+          if not XMLSS.Sheets[i].Drawing.IsEmpty then begin
+            // drawings/drawingN.xml
+            stream := TMemoryStream.Create();
+            try
+              ZEXLSXCreateDrawing(XMLSS.Sheets[i], stream, TextConverter, CodePageName, BOM);
+              stream.Position := 0;
+              zip.Add(stream, 'xl/drawings/drawing' + IntToStr(i+1) + '.xml');
+            finally
+              FreeAndNil(stream);
+            end;
+
+            // drawings/_rels/drawingN.xml.rels
+            stream := TMemoryStream.Create();
+            try
+              ZEXLSXCreateDrawingRels(XMLSS.Sheets[i], stream, TextConverter, CodePageName, BOM);
+              stream.Position := 0;
+              zip.Add(stream, 'xl/drawings/_rels/drawing' + IntToStr(i+1) + '.xml.rels');
+            finally
+              FreeAndNil(stream);
+            end;
+          end;
+        end;
+
+        // media/imageN.png
+        for I := 0 to High(XMLSS.MediaList) do begin
+          zip.Add(XMLSS.MediaList[i].Content, 'xl/media/' + XMLSS.MediaList[i].FileName);
+        end;
+
+        //workbook.xml - sheets count
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateWorkBook(XMLSS, stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, 'xl/workbook.xml');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        //[Content_Types].xml
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateContentTypes(XMLSS, stream, kol, 0, nil, TextConverter, CodePageName, BOM, writeHelper);
+          stream.Position := 0;
+          zip.Add(stream, '[Content_Types].xml');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        // docProps/app.xml
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateDocPropsApp(stream, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, 'docProps/app.xml');
+        finally
+          FreeAndNil(stream);
+        end;
+
+        // docProps/core.xml
+        stream := TMemoryStream.Create();
+        try
+          ZEXLSXCreateDocPropsCore(XMLSS, stream, TextConverter, CodePageName, BOM);
+          stream.Position := 0;
+          zip.Add(stream, 'docProps/core.xml');
+        finally
+          FreeAndNil(stream);
+        end;
       finally
-        FreeAndNil(stream);
+        SharedStringsDictionary.Free;
       end;
-
-      if (writeHelper.HyperLinksCount > 0) then begin
-        writeHelper.AddSheetHyperlink(i);
-        stream := TMemoryStream.Create();
-        try
-          writeHelper.CreateSheetRels(stream, TextConverter, CodePageName, BOM);
-          stream.Position := 0;
-          zip.Add(stream, 'xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
-        finally
-          FreeAndNil(stream);
-        end;
-      end;
-    end; //for i
-
-    for i := 0 to XMLSS.Sheets.Count - 1 do begin
-      if not XMLSS.Sheets[i].Drawing.IsEmpty then begin
-        // drawings/drawingN.xml
-        stream := TMemoryStream.Create();
-        try
-          ZEXLSXCreateDrawing(XMLSS.Sheets[i], stream, TextConverter, CodePageName, BOM);
-          stream.Position := 0;
-          zip.Add(stream, 'xl/drawings/drawing' + IntToStr(i+1) + '.xml');
-        finally
-          FreeAndNil(stream);
-        end;
-
-        // drawings/_rels/drawingN.xml.rels
-        stream := TMemoryStream.Create();
-        try
-          ZEXLSXCreateDrawingRels(XMLSS.Sheets[i], stream, TextConverter, CodePageName, BOM);
-          stream.Position := 0;
-          zip.Add(stream, 'xl/drawings/_rels/drawing' + IntToStr(i+1) + '.xml.rels');
-        finally
-          FreeAndNil(stream);
-        end;
-      end;
-    end;
-
-    // media/imageN.png
-    for I := 0 to High(XMLSS.MediaList) do begin
-      zip.Add(XMLSS.MediaList[i].Content, 'xl/media/' + XMLSS.MediaList[i].FileName);
-    end;
-
-    //workbook.xml - sheets count
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateWorkBook(XMLSS, stream, _pages, _names, kol, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, 'xl/workbook.xml');
     finally
-      FreeAndNil(stream);
-    end;
-
-    //[Content_Types].xml
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateContentTypes(XMLSS, stream, kol, 0, nil, TextConverter, CodePageName, BOM, writeHelper);
-      stream.Position := 0;
-      zip.Add(stream, '[Content_Types].xml');
-    finally
-      FreeAndNil(stream);
-    end;
-
-    // docProps/app.xml
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateDocPropsApp(stream, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, 'docProps/app.xml');
-    finally
-      FreeAndNil(stream);
-    end;
-
-    // docProps/core.xml
-    stream := TMemoryStream.Create();
-    try
-      ZEXLSXCreateDocPropsCore(XMLSS, stream, TextConverter, CodePageName, BOM);
-      stream.Position := 0;
-      zip.Add(stream, 'docProps/core.xml');
-    finally
-      FreeAndNil(stream);
+      writeHelper.Free();
     end;
   finally
-    ZESClearArrays(_pages, _names);
-    writeHelper.Free();
     zip.Free();
+    ZESClearArrays(_pages, _names);
   end;
 end; //SaveXmlssToXSLX
 
