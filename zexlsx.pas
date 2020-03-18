@@ -275,6 +275,8 @@ type
     ColorType: byte;
     LumFactor: double;
     fontsize:  integer;
+    superscript: boolean;
+    subscript: boolean;
   end;
 
   TZEXLSXFontArray = array of TZEXLSXFont;
@@ -2390,6 +2392,8 @@ var
     fnt.LumFactor := 0;
     fnt.ColorType := 0;
     fnt.fontsize := 8;
+    fnt.superscript := false;
+    fnt.subscript := false;
   end; //ZEXLSXZeroFont
 
   //Обнуляет границы
@@ -2467,7 +2471,7 @@ var
   //INPUT
   //  var fnt: TZEXLSXFont  - XLSX шрифт
   //  var font: TFont       - стандартный шрифт
-  procedure ZEXLSXFontToFont(var fnt: TZEXLSXFont; var font: TFont);
+  {procedure ZEXLSXFontToFont(var fnt: TZEXLSXFont; var font: TFont);
   begin
     if (Assigned(font)) then begin
       if (fnt.bold) then
@@ -2482,7 +2486,7 @@ var
       font.Name := fnt.name;
       font.Size := fnt.fontsize;
     end;
-  end; //ZEXLSXFontToFont
+  end;} //ZEXLSXFontToFont
 
   //Прочитать цвет
   //INPUT
@@ -2552,8 +2556,9 @@ var
             FontArray[_currFont].fontsize := t;
         end else if xml.IsTagClosedByName('u') then begin
           FontArray[_currFont].underline := true;
-        end else if xml.IsTagClosedByName('vertAlign') then
-        begin
+        end else if xml.IsTagClosedByName('vertAlign') then begin
+          FontArray[_currFont].superscript := s = 'superscript';
+          FontArray[_currFont].subscript := s = 'subscript';
         end;
       end; //if
       //Тэги настройки шрифта
@@ -3386,6 +3391,8 @@ var
           XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsItalic];
         if (FontArray[n].strike) then
           XMLSSStyle.Font.Style := XMLSSStyle.Font.Style + [fsStrikeOut];
+        XMLSSStyle.Superscript := FontArray[n].superscript;
+        XMLSSStyle.Subscript := FontArray[n].subscript;
       end;
     end;
 
@@ -5513,26 +5520,32 @@ var
     end;
   end; //WritenumFmts
 
-  //Являются ли шрифты одинаковыми
-  function _isFontsEqual(const fnt1, fnt2: TFont): boolean;
+  //Являются ли шрифты стилей одинаковыми
+  function _isFontsEqual(const stl1, stl2: TZStyle): boolean;
   begin
     result := False;
-    if (fnt1.Color <> fnt2.Color) then
+    if (stl1.Font.Color <> stl2.Font.Color) then
       exit;
 
-    if (fnt1.Height <> fnt2.Height) then
+    if (stl1.Font.Height <> stl2.Font.Height) then
       exit;
 
-    if (fnt1.Name <> fnt2.Name) then
+    if (stl1.Font.Name <> stl2.Font.Name) then
       exit;
 
-    if (fnt1.Pitch <> fnt2.Pitch) then
+    if (stl1.Font.Pitch <> stl2.Font.Pitch) then
       exit;
 
-    if (fnt1.Size <> fnt2.Size) then
+    if (stl1.Font.Size <> stl2.Font.Size) then
       exit;
 
-    if (fnt1.Style <> fnt2.Style) then
+    if (stl1.Font.Style <> stl2.Font.Style) then
+      exit;
+
+    if stl1.Superscript <> stl2.Superscript then
+      exit;
+
+    if stl1.Subscript <> stl2.Subscript then
       exit;
 
     Result := true; // если уж до сюда добрались
@@ -5582,7 +5595,7 @@ var
       n := i + 1;
       for j := n to _StylesCount - 1 do
       if (_FontIndex[j + 1] = -2) then
-        if (_isFontsEqual(XMLSS.Styles[i].Font, XMLSS.Styles[j].Font)) then
+        if (_isFontsEqual(XMLSS.Styles[i], XMLSS.Styles[j])) then
           _FontIndex[j + 1] := i;
     end; //if
 
@@ -5636,6 +5649,19 @@ var
         xml.Attributes.Clear();
         xml.Attributes.Add('val', 'single');
         xml.WriteEmptyTag('u', true);
+      end;
+
+      //<vertAlign val="superscript"/>
+      if XMLSS.Styles[i - 1].Superscript then begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add('val', 'superscript');
+        xml.WriteEmptyTag('vertAlign', true);
+      end
+      //<vertAlign val="subscript"/>
+      else if XMLSS.Styles[i - 1].Subscript then begin
+        xml.Attributes.Clear();
+        xml.Attributes.Add('val', 'subscript');
+        xml.WriteEmptyTag('vertAlign', true);
       end;
 
       xml.WriteEndTagNode(); //font

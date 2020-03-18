@@ -331,12 +331,16 @@ type
     FNumberFormat: string;
     FProtect: boolean;
     FHideFormula: boolean;
+    FSuperscript: boolean;
+    FSubscript: boolean;
     procedure SetFont(const Value: TFont);
     procedure SetBorder(const Value: TZBorder);
     procedure SetAlignment(const Value: TZAlignment);
     procedure SetBGColor(const Value: TColor);
     procedure SetPatternColor(const Value: TColor);
     procedure SetCellPattern(const Value: TZCellPattern);
+    procedure SetSuperscript(const Value: boolean);
+    procedure SetSubscript(const Value: boolean);
   protected
     procedure SetNumberFormat(const Value: string); virtual;
   public
@@ -376,6 +380,14 @@ type
     /// Indicates whether or not this cell's formula should be hidden when sheet protection is enabled. <br />False by default.
     /// </summary>
     property HideFormula: boolean read FHideFormula write FHideFormula default false;
+    /// <summary>
+    /// Indicates whether or not the text is slightly above the baseline. <br />False by default.
+    /// </summary>
+    property Superscript: boolean read FSuperscript write SetSuperscript default false;
+    /// <summary>
+    /// Indicates whether or not the text is slightly below the baseline. <br />False by default.
+    /// </summary>
+    property Subscript: boolean read FSubscript write SetSubscript default false;
     /// <summary>
     /// Fill pattern of the cell. <br />ZPNone by default.
     /// </summary>
@@ -2483,6 +2495,8 @@ begin
   FNumberFormatId := -1;
   FProtect        := true;
   FHideFormula    := false;
+  FSuperscript    := false;
+  FSubscript      := false;
 end;
 
 destructor TZStyle.Destroy();
@@ -2508,6 +2522,8 @@ begin
     FNumberFormatId := zSource.NumberFormatId;
     FProtect        := zSource.Protect;
     FHideFormula    := zSource.HideFormula;
+    FSuperscript    := zSource.Superscript;
+    FSubscript      := zSource.Subscript;
   end else
     inherited Assign(Source);
 end;
@@ -2536,6 +2552,10 @@ begin
   if Protect <> zSource.Protect then
     exit;
   if HideFormula <> zSource.HideFormula then
+    exit;
+  if Superscript <> zSource.Superscript then
+    exit;
+  if Subscript <> zSource.Subscript then
     exit;
   Result := ZEIsFontsEquals(FFont, zSource.Font);
 end;
@@ -2568,6 +2588,26 @@ end;
 procedure TZStyle.SetCellPattern(const Value: TZCellPattern);
 begin
   FCellPattern := Value;
+end;
+
+procedure TZStyle.SetSuperscript(const Value: boolean);
+begin
+  if FSuperscript <> Value then
+  begin
+    FSuperscript := Value;
+    if FSuperscript then
+      FSubscript := false;
+  end;
+end;
+
+procedure TZStyle.SetSubscript(const Value: boolean);
+begin
+  if FSubscript <> Value then
+  begin
+    FSubscript := Value;
+    if FSubscript then
+      FSuperscript := false;
+  end;
 end;
 
 procedure TZStyle.SetNumberFormat(const Value: string);
