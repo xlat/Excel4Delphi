@@ -274,7 +274,7 @@ type
     color:     TColor;
     ColorType: byte;
     LumFactor: double;
-    fontsize:  integer;
+    fontsize:  double;
     superscript: boolean;
     subscript: boolean;
   end;
@@ -2524,7 +2524,7 @@ var
   end; //ZXLSXGetColor
 
   procedure _ReadFonts();
-  var _currFont: integer;
+  var _currFont: integer; sz: double;
   begin
     _currFont := -1;
     while xml.ReadToEndTagByName('fonts') do begin
@@ -2552,8 +2552,8 @@ var
           FontArray[_currFont].strike := true
         else
         if xml.IsTagClosedByName('sz') then begin
-          if (TryStrToInt(s, t)) then
-            FontArray[_currFont].fontsize := t;
+          if (TryStrToFloat(s, sz, TFormatSettings.Invariant)) then
+            FontArray[_currFont].fontsize := sz;
         end else if xml.IsTagClosedByName('u') then begin
           FontArray[_currFont].underline := true;
         end else if xml.IsTagClosedByName('vertAlign') then begin
@@ -5527,13 +5527,7 @@ var
     if (stl1.Font.Color <> stl2.Font.Color) then
       exit;
 
-    if (stl1.Font.Height <> stl2.Font.Height) then
-      exit;
-
     if (stl1.Font.Name <> stl2.Font.Name) then
-      exit;
-
-    if (stl1.Font.Pitch <> stl2.Font.Pitch) then
       exit;
 
     if (stl1.Font.Size <> stl2.Font.Size) then
@@ -5582,7 +5576,7 @@ var
   procedure WriteXLSXFonts();
   var i, j, n: integer;
     _fontCount: integer;
-    fnt: TFont;
+    fnt: TZFont;
   begin
     _fontCount := 0;
     SetLength(_FontIndex, _StylesCount + 1);
@@ -5618,7 +5612,7 @@ var
       xml.WriteEmptyTag('charset', true);
 
       xml.Attributes.Clear();
-      xml.Attributes.Add('val', IntToStr(fnt.Size));
+      xml.Attributes.Add('val', FloatToStr(fnt.Size, TFormatSettings.Invariant));
       xml.WriteEmptyTag('sz', true);
 
       if (fnt.Color <> clWindowText) then begin

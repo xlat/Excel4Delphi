@@ -317,13 +317,35 @@ type
   end;
 
   /// <summary>
+  ///  Excel Font - https://docs.microsoft.com/ru-ru/office/vba/api/excel.font(object)
+  /// </summary>
+  TZFont = class (TPersistent)
+  private
+    FColor: TColor;
+    FSize: double;
+    FCharset: TFontCharset;
+    FName: TFontName;
+    FStyle: TFontStyles;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
+    procedure AssignTo(Dest: TPersistent); override;
+    property Color: TColor read FColor write FColor;
+    property Size: double read FSize write FSize;
+    property Charset: TFontCharset read FCharset write FCharset;
+    property Name: TFontName read FName write FName;
+    property Style: TFontStyles read FStyle write FStyle;
+  end;
+
+  /// <summary>
   /// Cell style.
   /// </summary>
   TZStyle = class (TPersistent)
   private
     FBorder: TZBorder;
     FAlignment: TZAlignment;
-    FFont: TFont;
+    FFont: TZFont;
     FBGColor: TColor;
     FPatternColor: TColor;
     FCellPattern: TZCellPattern;
@@ -333,7 +355,7 @@ type
     FHideFormula: boolean;
     FSuperscript: boolean;
     FSubscript: boolean;
-    procedure SetFont(const Value: TFont);
+    procedure SetFont(const Value: TZFont);
     procedure SetBorder(const Value: TZBorder);
     procedure SetAlignment(const Value: TZAlignment);
     procedure SetBGColor(const Value: TColor);
@@ -355,7 +377,7 @@ type
     /// <summary>
     /// Cell font.
     /// </summary>
-    property Font: TFont read FFont write SetFont;
+    property Font: TZFont read FFont write SetFont;
     /// <summary>
     /// Cell borders.
     /// </summary>
@@ -1689,8 +1711,8 @@ type
     procedure SetBgColor(const Value: TColor);
     function GetFontColor(): TColor;
     procedure SetFontColor(const Value: TColor);
-    function GetFontSize(): Byte;
-    procedure SetFontSize(const Value: Byte);
+    function GetFontSize(): double;
+    procedure SetFontSize(const Value: double);
     function GetFontStyle(): TFontStyles;
     procedure SetFontStyle(const Value: TFontStyles);
     function GetBorderStyle(Num: TZBordersPos): TZBorderType;
@@ -1710,7 +1732,7 @@ type
     property HorizontalAlignment: TZHorizontalAlignment read GetHorizontalAlignment write SetHorizontalAlignment;
     property BgColor: TColor read GetBgColor write SetBgColor;
     property FontColor: TColor read GetFontColor write SetFontColor;
-    property FontSize: Byte read GetFontSize write SetFontSize;
+    property FontSize: double read GetFontSize write SetFontSize;
     property FontStyle: TFontStyles read GetFontStyle write SetFontStyle;
     property BorderStyle[num: TZBordersPos]: TZBorderType read GetBorderStyle write SetBorderStyle;
     property BorderWidht[num: TZBordersPos]: Byte read GetBorderWidht write SetBorderWidht;
@@ -1737,8 +1759,8 @@ type
     procedure SetBgColor(const Value: TColor);
     function GetFontColor(): TColor;
     procedure SetFontColor(const Value: TColor);
-    function GetFontSize(): Byte;
-    procedure SetFontSize(const Value: Byte);
+    function GetFontSize(): double;
+    procedure SetFontSize(const Value: double);
     function GetFontStyle(): TFontStyles;
     procedure SetFontStyle(const Value: TFontStyles);
     function GetBorderStyle(Num: TZBordersPos): TZBorderType;
@@ -1762,7 +1784,7 @@ type
     property HorizontalAlignment: TZHorizontalAlignment read GetHorizontalAlignment write SetHorizontalAlignment;
     property BgColor: TColor read GetBgColor write SetBgColor;
     property FontColor: TColor read GetFontColor write SetFontColor;
-    property FontSize: Byte read GetFontSize write SetFontSize;
+    property FontSize: double read GetFontSize write SetFontSize;
     property FontStyle: TFontStyles read GetFontStyle write SetFontStyle;
     property BorderStyle[num: TZBordersPos]: TZBorderType read GetBorderStyle write SetBorderStyle;
     property BorderWidht[num: TZBordersPos]: Byte read GetBorderWidht write SetBorderWidht;
@@ -1898,7 +1920,12 @@ function MMToPoint(inMM: real): real;
 /// <summary>
 /// Checks is Font1 equal Font2
 /// </summary>
-function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
+function ZEIsFontsEquals(const Font1, Font2: TZFont): boolean; overload;
+
+/// <summary>
+/// Checks is Font1 equal Font2
+/// </summary>
+function ZEIsFontsEquals(const Font1, Font2: TFont): boolean; overload;
 
 /// <summary>
 /// Convert datetime value to string (YYYY-MM-DDTHH:MM:SS[.mmm]).
@@ -2165,6 +2192,27 @@ begin
   end;
 end; //TryZEStrToDateTime
 
+function ZEIsFontsEquals(const Font1, Font2: TZFont): boolean;
+begin
+  Result := Assigned(Font1) and (Assigned(Font2));
+  if (Result) then begin
+    Result := false;
+    if (Font1.Color <> Font2.Color) then
+      exit;
+
+    if (Font1.Name <> Font2.Name) then
+      exit;
+
+    if (Font1.Size <> Font2.Size) then
+      exit;
+
+    if (Font1.Style <> Font2.Style) then
+      exit;
+
+    Result := true;
+  end;
+end; //ZEIsFontsEquals
+
 function ZEIsFontsEquals(const Font1, Font2: TFont): boolean;
 begin
   Result := Assigned(Font1) and (Assigned(Font2));
@@ -2173,13 +2221,7 @@ begin
     if (Font1.Color <> Font2.Color) then
       exit;
 
-    if (Font1.Height <> Font2.Height) then
-      exit;
-
     if (Font1.Name <> Font2.Name) then
-      exit;
-
-    if (Font1.Pitch <> Font2.Pitch) then
       exit;
 
     if (Font1.Size <> Font2.Size) then
@@ -2478,11 +2520,69 @@ begin
   FWrapText := Value;
 end;
 
+////::::::::::::: TZFont :::::::::::::::::////
+
+constructor TZFont.Create;
+begin
+  inherited;
+  FColor := clWindowText;
+  FSize := 8;
+  FCharset := DEFAULT_CHARSET;
+  FName := 'MS Sans Serif';
+  FStyle := [];
+end;
+
+destructor TZFont.Destroy;
+begin
+  inherited;
+end;
+
+procedure TZFont.Assign(Source: TPersistent);
+var zSource: TZFont; srcFont: TFont;
+begin
+  if (Source is TZFont) then begin
+    zSource := Source as TZFont;
+    FColor := zSource.Color;
+    FSize := zSource.Size;
+    FCharset := zSource.Charset;
+    FName := zSource.Name;
+    FStyle := zSource.Style;
+  end else if (Source is TFont) then begin
+    srcFont := Source as TFont;
+    FColor := srcFont.Color;
+    FSize := srcFont.Size;
+    FCharset := srcFont.Charset;
+    FName := srcFont.Name;
+    FStyle := srcFont.Style;
+  end else
+    inherited Assign(Source);
+end;
+
+procedure TZFont.AssignTo(Dest: TPersistent);
+var dstFont: TFont;
+begin
+  if Dest is TZFont then
+    TZFont(Dest).Assign(self)
+  else if Dest is TFont then begin
+    dstFont := Dest as TFont;
+    //А.А.Валуев Свойства, которых нет в TZFont сбрасываем на значения по умолчанию.
+    dstFont.Pitch := fpDefault;
+    dstFont.Orientation := 0;
+    dstFont.Color := FColor;
+    dstFont.Size := Round(FSize);
+    dstFont.Charset := FCharset;
+    dstFont.Name := FName;
+    dstFont.Style := FStyle;
+  end else
+    inherited AssignTo(Dest);
+end;
+
+
 ////::::::::::::: TZStyle :::::::::::::::::////
 // about default font in Excel - http://support.microsoft.com/kb/214123
 constructor TZStyle.Create();
 begin
-  FFont           := TFont.Create();
+  FFont           := TZFont.Create();
   FFont.Size      := 10;
   FFont.Name      := 'Arial';
   FFont.Color     := ClBlack;
@@ -2560,7 +2660,7 @@ begin
   Result := ZEIsFontsEquals(FFont, zSource.Font);
 end;
 
-procedure TZStyle.SetFont(const Value: TFont);
+procedure TZStyle.SetFont(const Value: TZFont);
 begin
   FFont.Assign(Value);
 end;
@@ -5790,7 +5890,7 @@ begin
     Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Font.Color;
 end;
 
-function TZRange.GetFontSize: Byte;
+function TZRange.GetFontSize: double;
 begin
   Result := 0;
   if HasStyle then
@@ -5874,7 +5974,7 @@ begin
   end);
 end;
 
-procedure TZRange.SetFontSize(const Value: Byte);
+procedure TZRange.SetFontSize(const Value: double);
 begin
   ApplyStyleValue(procedure (style: TZStyle) begin
     style.Font.Size := Value;

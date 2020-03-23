@@ -67,7 +67,7 @@ var xml: TZsspXMLWriterH;
   begin
     result := #13#10 + ' .' + name + '{'#13#10;
     result := result + 'color:#'      + ColorToHTMLHex(Style.Font.Color) + ';';
-    result := result + 'font-size:'   + inttostr(Style.Font.Size) + 'px;';
+    result := result + 'font-size:'   + FloatToStr(Style.Font.Size, TFormatSettings.Invariant) + 'px;';
     result := result + 'font-family:' + Style.Font.Name + ';}';
   end;
 
@@ -88,7 +88,7 @@ begin
     s := 'body {';
     s := s + 'background:#' + ColorToHTMLHex(sheet.WorkBook.Styles.DefaultStyle.BGColor) + ';';
     s := s + 'color:#'      + ColorToHTMLHex(sheet.WorkBook.Styles.DefaultStyle.Font.Color) + ';';
-    s := s + 'font-size:'   + inttostr(sheet.WorkBook.Styles.DefaultStyle.Font.Size) + 'px;';
+    s := s + 'font-size:'   + FloatToStr(sheet.WorkBook.Styles.DefaultStyle.Font.Size, TFormatSettings.Invariant) + 'px;';
     s := s + 'font-family:' + sheet.WorkBook.Styles.DefaultStyle.Font.Name + ';}';
 
     s := s + HTMLStyleTable('T19', sheet.WorkBook.Styles.DefaultStyle);
