@@ -2870,6 +2870,13 @@ var
           if (TryStrToInt(s, t)) then
             CSA[_currCell].numFmtId := t;
 
+        {
+          <xfId> (Format Id)
+          For <xf> records contained in <cellXfs> this is the zero-based index of an <xf> record contained in <cellStyleXfs> corresponding to the cell style applied to the cell.
+          Not present for <xf> records contained in <cellStyleXfs>.
+          The possible values for this attribute are defined by the ST_CellStyleXfId simple type (§3.18.11).
+          https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_xf_topic_ID0E13S6.html
+        }
         s := xml.Attributes.ItemsByName['xfId'];
         if (s > '') then
           if (TryStrToInt(s, t)) then
@@ -3520,7 +3527,11 @@ begin
       if xml.IsTagStartByName('fills') then
         _ReadFills()
       else
-      //TODO: разобраться, чем отличаются cellStyleXfs и cellXfs. Что за cellStyles?
+      {
+        А.А.Валуев:
+        Элементы внутри cellXfs ссылаются на элементы внутри cellStyleXfs.
+        Элементы внутри cellStyleXfs ни на что не ссылаются.
+      }
       if xml.IsTagStartByName('cellStyleXfs') then
         _ReadCellCommonStyles('cellStyleXfs', CellStyleArray, CellStyleCount)//_ReadCellStyleXfs()
       else
