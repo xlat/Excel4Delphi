@@ -7,7 +7,7 @@
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>VCL</FrameworkType>
-        <ProjectVersion>18.5</ProjectVersion>
+        <ProjectVersion>18.8</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -111,7 +111,6 @@
         <DCCReference Include="zesavecommon.pas"/>
         <DCCReference Include="zeformula.pas"/>
         <DCCReference Include="zexmlssutils.pas"/>
-        <DCCReference Include="zearchhelper.pas"/>
         <DCCReference Include="zexlsx.pas"/>
         <DCCReference Include="zenumberformats.pas"/>
         <BuildConfiguration Include="Debug">

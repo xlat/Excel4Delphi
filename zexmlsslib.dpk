@@ -36,7 +36,6 @@ contains
   zesavecommon in 'zesavecommon.pas',
   zeformula in 'zeformula.pas',
   zexmlssutils in 'zexmlssutils.pas',
-  zearchhelper in 'zearchhelper.pas',
   zexlsx in 'zexlsx.pas',
   zenumberformats in 'zenumberformats.pas';
 

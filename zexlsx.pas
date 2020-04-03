@@ -243,13 +243,24 @@ function SaveXmlssToXLSXPath(var XMLSS: TZEXMLSS; PathName: string): integer; ov
 function SaveXmlssToXLSX(var XMLSS: TZEXMLSS; zipStream: TStream; const SheetsNumbers: array of integer; const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 
 //Дополнительные функции, на случай чтения отдельного файла
-function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
-function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TArray<TZXLSXFileItem>; var FilesCount: integer): boolean;
-function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
-function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
-function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
-function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
-function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
+function ZEXSLXReadTheme(var Stream: TStream;
+    var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
+function ZEXSLXReadContentTypes(var Stream: TStream;
+    var FileArray: TArray<TZXLSXFileItem>; var FilesCount: integer): boolean;
+function ZEXSLXReadSharedStrings(var Stream: TStream;
+    out StrArray: TStringDynArray; out StrCount: integer): boolean;
+function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream;
+    var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer;
+    var MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;
+function ZE_XSLXReadRelationships(var Stream: TStream;
+    var Relations: TZXLSXRelationsArray; var RelationsCount: integer;
+    var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
+function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream;
+    var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
+function ZEXSLXReadSheet(var XMLSS: TZEXMLSS; var Stream: TStream;
+    const SheetName: string; var StrArray: TStringDynArray; StrCount: integer;
+    var Relations: TZXLSXRelationsArray; RelationsCount: integer;
+    MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;
 function ZEXSLXReadComments(var XMLSS: TZEXMLSS; var Stream: TStream): boolean;
 
 implementation
@@ -333,6 +344,27 @@ CONTENT_TYPES: array[0..10] of TContentTypeRec = (
     name:'application/vnd.openxmlformats-officedocument.drawing+xml';
     rel: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing')
 );
+
+function GetMaximumDigitWidth(fontName: string; fontSize: double): double;
+const
+  numbers = '0123456789';
+var
+  bitmap: Graphics.TBitmap;
+  number: string;
+begin
+  //А.А.Валуев Расчитываем ширину самого широкого числа.
+  Result := 0;
+  bitmap := Graphics.TBitmap.Create;
+  try
+    bitmap.Canvas.Font.PixelsPerInch := 96;
+    bitmap.Canvas.Font.Size := Trunc(fontSize);
+    bitmap.Canvas.Font.Name := fontName;
+    for number in numbers do
+      Result := Max(Result, bitmap.Canvas.TextWidth(number));
+  finally
+    bitmap.Free;
+  end;
+end;
 
 ////:::::::::::::  TZXLSXDiffFormating :::::::::::::::::////
 
@@ -1307,6 +1339,7 @@ end;
 //      StrCount: integer               - кол-во строк подстановки
 //  var Relations: TZXLSXRelationsArray - отношения
 //      RelationsCount: integer         - кол-во отношений
+//  var MaximumDigitWidth: double       - ширина самого широкого числа в пикселях
 //      ReadHelper: TZEXLSXReadHelper   -
 //RETURN
 //      boolean - true - страница прочиталась успешно
@@ -1317,6 +1350,7 @@ function ZEXSLXReadSheet(var XMLSS: TZEXMLSS;
                          StrCount: integer;
                          var Relations: TZXLSXRelationsArray;
                          RelationsCount: integer;
+                         MaximumDigitWidth: double;
                          ReadHelper: TZEXLSXReadHelper): boolean;
 var
   xml: TZsspXMLReaderH;
@@ -1589,8 +1623,10 @@ var
         str := xml.Attributes.ItemsByName['width'];
         if (str > '') then begin
           t := ZETryStrToFloat(str, 5.14509803921569);
-          t := 10 * t / 5.14509803921569;
-          currentSheet.Columns[num].WidthMM := t;
+          //t := 10 * t / 5.14509803921569;
+          //А.А.Валуев. Формулы расёта ширины взяты здесь - https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_col_topic_ID0ELFQ4.html
+          t := Trunc(((256 * t + Trunc(128 / MaximumDigitWidth)) / 256) * MaximumDigitWidth);
+          currentSheet.Columns[num].WidthPix := Trunc(t);
         end;
 
         str := xml.Attributes.ItemsByName['outlineLevel'];
@@ -2272,14 +2308,17 @@ end; //ZEXSLXReadSheet
 
 //Прочитать стили из потока (styles.xml)
 //INPUT
-//  var XMLSS: TZEXMLSS                   - хранилище
-//  var Stream: TStream                   - поток
+//  var XMLSS: TZEXMLSS                    - хранилище
+//  var Stream: TStream                    - поток
 //  var ThemaFillsColors: TIntegerDynArray - цвета из темы
-//  var ThemaColorCount: integer          - кол-во цветов заливки в теме
-//      ReadHelper: TZEXLSXReadHelper     -
+//  var ThemaColorCount: integer           - кол-во цветов заливки в теме
+//  var MaximumDigitWidth: double          - ширина самого широкого числа в пикселях
+//      ReadHelper: TZEXLSXReadHelper      -
 //RETURN
 //      boolean - true - стили прочитались без ошибок
-function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer; ReadHelper: TZEXLSXReadHelper): boolean;
+function ZEXSLXReadStyles(var XMLSS: TZEXMLSS; var Stream: TStream;
+    var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer;
+    var MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;
 type
   TZXLSXBorderItem = record
     color: TColor;
@@ -3497,6 +3536,7 @@ var
 
 begin
   result := false;
+  MaximumDigitWidth := 0;
   xml := nil;
   CellXfsArray := nil;
   CellStyleArray := nil;
@@ -3519,7 +3559,11 @@ begin
       xml.ReadTag();
 
       if xml.IsTagStartByName('fonts') then
-        _ReadFonts()
+      begin
+        _ReadFonts();
+        if Length(FontArray) > 0 then
+          MaximumDigitWidth := GetMaximumDigitWidth(FontArray[0].Name, FontArray[0].fontsize);
+      end
       else
       if xml.IsTagStartByName('borders') then
         _ReadBorders()
@@ -3883,6 +3927,7 @@ var
   s: string;
   b: boolean;
   _no_sheets: boolean;
+  MaximumDigitWidth: double;
   RH: TZEXLSXReadHelper;
   //Пытается прочитать rel для листа
   //INPUT
@@ -3975,6 +4020,7 @@ var
 
 begin
   result := 0;
+  MaximumDigitWidth := 0;
   FilesCount := 0;
   FileArray := nil;
 
@@ -4095,7 +4141,7 @@ begin
       if (FileArray[i].ftype = TRelationType.rtStyles) then begin
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
-        if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
+        if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, MaximumDigitWidth, RH)) then begin
           result := 5;
           exit;
         end else
@@ -4124,7 +4170,7 @@ begin
             b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
             FreeAndNil(stream);
             stream := TFileStream.Create(DirName + FileArray[RelationsArray[SheetRelationNumber][j].fileid].name, fmOpenRead or fmShareDenyNone);
-            if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+            if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, MaximumDigitWidth, RH)) then
               result := result or 4;
             if (b) then
               _ReadComments();
@@ -4138,7 +4184,7 @@ begin
         b := _CheckSheetRelations(FileArray[i].name);
         FreeAndNil(stream);
         stream := TFileStream.Create(DirName + FileArray[i].name, fmOpenRead or fmShareDenyNone);
-        if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+        if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, MaximumDigitWidth, RH)) then
           result := result or 4;
         if (b) then
             _ReadComments();
@@ -4196,6 +4242,7 @@ var
   encoding: TEncoding;
   zipHdr: TZipHeader;
   buff: TBytes;
+  MaximumDigitWidth: double;
   //zfiles: TArray<string>;
 
   function _CheckSheetRelations(const fname: string): boolean;
@@ -4287,6 +4334,7 @@ var
 
 begin
   result := 0;
+  MaximumDigitWidth := 0;
   FilesCount := 0;
   zip := TZipFile.Create();
   encoding := TEncoding.GetEncoding(437);
@@ -4420,7 +4468,7 @@ begin
         begin
           zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
           try
-            if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, RH)) then begin
+            if (not ZEXSLXReadStyles(XMLSS, stream, ThemaColor, ThemaColorCount, MaximumDigitWidth, RH)) then begin
               result := 5;
               exit;
             end
@@ -4459,7 +4507,7 @@ begin
             b := _CheckSheetRelations(FileArray[RelationsArray[SheetRelationNumber][j].fileid].name);
             zip.Read(FileArray[RelationsArray[SheetRelationNumber][j].fileid].original.Substring(1), stream, zipHdr);
             try
-              if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+              if (not ZEXSLXReadSheet(XMLSS, stream, RelationsArray[SheetRelationNumber][j].name, StrArray, StrCount, SheetRelations, SheetRelationsCount, MaximumDigitWidth, RH)) then
                 result := result or 4;
               if (b) then
                 _ReadComments();
@@ -4477,7 +4525,7 @@ begin
             b := _CheckSheetRelations(FileArray[i].name);
             zip.Read(FileArray[i].original.Substring(1), stream, zipHdr);
             try
-              if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, RH)) then
+              if (not ZEXSLXReadSheet(XMLSS, stream, '', StrArray, StrCount, SheetRelations, SheetRelationsCount, MaximumDigitWidth, RH)) then
                 result := result or 4;
               if (b) then
                 _ReadComments();
@@ -5003,7 +5051,11 @@ var xml: TZsspXMLWriterH;    //писатель
   var i: integer;
     s: string;
     ProcessedColumn: TZColOptions;
+    MaximumDigitWidth: double;
+    NumberOfCharacters: double;
+    width: real;
   begin
+    MaximumDigitWidth := GetMaximumDigitWidth(XMLSS.Styles[0].Font.Name, XMLSS.Styles[0].Font.Size); //Если совсем нет стилей, пусть будет ошибка.
     xml.Attributes.Clear();
     xml.WriteTagNode('cols', true, true, true);
     for i := 0 to sheet.ColCount - 1 do begin
@@ -5017,7 +5069,13 @@ var xml: TZsspXMLWriterH;    //писатель
       if ((ProcessedColumn.StyleID >= -1) and (ProcessedColumn.StyleID < XMLSS.Styles.Count)) then
         s := IntToStr(ProcessedColumn.StyleID + 1);
       xml.Attributes.Add('style', s, false);
-      xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', ProcessedColumn.WidthMM * 5.14509803921569 / 10)), false);
+      //xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', ProcessedColumn.WidthMM * 5.14509803921569 / 10)), false);
+      //А.А.Валуев. Формулы расёта ширины взяты здесь - https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_col_topic_ID0ELFQ4.html
+      //А.А.Валуев. Получаем ширину в символах в Excel-е.
+      NumberOfCharacters := Trunc((ProcessedColumn.WidthPix - 5) / MaximumDigitWidth * 100 + 0.5) / 100;
+      //А.А.Валуев. Конвертируем ширину в символах в ширину для сохранения в файл.
+      width := Trunc((NumberOfCharacters * MaximumDigitWidth + 5) / MaximumDigitWidth * 256) / 256;
+      xml.Attributes.Add('width', ZEFloatSeparator(FormatFloat('0.##########', width)), false);
       if ProcessedColumn.AutoFitWidth then
         xml.Attributes.Add('bestFit', '1', false);
       if sheet.Columns[i].OutlineLevel > 0 then
