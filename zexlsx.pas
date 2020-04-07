@@ -1485,12 +1485,15 @@ var
         //s := xml.Attributes.ItemsByName['customHeight'];
         currentSheet.Rows[currentRow].Hidden := ZETryStrToBoolean(xml.Attributes.ItemsByName['hidden'], false);
 
-        str := xml.Attributes.ItemsByName['ht']; //в поинтах?
+        str := xml.Attributes.ItemsByName['ht']; //в поинтах
         if (str > '') then begin
           tempReal := ZETryStrToFloat(str, 10);
-          tempReal := tempReal / 2.835; //???
-          currentSheet.Rows[currentRow].HeightMM := tempReal;
-        end;
+          currentSheet.Rows[currentRow].Height := tempReal;
+          //tempReal := tempReal / 2.835; //???
+          //currentSheet.Rows[currentRow].HeightMM := tempReal;
+        end
+        else
+          currentSheet.Rows[currentRow].Height := currentSheet.DefaultRowHeight;
 
         str := xml.Attributes.ItemsByName['outlineLevel'];
         currentSheet.Rows[currentRow].OutlineLevel := StrToIntDef(str, 0);
@@ -2274,7 +2277,18 @@ begin
         str := xml.Attributes.ItemsByName['verticalCentered'];
         if (str > '') then
           currentSheet.SheetOptions.CenterVertical := ZEStrToBoolean(str);
-      end else
+      end
+      else
+      if xml.IsTagClosedByName('sheetFormatPr') then
+      begin
+        str := xml.Attributes.ItemsByName['defaultColWidth'];
+        if (str > '') then
+          currentSheet.DefaultColWidth := ZETryStrToFloat(str, currentSheet.DefaultColWidth);
+        str := xml.Attributes.ItemsByName['defaultRowHeight'];
+        if (str > '') then
+          currentSheet.DefaultRowHeight := ZETryStrToFloat(str, currentSheet.DefaultRowHeight);
+      end
+      else
       if xml.IsTagClosedByName('dimension') then
         _GetDimension()
       else
@@ -4954,7 +4968,8 @@ var xml: TZsspXMLWriterH;    //писатель
     {$REGION 'write sheetFormatPr'}
     if (sheet.OutlineLevelCol > 0) or (sheet.OutlineLevelRow > 0) then begin
         xml.Attributes.Clear();
-        xml.Attributes.Add('defaultRowHeight', '15');
+        xml.Attributes.Add('defaultColWidth', FloatToStr(sheet.DefaultColWidth, TFormatSettings.Invariant));
+        xml.Attributes.Add('defaultRowHeight', FloatToStr(sheet.DefaultRowHeight, TFormatSettings.Invariant));
         if (sheet.OutlineLevelCol > 0) then
             xml.Attributes.Add('outlineLevelCol', IntToStr(sheet.OutlineLevelCol));
         if (sheet.OutlineLevelRow > 0) then
