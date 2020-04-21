@@ -267,6 +267,7 @@ implementation
 
 uses AnsiStrings, StrUtils, Math, zenumberformats, NetEncoding;
 
+
 const
   SCHEMA_DOC         = 'http://schemas.openxmlformats.org/officeDocument/2006';
   SCHEMA_DOC_REL     = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -354,17 +355,28 @@ var
 begin
   //А.А.Валуев Расчитываем ширину самого широкого числа.
   Result := 0;
+
   bitmap := Graphics.TBitmap.Create;
+
   try
+
     bitmap.Canvas.Font.PixelsPerInch := 96;
-    bitmap.Canvas.Font.Size := Trunc(fontSize);
-    bitmap.Canvas.Font.Name := fontName;
-    for number in numbers do
-      Result := Max(Result, bitmap.Canvas.TextWidth(number));
-  finally
+
+    bitmap.Canvas.Font.Size := Trunc(fontSize);
+
+    bitmap.Canvas.Font.Name := fontName;
+
+    for number in numbers do
+
+      Result := Max(Result, bitmap.Canvas.TextWidth(number));
+
+  finally
+
     bitmap.Free;
+
   end;
 end;
+
 
 ////:::::::::::::  TZXLSXDiffFormating :::::::::::::::::////
 
@@ -731,15 +743,25 @@ procedure TZEXLSXNumberFormats.ReadNumFmts(const xml: TZsspXMLReaderH);
 var temp: integer;
 begin
   with THTMLEncoding.Create do
+
     try
+
       while xml.ReadToEndTagByName('numFmts') do begin
+
         if (xml.TagName = 'numFmt') then
+
           if (TryStrToInt(xml.Attributes['numFmtId'], temp)) then
+
             Format[temp] := Decode(xml.Attributes['formatCode']);
+
       end;
+
     finally
+
       Free;
+
     end;
+
 end;
 
 procedure TZEXLSXNumberFormats.SetStyleFMTID(num: integer; const value: integer);
@@ -1780,7 +1802,7 @@ var
     s: string;
   begin
     while xml.ReadToEndTagByName('sheetViews') do begin
-      if xml.IsTagStartByName('sheetView') then begin
+      if xml.IsTagStartByName('sheetView') or xml.IsTagClosedByName('sheetView') then begin
         s := xml.Attributes.ItemsByName['tabSelected'];
         // тут кроется проблема с выделением нескольких листов
         currentSheet.Selected := currentSheet.SheetIndex = 0;// s = '1';
@@ -2926,10 +2948,15 @@ var
         {
           <xfId> (Format Id)
           For <xf> records contained in <cellXfs> this is the zero-based index of an <xf> record contained in <cellStyleXfs> corresponding to the cell style applied to the cell.
+
           Not present for <xf> records contained in <cellStyleXfs>.
+
           The possible values for this attribute are defined by the ST_CellStyleXfId simple type (§3.18.11).
+
           https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_xf_topic_ID0E13S6.html
+
         }
+
         s := xml.Attributes.ItemsByName['xfId'];
         if (s > '') then
           if (TryStrToInt(s, t)) then
@@ -5732,15 +5759,22 @@ var
       //<vertAlign val="superscript"/>
       if XMLSS.Styles[i - 1].Superscript then begin
         xml.Attributes.Clear();
+
         xml.Attributes.Add('val', 'superscript');
         xml.WriteEmptyTag('vertAlign', true);
       end
+
       //<vertAlign val="subscript"/>
+
       else if XMLSS.Styles[i - 1].Subscript then begin
+
         xml.Attributes.Clear();
+
         xml.Attributes.Add('val', 'subscript');
         xml.WriteEmptyTag('vertAlign', true);
       end;
+
+
 
       xml.WriteEndTagNode(); //font
     end; //if
@@ -6295,17 +6329,29 @@ begin
 
     {- Write out the content of Shared Strings: <si><t>Value</t></si> }
     for i := 0 to Pred(count) do begin
+
       xml.Attributes.Clear();
+
       xml.WriteTagNode('si', false, false, false);
+
       str := SharedStrings[i];
+
       xml.Attributes.Clear();
+
       if str.StartsWith(' ') or str.EndsWith(' ') then
+
         //А.А.Валуев Чтобы ведущие и последние пробелы не терялись,
+
         //добавляем атрибут xml:space="preserve".
+
         xml.Attributes.Add('xml:space', 'preserve', false);
+
       xml.WriteTag('t', str);
+
       xml.WriteEndTagNode();
+
     end;
+
 
     xml.WriteEndTagNode(); //Relationships
   finally
@@ -6443,16 +6489,22 @@ begin
     try
       ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
     finally
+
       FreeAndNil(Stream);
+
     end;
+
 
     // sharedStrings.xml
     Stream := TFileStream.Create(path_xl + 'sharedStrings.xml', fmCreate);
     try
       ZEXLSXCreateSharedStrings(XMLSS, Stream, SharedStrings, TextConverter, CodePageName, BOM);
     finally
+
       FreeAndNil(Stream);
+
     end;
+
 
     // _rels/.rels
     path_relsmain := PathName + PathDelim + '_rels' + PathDelim;
@@ -6462,8 +6514,11 @@ begin
     try
       ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
     finally
+
       FreeAndNil(Stream);
+
     end;
+
 
     // xl/_rels/workbook.xml.rels
     path_relsw := path_xl + '_rels' + PathDelim;
@@ -6473,8 +6528,11 @@ begin
     try
       ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
     finally
+
       FreeAndNil(Stream);
+
     end;
+
 
     path_sheets := path_xl + 'worksheets' + PathDelim;
     if (not DirectoryExists(path_sheets)) then
@@ -6488,8 +6546,11 @@ begin
       try
         ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, _WriteHelper);
       finally
+
         FreeAndNil(Stream);
+
       end;
+
 
       if (_WriteHelper.HyperLinksCount > 0) then begin
         _WriteHelper.AddSheetHyperlink(i);
@@ -6500,8 +6561,11 @@ begin
         try
           _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
         finally
+
           FreeAndNil(Stream);
+
         end;
+
       end;
     end; //for i
 
@@ -6796,11 +6860,16 @@ begin
           FreeAndNil(stream);
         end;
       finally
+
         SharedStringsDictionary.Free;
+
       end;
     finally
+
       writeHelper.Free();
+
     end;
+
   finally
     zip.Free();
     ZESClearArrays(_pages, _names);

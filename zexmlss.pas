@@ -3433,7 +3433,6 @@ begin
     FViewMode  := zSource.FViewMode;
     FRowBreaks := zSource.FRowBreaks;
     FColBreaks := zSource.FColBreaks;
-    FViewMode  := zSource.FViewMode;
     FDrawingRid := zSource.FDrawingRid;
 
     FSummaryBelow    := zSource.FSummaryBelow;
