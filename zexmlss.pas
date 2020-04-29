@@ -1850,6 +1850,12 @@ type
     property WindowTopY: integer read FWindowTopY write FWindowTopY default 150;
   end;
 
+  TDefinedName = record
+    LocalSheetId: integer;
+    Name: string;
+    Body: string;
+  end;
+
   /// <summary>
   /// Contains spreadsheet document
   /// </summary>
@@ -1868,6 +1874,7 @@ type
     procedure SetDefaultSheetOptions(Value: TZSheetOptions);
   protected
   public
+    FDefinedNames: TArray<TDefinedName>;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy();override;
     procedure Assign(Source: TPersistent); override;
@@ -4012,6 +4019,7 @@ begin
   if (Source is TZEXMLSS) then begin
     t := Source as TZEXMLSS;
     FMediaList := t.FMediaList;
+    FDefinedNames := t.FDefinedNames;
     Styles.Assign(t.Styles);
     Sheets.Assign(t.Sheets);
   end else if (Source is TZStyles) then

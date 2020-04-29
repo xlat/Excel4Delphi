@@ -3712,8 +3712,7 @@ function ZEXSLXReadWorkBook(var XMLSS: TZEXMLSS; var Stream: TStream; var Relati
 var
   xml: TZsspXMLReaderH;
   s: string;
-  i: integer;
-  t: integer;
+  i, t, dn: integer;
 begin
   result := false;
   xml := TZsspXMLReaderH.Create();
@@ -3721,9 +3720,18 @@ begin
     if (xml.BeginReadStream(Stream) <> 0) then
       exit;
 
+    dn := 0;
     while (not xml.Eof()) do begin
       xml.ReadTag();
 
+      if xml.IsTagStartByName('definedName') then begin
+         xml.ReadTag();
+         SetLength(XMLSS.FDefinedNames, dn + 1);
+         XMLSS.FDefinedNames[dn].LocalSheetId := StrToIntDef(xml.Attributes.ItemsByName['localSheetId'], 0);
+         XMLSS.FDefinedNames[dn].Name := xml.Attributes.ItemsByName['name'];
+         XMLSS.FDefinedNames[dn].Body := xml.TagValue;
+         inc(dn);
+      end else
       if xml.IsTagClosedByName('sheet') then begin
         s := xml.Attributes.ItemsByName['r:id'];
         for i := 0 to RelationsCount - 1 do
@@ -5405,26 +5413,7 @@ end; //ZEXLSXCreateSheet
 //      integer
 function ZEXLSXCreateWorkBook(var XMLSS: TZEXMLSS; Stream: TStream; const _pages: TIntegerDynArray;
                               const _names: TStringDynArray; PageCount: integer; TextConverter: TAnsiToCPConverter; CodePageName: String; BOM: ansistring): integer;
-var xml: TZsspXMLWriterH;
-  //<sheets> ... </sheets>
-  procedure WriteSheets();
-  var i: integer;
-  begin
-    xml.Attributes.clear();
-    xml.WriteTagNode('sheets', true, true, true);
-
-    for i := 0 to PageCount - 1 do begin
-      xml.Attributes.Clear();
-      xml.Attributes.Add('name', _names[i], false);
-      xml.Attributes.Add('sheetId', IntToStr(i + 1), false);
-      xml.Attributes.Add('state', 'visible', false);
-      xml.Attributes.Add('r:id', 'rId' + IntToStr(i + 2), false);
-      xml.WriteEmptyTag('sheet', true);
-    end; //for i
-
-    xml.WriteEndTagNode(); //sheets
-  end; //WriteSheets
-
+var xml: TZsspXMLWriterH; i: integer;
 begin
   result := 0;
   xml := TZsspXMLWriterH.Create(Stream);
@@ -5468,7 +5457,29 @@ begin
     xml.WriteEmptyTag('workbookView', true);
     xml.WriteEndTagNode(); // bookViews
 
-    WriteSheets();
+    // sheets
+    xml.Attributes.clear();
+    xml.WriteTagNode('sheets', true, true, true);
+    for i := 0 to PageCount - 1 do begin
+      xml.Attributes.Clear();
+      xml.Attributes.Add('name', _names[i], false);
+      xml.Attributes.Add('sheetId', IntToStr(i + 1), false);
+      xml.Attributes.Add('state', 'visible', false);
+      xml.Attributes.Add('r:id', 'rId' + IntToStr(i + 2), false);
+      xml.WriteEmptyTag('sheet', true);
+    end; //for i
+    xml.WriteEndTagNode(); //sheets
+
+    // definedNames
+    xml.Attributes.clear();
+    xml.WriteTagNode('definedNames', true, true, true);
+    for i := 0 to High(XMLSS.FDefinedNames) do begin
+      xml.Attributes.Clear();
+      xml.Attributes.Add('localSheetId', IntToStr(XMLSS.FDefinedNames[i].LocalSheetId), false);
+      xml.Attributes.Add('name', XMLSS.FDefinedNames[i].Name, false);
+      xml.WriteTag('definedName', XMLSS.FDefinedNames[i].Body);
+    end; //for i
+    xml.WriteEndTagNode(); //definedNames
 
     xml.Attributes.Clear();
     xml.Attributes.Add('iterateCount', '100');
