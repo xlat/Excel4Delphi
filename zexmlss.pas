@@ -1707,6 +1707,8 @@ type
     procedure SetVerticalAlignment(const Value: TZVerticalAlignment);
     function GetHorizontalAlignment(): TZHorizontalAlignment;
     procedure SetHorizontalAlignment(const Value: TZHorizontalAlignment);
+    function GetRotate(): TZCellTextRotate;
+    procedure SetRotate(const Value: TZCellTextRotate);
     function GetBgColor(): TColor;
     procedure SetBgColor(const Value: TColor);
     function GetFontColor(): TColor;
@@ -1739,6 +1741,7 @@ type
     property BorderColor[num: TZBordersPos]: TColor read GetBorderColor write SetBorderColor;
     property WrapText: Boolean read GetWrapText write SetWrapText;
     property VerticalText: Boolean read GetVerticalText write SetVerticalText;
+    property Rotate: TZCellTextRotate read GetRotate write SetRotate;
     property NumberFormat: string read GetNumberFormat write SetNumberFormat;
     procedure Merge();
     procedure Clear();
@@ -1755,6 +1758,8 @@ type
     procedure SetVerticalAlignment(const Value: TZVerticalAlignment);
     function GetHorizontalAlignment(): TZHorizontalAlignment;
     procedure SetHorizontalAlignment(const Value: TZHorizontalAlignment);
+    function GetRotate(): TZCellTextRotate;
+    procedure SetRotate(const Value: TZCellTextRotate);
     function GetBgColor(): TColor;
     procedure SetBgColor(const Value: TColor);
     function GetFontColor(): TColor;
@@ -1791,6 +1796,7 @@ type
     property BorderColor[num: TZBordersPos]: TColor read GetBorderColor write SetBorderColor;
     property WrapText: Boolean read GetWrapText write SetWrapText;
     property VerticalText: Boolean read GetVerticalText write SetVerticalText;
+    property Rotate: TZCellTextRotate read GetRotate write SetRotate;
     property NumberFormat: string read GetNumberFormat write SetNumberFormat;
     procedure Merge();
     procedure Clear();
@@ -5925,6 +5931,13 @@ begin
     Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].NumberFormat;
 end;
 
+function TZRange.GetRotate: TZCellTextRotate;
+begin
+  Result := 0;
+  if HasStyle then
+    Result := FSheet.FStore.FStyles[FSheet.Cell[FC1,FR1].FCellStyle].Alignment.Rotate;
+end;
+
 function TZRange.GetVerticalAlignment: TZVerticalAlignment;
 begin
   Result := TZVerticalAlignment.ZVAutomatic;
@@ -6006,6 +6019,13 @@ procedure TZRange.SetNumberFormat(const Value: string);
 begin
   ApplyStyleValue(procedure (style: TZStyle) begin
     style.NumberFormat := Value;
+  end);
+end;
+
+procedure TZRange.SetRotate(const Value: TZCellTextRotate);
+begin
+  ApplyStyleValue(procedure (style: TZStyle) begin
+    style.Alignment.Rotate := Value;
   end);
 end;
 
