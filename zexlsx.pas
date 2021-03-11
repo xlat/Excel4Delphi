@@ -1627,23 +1627,36 @@ var
 
   //Столбцы
   procedure _ReadCols();
+  type
+    TZColInf = record
+      min,max: integer;
+      bestFit,hidden: boolean;
+      outlineLevel: integer;
+      width: integer;
+    end;
   var
-    num: integer;
-    t: real;
-    _max, _min: integer;
-    _delta, i: integer;
+    i, j: integer; t: real;
+    colInf: TArray<TZColInf>;
+  const MAX_COL_DIFF = 500;
   begin
-    num := 0;
+    i := 0;
     while xml.ReadToEndTagByName('cols') do begin
       if (xml.TagName = 'col') and xml.IsTagStartOrClosed then begin
-        CheckCol(num + 1);
-        str := xml.Attributes.ItemsByName['bestFit'];
-        if (str > '') then
-          currentSheet.Columns[num].AutoFitWidth := ZETryStrToBoolean(str);
+        SetLength(colInf, i + 1);
 
+        colInf[i].min := StrToIntDef(xml.Attributes.ItemsByName['min'], 0);
+        colInf[i].max := StrToIntDef(xml.Attributes.ItemsByName['max'], 0);
+        // защита от сплошного диапазона
+        // когда значение _мах = 16384
+        // но чтобы уж наверняка, проверим на MAX_COL_DIFF колонок подряд.
+        if (colInf[i].max - colInf[i].min) > MAX_COL_DIFF then
+            colInf[i].max := colInf[i].min + MAX_COL_DIFF;
+
+        colInf[i].outlineLevel := StrToIntDef(xml.Attributes.ItemsByName['outlineLevel'], 0);
         str := xml.Attributes.ItemsByName['hidden'];
-        if (str > '') then
-          currentSheet.Columns[num].Hidden := ZETryStrToBoolean(str);
+        if (str > '') then colInf[i].hidden := ZETryStrToBoolean(str);
+        str := xml.Attributes.ItemsByName['bestFit'];
+        if (str > '') then colInf[i].bestFit := ZETryStrToBoolean(str);
 
         str := xml.Attributes.ItemsByName['width'];
         if (str > '') then begin
@@ -1651,35 +1664,21 @@ var
           //t := 10 * t / 5.14509803921569;
           //А.А.Валуев. Формулы расёта ширины взяты здесь - https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_col_topic_ID0ELFQ4.html
           t := Trunc(((256 * t + Trunc(128 / MaximumDigitWidth)) / 256) * MaximumDigitWidth);
-          currentSheet.Columns[num].WidthPix := Trunc(t);
+          colInf[i].width := Trunc(t);
         end;
 
-        str := xml.Attributes.ItemsByName['outlineLevel'];
-        currentSheet.Columns[num].OutlineLevel := StrToIntDef(str, 0);
-        //s := xml.Attributes.ItemsByName['phonetic'];
-        //s := xml.Attributes.ItemsByName['style'];
-        //s := xml.Attributes.ItemsByName['collapsed'];
-        //s := xml.Attributes.ItemsByName['customWidth'];
-
-        _min := StrToIntDef(xml.Attributes.ItemsByName['min'], 0);
-        _max := StrToIntDef(xml.Attributes.ItemsByName['max'], 0);
-
-        if (_max > _min) then begin
-          _delta := min(_max - _min, 1000);
-          // защита от сплошного диапазона
-          // когда значение _мах = 16384
-          // но чтобы уж наверняка, проверим на 1000 колонок подряд.
-          if _delta < 1001 then begin
-            CheckCol(_max);
-            for i := _min to _max - 1 do
-              currentSheet.Columns[i].Assign(currentSheet.Columns[num]);
-            inc(num, _delta);
-          end;
-        end;
-
-        inc(num);
+        inc(i);
       end; //if
     end; //while
+
+    for I := Low(colInf) to High(colInf) do begin
+      for j := colInf[i].min to colInf[i].max do begin
+        CheckCol(j);
+        currentSheet.Columns[j-1].AutoFitWidth := colInf[i].bestFit;
+        currentSheet.Columns[j-1].Hidden := colInf[i].hidden;
+        currentSheet.Columns[j-1].WidthPix := colInf[i].width;
+      end;
+    end;
   end; //_ReadCols
 
   function _StrToMM(const st: string; var retFloat: real): boolean;
