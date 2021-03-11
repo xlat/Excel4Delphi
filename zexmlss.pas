@@ -526,6 +526,9 @@ type
     /// </summary>
     function InMergeRange(ACol, ARow: integer): integer;
     function IsCrossWithArea(AID,AC1,AR1,AC2,AR2: integer): Boolean;
+
+    function MergedRows(ACol, ARow: integer): integer;
+    function MergedCols(ACol, ARow: integer): integer;
     /// <summary>
     /// Removes all merged cells.
     /// </summary>
@@ -3075,6 +3078,32 @@ begin
       ((Items[AID].Right  >= AC1) and (Items[AID].Right  <= AC2))) and
      (((Items[AID].Top    >= AR1) and (Items[AID].Top    <= AR2)) or
       ((Items[AID].Bottom >= AR1) and (Items[AID].Bottom <= AR2)));
+end;
+
+function TZMergeCells.MergedCols(ACol, ARow: integer): integer;
+var i: integer;
+begin
+  result := 1;
+  for i := 0 to FCount - 1 do begin
+     if (ACol >= FMergeArea[i].Left) and (ACol <= FMergeArea[i].Right) and
+     (ARow >= FMergeArea[i].Top) and (ARow <= FMergeArea[i].Bottom) then begin
+         result := (FMergeArea[i].Right - FMergeArea[i].Left)+1;
+         break;
+     end;
+  end;
+end;
+
+function TZMergeCells.MergedRows(ACol, ARow: integer): integer;
+var i: integer;
+begin
+  result := 1;
+  for i := 0 to FCount - 1 do begin
+     if (ACol >= FMergeArea[i].Left) and (ACol <= FMergeArea[i].Right) and
+     (ARow >= FMergeArea[i].Top) and (ARow <= FMergeArea[i].Bottom) then begin
+         result := (FMergeArea[i].Bottom - FMergeArea[i].Top)+1;
+         break;
+     end;
+  end;
 end;
 
 function TZMergeCells.DeleteItem(num: integer): boolean;
