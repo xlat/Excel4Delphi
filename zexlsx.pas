@@ -355,25 +355,15 @@ var
 begin
   //А.А.Валуев Расчитываем ширину самого широкого числа.
   Result := 0;
-
   bitmap := Graphics.TBitmap.Create;
-
   try
-
     bitmap.Canvas.Font.PixelsPerInch := 96;
-
     bitmap.Canvas.Font.Size := Trunc(fontSize);
-
     bitmap.Canvas.Font.Name := fontName;
-
     for number in numbers do
-
       Result := Max(Result, bitmap.Canvas.TextWidth(number));
-
   finally
-
     bitmap.Free;
-
   end;
 end;
 
