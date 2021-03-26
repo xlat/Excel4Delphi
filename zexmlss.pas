@@ -612,7 +612,7 @@ type
 
   TZCellColumn = array of TZCell;
 
-  TZEXMLSS = class;
+  TZWorkBook = class;
 
   /// <summary>
   /// Common options for columns and rows. Ancestor for TZColOptions and TZRowOptions.
@@ -1547,7 +1547,7 @@ type
   /// </summary>
   TZSheet = class (TPersistent)
   private
-    FStore: TZEXMLSS;
+    FStore: TZWorkBook;
     FCells: array of TZCellColumn;
     FRows: array of TZRowOptions;
     FColumns: array of TZColOptions;
@@ -1608,7 +1608,7 @@ type
     //procedure SetRangeRef(AFrom, ATo: string; const Value: TZRange); virtual;
     function GetSheetIndex(): integer;
   public
-    constructor Create(AStore: TZEXMLSS); virtual;
+    constructor Create(AStore: TZWorkBook); virtual;
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     procedure Clear(); virtual;
@@ -1707,7 +1707,7 @@ type
     /// Indicates whether or not this sheet is selecteded.
     /// </summary>
     property Selected: boolean read FSelected write FSelected;
-    property WorkBook: TZEXMLSS read FStore;
+    property WorkBook: TZWorkBook read FStore;
     property RowsToRepeat: TZSheetPrintTitles read FPrintRows write SetPrintRows;
     property ColsToRepeat: TZSheetPrintTitles read FPrintCols write SetPrintCols;
     /// <summary>
@@ -1726,14 +1726,14 @@ type
   /// </summary>
   TZSheets = class (TPersistent)
   private
-    FStore: TZEXMLSS;
+    FStore: TZWorkBook;
     FSheets: array of TZSheet;
     FCount : integer;
     procedure SetSheetCount(const Value: integer);
     procedure SetSheet(num: integer; Const Value: TZSheet);
     function  GetSheet(num: integer): TZSheet;
   public
-    constructor Create(AStore: TZEXMLSS); virtual;
+    constructor Create(AStore: TZWorkBook); virtual;
     destructor  Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     /// <summary>
@@ -1914,7 +1914,7 @@ type
   /// <summary>
   /// Contains spreadsheet document
   /// </summary>
-  TZEXMLSS = class (TComponent)
+  TZWorkBook = class (TComponent)
   private
     FSheets: TZSheets;
     FDocumentProperties: TZEXMLDocumentProperties;
@@ -3648,7 +3648,7 @@ end;
 
 ////::::::::::::: TZSheet :::::::::::::::::////
 
-constructor TZSheet.Create(AStore: TZEXMLSS);
+constructor TZSheet.Create(AStore: TZWorkBook);
 var i, j: integer;
 begin
   FStore := AStore;
@@ -4145,7 +4145,7 @@ begin
 end;
 
 ////::::::::::::: TZSheets :::::::::::::::::////
-constructor TZSheets.Create(AStore: TZEXMLSS);
+constructor TZSheets.Create(AStore: TZWorkBook);
 begin
   FStore := AStore;
   FCount := 0;
@@ -4266,9 +4266,9 @@ begin
     inherited Assign(Source);
 end;
 
-////::::::::::::: TZEXMLSS :::::::::::::::::////
+////::::::::::::: TZWorkBook :::::::::::::::::////
 
-constructor TZEXMLSS.Create(AOwner: TComponent);
+constructor TZWorkBook.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FDocumentProperties  := TZEXMLDocumentProperties.Create;
@@ -4279,7 +4279,7 @@ begin
   FDefaultSheetOptions := TZSheetOptions.Create();
 end;
 
-destructor TZEXMLSS.Destroy();
+destructor TZWorkBook.Destroy();
 begin
   FreeAndNil(FDefaultSheetOptions);
   FreeAndNil(FDocumentProperties);
@@ -4288,7 +4288,7 @@ begin
   inherited Destroy();
 end;
 
-function TZEXMLSS.AddMediaContent(AFileName: string; AContent: TBytes; ACheckByName: boolean): integer;
+function TZWorkBook.AddMediaContent(AFileName: string; AContent: TBytes; ACheckByName: boolean): integer;
 var I: Integer;
 begin
   if ACheckByName then begin
@@ -4309,11 +4309,11 @@ begin
   result := High(FMediaList);
 end;
 
-procedure TZEXMLSS.Assign(Source: TPersistent);
-var t: TZEXMLSS;
+procedure TZWorkBook.Assign(Source: TPersistent);
+var t: TZWorkBook;
 begin
-  if Source is TZEXMLSS then begin
-    t := Source as TZEXMLSS;
+  if Source is TZWorkBook then begin
+    t := Source as TZWorkBook;
     FMediaList := t.FMediaList;
     FDefinedNames := t.FDefinedNames;
     Styles.Assign(t.Styles);
@@ -4326,19 +4326,19 @@ begin
     inherited Assign(Source);
 end;
 
-procedure TZEXMLSS.SetHorPixelSize(Value: real);
+procedure TZWorkBook.SetHorPixelSize(Value: real);
 begin
   if Value > 0 then
     FHorPixelSize := Value;
 end;
 
-procedure TZEXMLSS.SetVertPixelSize(Value: real);
+procedure TZWorkBook.SetVertPixelSize(Value: real);
 begin
   if Value > 0 then
     FVertPixelSize := Value;
 end;
 
-procedure TZEXMLSS.GetPixelSize(hdc: HWND);
+procedure TZWorkBook.GetPixelSize(hdc: HWND);
 begin
   // горизонтальный размер пикселя в миллиметрах
   HorPixelSize  := GetDeviceCaps(hdc, HORZSIZE) / GetDeviceCaps(hdc, HORZRES);
@@ -4346,18 +4346,18 @@ begin
   VertPixelSize := GetDeviceCaps(hdc, VERTSIZE) / GetDeviceCaps(hdc, VERTRES);
 end;
 
-function TZEXMLSS.GetDefaultSheetOptions(): TZSheetOptions;
+function TZWorkBook.GetDefaultSheetOptions(): TZSheetOptions;
 begin
   result := FDefaultSheetOptions;
 end;
 
-procedure TZEXMLSS.SetDefaultSheetOptions(Value: TZSheetOptions);
+procedure TZWorkBook.SetDefaultSheetOptions(Value: TZSheetOptions);
 begin
   if Assigned(Value) then
    FDefaultSheetOptions.Assign(Value);
 end;
 
-function TZEXMLSS.GetDrawing(num: Integer): TZEDrawing;
+function TZWorkBook.GetDrawing(num: Integer): TZEDrawing;
 var i, n: Integer;
 begin
   Result := nil;
@@ -4373,7 +4373,7 @@ begin
   end;
 end;
 
-function TZEXMLSS.GetDrawingSheetNum(Value: TZEDrawing): Integer;
+function TZWorkBook.GetDrawingSheetNum(Value: TZEDrawing): Integer;
 var i: Integer;
 begin
   Result := 0;

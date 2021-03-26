@@ -7,7 +7,7 @@ uses
   zexmlss, zsspxml, zesavecommon;
 
 /// <summary>
-/// Сохраняет страницу TZEXMLSS в поток в формате HTML
+/// Сохраняет страницу TZWorkBook в поток в формате HTML
 /// </summary>
 function SaveXmlssToHtml(sheet: TZSheet; CodePageName: string = 'UTF-8'): string;
 

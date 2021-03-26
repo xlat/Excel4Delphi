@@ -20,7 +20,7 @@ function ZETryStrToBoolean(const st: string; valueIfError: boolean = false): boo
 function ZEFloatSeparator(st: string): string;
 
 //Проверяет заголовки страниц, при необходимости корректирует
-function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
+function ZECheckTablesTitle(var XMLSS: TZWorkBook; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; out _pages: TIntegerDynArray;
                             out _names: TStringDynArray; out retCount: integer): boolean;
 
@@ -323,7 +323,7 @@ end; //CorrectTitles
 
 //Проверяет заголовки страниц, при необходимости корректирует
 //INPUT
-//  var XMLSS: TZEXMLSS
+//  var XMLSS: TZWorkBook
 //  const SheetsNumbers:array of integer
 //  const SheetsNames: array of string
 //  var _pages: TIntegerDynArray
@@ -332,7 +332,7 @@ end; //CorrectTitles
 //RETURN
 //      boolean - true - всё нормально, можно продолжать дальше
 //                false - что-то не то подсунули, дальше продолжать нельзя
-function ZECheckTablesTitle(var XMLSS: TZEXMLSS; const SheetsNumbers:array of integer;
+function ZECheckTablesTitle(var XMLSS: TZWorkBook; const SheetsNumbers:array of integer;
                             const SheetsNames: array of string; out _pages: TIntegerDynArray;
                             out _names: TStringDynArray; out retCount: integer): boolean;
 var t1, t2, i: integer;
