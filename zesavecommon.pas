@@ -3,10 +3,20 @@
 interface
 
 uses
-  SysUtils, Types, zexmlss, zsspxml;
+  SysUtils, Types, Classes, zexmlss, zsspxml;
 
 const
   ZE_MMinInch: real = 25.4;
+  
+type
+  TTempFileStream = class(THandleStream)
+  private
+    FFileName: string;
+  public
+    constructor Create();
+    destructor Destroy; override;
+    property FileName: string read FFileName;
+  end;
 
 //Попытка преобразовать строку в число
 function ZEIsTryStrToFloat(const st: string; out retValue: double): boolean;
@@ -47,7 +57,35 @@ function ZENormalizeAngle180(const value: TZCellTextRotate): integer;
 implementation
 
 uses
-  DateUtils;
+  DateUtils, IOUtils, winapi.windows;
+
+function FileCreateTemp(var tempName: string): THandle;
+begin
+  Result := INVALID_HANDLE_VALUE;
+  TempName := TPath.GetTempFileName();
+  if TempName <> '' then begin
+    Result := CreateFile(PChar(TempName), GENERIC_READ or GENERIC_WRITE, 0, nil,
+      OPEN_EXISTING, FILE_ATTRIBUTE_TEMPORARY or FILE_FLAG_DELETE_ON_CLOSE, 0);
+    if Result = INVALID_HANDLE_VALUE then
+      TFile.Delete(TempName);
+  end;
+end;
+
+constructor TTempFileStream.Create();
+var FileHandle: THandle;
+begin
+  FileHandle := FileCreateTemp(FFileName);
+  if FileHandle = INVALID_HANDLE_VALUE then
+    raise Exception.Create('Не удалось создать временный файл');
+  inherited Create(FileHandle);
+end;
+
+destructor TTempFileStream.Destroy;
+begin
+  if THandle(Handle) <> INVALID_HANDLE_VALUE then
+    FileClose(Handle);
+  inherited Destroy;
+end;
 
 // despite formal angle datatype declaration in default "range check off" mode
 //    it can be anywhere -32K to +32K

@@ -6759,13 +6759,25 @@ begin
 
         // sheets of workbook
         for i := 0 to kol - 1 do begin
-          stream := TMemoryStream.Create();
-          try
-            ZEXLSXCreateSheet(XMLSS, stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, writeHelper);
-            stream.Position := 0;
-            zip.Add(stream, 'xl/worksheets/sheet' + IntToStr(i + 1) + '.xml');
-          finally
-            FreeAndNil(stream);
+          if XMLSS.Sheets[_pages[i]].RowCount > 60000 then begin
+            stream := TTempFileStream.Create();
+            try
+              ZEXLSXCreateSheet(XMLSS, stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, writeHelper);
+              stream.Position := 0;
+              zip.Add(stream, 'xl/worksheets/sheet' + IntToStr(i + 1) + '.xml');
+            finally
+              stream.Free();
+            end;
+          end
+          else begin
+            stream := TMemoryStream.Create();
+            try
+              ZEXLSXCreateSheet(XMLSS, stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, writeHelper);
+              stream.Position := 0;
+              zip.Add(stream, 'xl/worksheets/sheet' + IntToStr(i + 1) + '.xml');
+            finally
+              FreeAndNil(stream);
+            end;
           end;
 
           if (writeHelper.HyperLinksCount > 0) then begin
