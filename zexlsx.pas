@@ -5191,7 +5191,7 @@ var xml: TZsspXMLWriterH;    //писатель
             else
               s := 'str';
           end;
-          ZEError:    s := 'e';
+          ZEError: s := 'e';
         end;
 
         // если тип ячейки ZEGeneral, то атрибут опускаем
@@ -6292,9 +6292,7 @@ begin
       ZEAddRelsRelation(xml, 'rId' + IntToStr(i + 2), TRelationType.rtWorkSheet, 'worksheets/sheet' + IntToStr(i + 1) + '.xml');
 
     ZEAddRelsRelation(xml, 'rId' + IntToStr(PageCount + 2), TRelationType.rtSharedStr, 'sharedStrings.xml');
-
     xml.WriteEndTagNode(); //Relationships
-
   finally
     xml.Free();
   end;
@@ -6329,29 +6327,17 @@ begin
 
     {- Write out the content of Shared Strings: <si><t>Value</t></si> }
     for i := 0 to Pred(count) do begin
-
       xml.Attributes.Clear();
-
       xml.WriteTagNode('si', false, false, false);
-
       str := SharedStrings[i];
-
       xml.Attributes.Clear();
-
       if str.StartsWith(' ') or str.EndsWith(' ') then
-
         //А.А.Валуев Чтобы ведущие и последние пробелы не терялись,
-
         //добавляем атрибут xml:space="preserve".
-
         xml.Attributes.Add('xml:space', 'preserve', false);
-
       xml.WriteTag('t', str);
-
       xml.WriteEndTagNode();
-
     end;
-
 
     xml.WriteEndTagNode(); //Relationships
   finally
@@ -6489,22 +6475,16 @@ begin
     try
       ZEXLSXCreateStyles(XMLSS, Stream, TextConverter, CodePageName, BOM);
     finally
-
       FreeAndNil(Stream);
-
     end;
-
 
     // sharedStrings.xml
     Stream := TFileStream.Create(path_xl + 'sharedStrings.xml', fmCreate);
     try
       ZEXLSXCreateSharedStrings(XMLSS, Stream, SharedStrings, TextConverter, CodePageName, BOM);
     finally
-
       FreeAndNil(Stream);
-
     end;
-
 
     // _rels/.rels
     path_relsmain := PathName + PathDelim + '_rels' + PathDelim;
@@ -6514,11 +6494,8 @@ begin
     try
       ZEXLSXCreateRelsMain(Stream, TextConverter, CodePageName, BOM);
     finally
-
       FreeAndNil(Stream);
-
     end;
-
 
     // xl/_rels/workbook.xml.rels
     path_relsw := path_xl + '_rels' + PathDelim;
@@ -6528,29 +6505,22 @@ begin
     try
       ZEXLSXCreateRelsWorkBook(kol, Stream, TextConverter, CodePageName, BOM);
     finally
-
       FreeAndNil(Stream);
-
     end;
-
 
     path_sheets := path_xl + 'worksheets' + PathDelim;
     if (not DirectoryExists(path_sheets)) then
       ForceDirectories(path_sheets);
 
     //iDrawingsCount := XMLSS.DrawingCount();
-
     // sheets of workbook
     for i := 0 to kol - 1 do begin
       Stream := TFileStream.Create(path_sheets + 'sheet' + IntToStr(i + 1) + '.xml', fmCreate);
       try
         ZEXLSXCreateSheet(XMLSS, Stream, _pages[i], SharedStrings, SharedStringsDictionary, TextConverter, CodePageName, BOM, _WriteHelper);
       finally
-
         FreeAndNil(Stream);
-
       end;
-
 
       if (_WriteHelper.HyperLinksCount > 0) then begin
         _WriteHelper.AddSheetHyperlink(i);
@@ -6561,11 +6531,8 @@ begin
         try
           _WriteHelper.CreateSheetRels(Stream, TextConverter, CodePageName, BOM);
         finally
-
           FreeAndNil(Stream);
-
         end;
-
       end;
     end; //for i
 
@@ -6734,7 +6701,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, 'xl/styles.xml');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         // _rels/.rels
@@ -6744,7 +6711,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, '_rels/.rels');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         // xl/_rels/workbook.xml.rels
@@ -6754,7 +6721,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, 'xl/_rels/workbook.xml.rels');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         // sheets of workbook
@@ -6776,7 +6743,7 @@ begin
               stream.Position := 0;
               zip.Add(stream, 'xl/worksheets/sheet' + IntToStr(i + 1) + '.xml');
             finally
-              FreeAndNil(stream);
+              stream.Free();
             end;
           end;
 
@@ -6788,7 +6755,7 @@ begin
               stream.Position := 0;
               zip.Add(stream, 'xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels');
             finally
-              FreeAndNil(stream);
+              stream.Free();
             end;
           end;
         end; //for i
@@ -6800,7 +6767,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, 'xl/sharedStrings.xml');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         for i := 0 to XMLSS.Sheets.Count - 1 do begin
@@ -6812,7 +6779,7 @@ begin
               stream.Position := 0;
               zip.Add(stream, 'xl/drawings/drawing' + IntToStr(i+1) + '.xml');
             finally
-              FreeAndNil(stream);
+              stream.Free();
             end;
 
             // drawings/_rels/drawingN.xml.rels
@@ -6822,7 +6789,7 @@ begin
               stream.Position := 0;
               zip.Add(stream, 'xl/drawings/_rels/drawing' + IntToStr(i+1) + '.xml.rels');
             finally
-              FreeAndNil(stream);
+              stream.Free();
             end;
           end;
         end;
@@ -6839,7 +6806,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, 'xl/workbook.xml');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         //[Content_Types].xml
@@ -6849,7 +6816,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, '[Content_Types].xml');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         // docProps/app.xml
@@ -6859,7 +6826,7 @@ begin
           stream.Position := 0;
           zip.Add(stream, 'docProps/app.xml');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
 
         // docProps/core.xml
@@ -6869,19 +6836,14 @@ begin
           stream.Position := 0;
           zip.Add(stream, 'docProps/core.xml');
         finally
-          FreeAndNil(stream);
+          stream.Free();
         end;
       finally
-
         SharedStringsDictionary.Free;
-
       end;
     finally
-
       writeHelper.Free();
-
     end;
-
   finally
     zip.Free();
     ZESClearArrays(_pages, _names);

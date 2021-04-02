@@ -7,7 +7,7 @@ uses
 
 const
   ZE_MMinInch: real = 25.4;
-  
+
 type
   TTempFileStream = class(THandleStream)
   private

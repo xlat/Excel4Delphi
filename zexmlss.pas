@@ -242,6 +242,8 @@ type
     /// Number format
     /// </summary>
     property NumberFormat: string read GetNumberFormat write SetNumberFormat;
+
+    procedure SetBorderAround(borderWidth: Byte; borderColor: TColor = clBlack; borderStyle: TZBorderType = TZBorderType.ZEContinuous);
   end;
 
   /// <summary>
@@ -838,9 +840,9 @@ type
     /// </summary>
     property MarginBottom: word read FMarginBottom write FMarginBottom default 25;
     /// <summary>
-    /// Specifies the left margin on the page in millimeters. <br />20 mm by default.
+    /// Specifies the left margin on the page in millimeters 19mm (1.9sm) by default.
     /// </summary>
-    property MarginLeft: word read FMarginLeft write FMarginLeft default 20;
+    property MarginLeft: word read FMarginLeft write FMarginLeft default 19;
     /// <summary>
     /// Specifies the top margin on the page in millimeters. <br />25 mm by default.
     /// </summary>
@@ -2970,6 +2972,23 @@ begin
   try
     style.Assign(self.Style);
     proc(style);
+    FCellStyle := FSheet.FStore.Styles.Add(style, true);
+  finally
+    style.Free();
+  end;
+end;
+
+procedure TZCell.SetBorderAround(borderWidth: Byte; borderColor: TColor; borderStyle: TZBorderType);
+var style: TZStyle; bp: TZBordersPos;
+begin
+  style := TZStyle.Create();
+  try
+    style.Assign(self.Style);
+    for bp := TZBordersPos.bpLeft to TZBordersPos.bpBottom do begin
+      style.FBorder[bp].LineStyle := borderStyle;
+      style.FBorder[bp].Weight := borderWidth;
+      style.FBorder[bp].Color := borderColor;
+    end;
     FCellStyle := FSheet.FStore.Styles.Add(style, true);
   finally
     style.Free();
@@ -6090,29 +6109,38 @@ begin
 end;
 
 procedure TZRange.SetBorderAround(borderWidth: Byte; borderColor: TColor = clBlack; borderStyle: TZBorderType = TZBorderType.ZEContinuous);
-var row, col: integer;
+var row, col: integer; style: TZStyle;
 begin
   for row := FTop to FBottom do begin
     for col := FLeft to FRight do begin
-      if col = FLeft then begin
-        FSheet.Cell[col, row].BorderStyle[bpLeft] := borderStyle;
-        FSheet.Cell[col, row].BorderWidht[bpLeft] := borderWidth;
-        FSheet.Cell[col, row].BorderColor[bpLeft] := borderColor;
-      end;
-      if row = FTop then begin
-        FSheet.Cell[col, row].BorderStyle[bpTop] := borderStyle;
-        FSheet.Cell[col, row].BorderWidht[bpTop] := borderWidth;
-        FSheet.Cell[col, row].BorderColor[bpTop] := borderColor;
-      end;
-      if col = FRight then begin
-        FSheet.Cell[col, row].BorderStyle[bpRight] := borderStyle;
-        FSheet.Cell[col, row].BorderWidht[bpRight] := borderWidth;
-        FSheet.Cell[col, row].BorderColor[bpRight] := borderColor;
-      end;
-      if row = FBottom then begin
-        FSheet.Cell[col, row].BorderStyle[bpBottom] := borderStyle;
-        FSheet.Cell[col, row].BorderWidht[bpBottom] := borderWidth;
-        FSheet.Cell[col, row].BorderColor[bpBottom] := borderColor;
+      if (col = FLeft) or (row = FTop) or (col = FRight) or (row = FBottom) then begin
+        style := TZStyle.Create();
+        try
+          style.Assign(FSheet.Cell[col, row].Style);
+          if col = FLeft then begin
+            style.Border[bpLeft].LineStyle := borderStyle;
+            style.Border[bpLeft].Weight := borderWidth;
+            style.Border[bpLeft].Color := borderColor;
+          end;
+          if row = FTop then begin
+            style.Border[bpTop].LineStyle := borderStyle;
+            style.Border[bpTop].Weight := borderWidth;
+            style.Border[bpTop].Color := borderColor;
+          end;
+          if col = FRight then begin
+            style.Border[bpRight].LineStyle := borderStyle;
+            style.Border[bpRight].Weight := borderWidth;
+            style.Border[bpRight].Color := borderColor;
+          end;
+          if row = FBottom then begin
+            style.Border[bpBottom].LineStyle := borderStyle;
+            style.Border[bpBottom].Weight := borderWidth;
+            style.Border[bpBottom].Color := borderColor;
+          end;
+          FSheet.Cell[col, row].CellStyle := FSheet.FStore.Styles.Add(style, true);
+        finally
+          style.Free();
+        end;
       end;
     end;
   end;
@@ -6297,33 +6325,63 @@ begin
 end;
 
 procedure TZRange.SetBordersColor(const Value: TColor);
+var style: TZStyle; col, row: integer;
 begin
-  ApplyStyleValue(procedure (style: TZStyle) begin
-    style.Border[bpLeft].Color := Value;
-    style.Border[bpTop].Color := Value;
-    style.Border[bpRight].Color := Value;
-    style.Border[bpBottom].Color := Value;
-  end);
+  style := TZStyle.Create();
+  try
+    for row := FTop to FBottom do begin
+      for col := FLeft to FRight do begin
+        style.Assign(FSheet[col, row].Style);
+        style.Border[bpLeft].Color := Value;
+        style.Border[bpTop].Color := Value;
+        style.Border[bpRight].Color := Value;
+        style.Border[bpBottom].Color := Value;
+        FSheet[col, row].CellStyle := FSheet.FStore.Styles.Add(style, true);
+      end;
+    end;
+  finally
+    style.Free();
+  end;
 end;
 
 procedure TZRange.SetBordersStyle(const Value: TZBorderType);
+var style: TZStyle; col, row: integer;
 begin
-  ApplyStyleValue(procedure (style: TZStyle) begin
-    style.Border[bpLeft].LineStyle := Value;
-    style.Border[bpTop].LineStyle := Value;
-    style.Border[bpRight].LineStyle := Value;
-    style.Border[bpBottom].LineStyle := Value;
-  end);
+  style := TZStyle.Create();
+  try
+    for row := FTop to FBottom do begin
+      for col := FLeft to FRight do begin
+        style.Assign(FSheet[col, row].Style);
+        style.Border[bpLeft].LineStyle := Value;
+        style.Border[bpTop].LineStyle := Value;
+        style.Border[bpRight].LineStyle := Value;
+        style.Border[bpBottom].LineStyle := Value;
+        FSheet[col, row].CellStyle := FSheet.FStore.Styles.Add(style, true);
+      end;
+    end;
+  finally
+    style.Free();
+  end;
 end;
 
 procedure TZRange.SetBordersWidht(const Value: Byte);
+var style: TZStyle; col, row: integer;
 begin
-  ApplyStyleValue(procedure (style: TZStyle) begin
-    style.Border[bpLeft].Weight := Value;
-    style.Border[bpTop].Weight := Value;
-    style.Border[bpRight].Weight := Value;
-    style.Border[bpBottom].Weight := Value;
-  end);
+  style := TZStyle.Create();
+  try
+    for row := FTop to FBottom do begin
+      for col := FLeft to FRight do begin
+        style.Assign(FSheet[col, row].Style);
+        style.Border[bpLeft].Weight := Value;
+        style.Border[bpTop].Weight := Value;
+        style.Border[bpRight].Weight := Value;
+        style.Border[bpBottom].Weight := Value;
+        FSheet[col, row].CellStyle := FSheet.FStore.Styles.Add(style, true);
+      end;
+    end;
+  finally
+    style.Free();
+  end;
 end;
 
 procedure TZRange.SetFontColor(const Value: TColor);
