@@ -67,6 +67,33 @@ type
 
   TZSheet = class;
   TZStyle = class;
+  TZFont = class;
+
+  TRichString = class(TPersistent)
+  private
+    FText: string;
+    FFont: TZFont;
+    // FSCheme: string; // todo: add to TZFont or use "minor" for default
+  public
+    property Text: string read FText write FText;
+    property Font: TZFont read FFont write FFont;
+
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function GetHashCode(): integer; override;
+  end;
+
+  TRichText = class(TPersistent)
+  private
+    FList: TList<TRichString>;
+  public
+    constructor Create(); virtual;
+    destructor Destroy(); override;
+    procedure Assign(Source: TPersistent); override;
+    function GetHashCode(): integer; override;
+    //function ToHtml(): string;
+    //function ToString(): string; override;
+  end;
 
   /// <summary>
   /// Cell of spreadsheet.
@@ -83,6 +110,7 @@ type
     FShowComment: boolean;       //default = false
     FCellType: TZCellType;
     FCellStyle: integer;
+    FRichText: TRichText;
     FSheet: TZSheet;
     procedure ApplyStyleValue(proc: TProc<TZStyle>);
     function GetDataAsDouble: double;
@@ -121,6 +149,7 @@ type
     procedure SetWrapText(const Value: Boolean);
   public
     constructor Create(ASheet: TZSheet); virtual;
+    destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     /// <summary>
     /// Clear cell data.
@@ -174,6 +203,10 @@ type
     /// Show comment. <br />False by default.
     /// </summary>
     property ShowComment: boolean read FShowComment write FShowComment default false;
+    /// <summary>
+    /// Rich formated text.
+    /// </summary>
+    property RichText: TRichText read FRichText;
     /// <summary>
     /// Present cell data as double value
     /// </summary>
@@ -397,6 +430,7 @@ type
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
     procedure AssignTo(Dest: TPersistent); override;
+    function GetHashCode(): integer; override;
     property Color: TColor read FColor write FColor;
     property Size: double read FSize write FSize;
     property Charset: TFontCharset read FCharset write FCharset;
@@ -2620,6 +2654,23 @@ begin
   inherited;
 end;
 
+function TZFont.GetHashCode: integer;
+var st: integer;
+begin
+  st := 0;
+  if fsBold in FStyle then inc(st, 1);
+  if fsItalic in FStyle then inc(st, 2);
+  if fsUnderline in FStyle then inc(st, 4);
+  if fsStrikeOut in FStyle then inc(st, 8);
+
+  result := 17;
+  result := result * 23 + integer(FColor);
+  result := result * 23 + trunc(FSize * 1000.0);
+  result := result * 23 + integer(FCharset);
+  result := result * 23 + string(FName).GetHashCode();
+  result := result * 23 + st;
+end;
+
 procedure TZFont.Assign(Source: TPersistent);
 var zSource: TZFont; srcFont: TFont;
 begin
@@ -2931,6 +2982,13 @@ begin
   FCellStyle         := -1; //по дефолту
   FAlwaysShowComment := false;
   FShowComment       := false;
+  FRichText := TRichText.Create();
+end;
+
+destructor TZCell.Destroy;
+begin
+  FRichText.Free();
+  inherited;
 end;
 
 procedure TZCell.Assign(Source: TPersistent);
@@ -2947,6 +3005,7 @@ begin
     FCellType          := zSource.CellType;
     FAlwaysShowComment := zSource.AlwaysShowComment;
     FShowComment       := zSource.ShowComment;
+    FRichText.Assign(zSource.FRichText);
   end else
     inherited Assign(Source);
 end;
@@ -6445,6 +6504,72 @@ begin
   ApplyStyleValue(procedure (style: TZStyle) begin
     style.Alignment.WrapText := Value;
   end);
+end;
+
+{TRichText}
+
+constructor TRichText.Create();
+begin
+  FList := TList<TRichString>.Create();
+end;
+
+destructor TRichText.Destroy();
+var i: Integer;
+begin
+
+  for I := 0 to FList.Count-1 do
+
+    FList[i].Free();
+
+  FList.Clear();
+
+  FList.Free();
+end;
+
+procedure TRichText.Assign(Source: TPersistent);
+var i: integer;
+begin
+  if Source is TRichText then begin
+    FList.Clear();
+    for I := 0 to TRichText(Source).FList.Count-1 do
+      FList.Add(TRichText(Source).FList[i]);
+  end;
+end;
+
+function TRichText.GetHashCode(): integer;
+var i: integer;
+begin
+
+  result := 17;
+  for I := 0 to FList.Count-1 do
+    result := result * 23 + FList[i].GetHashCode();
+end;
+
+{TRichString}
+
+destructor TRichString.Destroy();
+begin
+  if Assigned(FFont) then
+
+    FFont.Free();
+
+end;
+
+procedure TRichString.Assign(Source: TPersistent);
+begin
+  if Source is TRichString then begin
+    FText := TRichString(Source).FText;
+    if Assigned(TRichString(Source).FFont) then
+       FFont.Assign(TRichString(Source).FFont);
+  end;
+end;
+
+function TRichString.GetHashCode(): integer;
+begin
+  result := 17;
+  result := result * 23 + FText.GetHashCode();
+  if Assigned(FFont) then
+    result := result * 23 + FFont.GetHashCode();
 end;
 
 initialization
