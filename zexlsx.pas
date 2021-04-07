@@ -21,6 +21,23 @@ type
     rtDrawing    = 9
  );
 
+  TZFileItem = record
+    name: string;     //путь к файлу
+    nameArx: string;
+    original: string; //исходная строка
+    ftype: TRelationType;   //тип контента
+  end;
+
+  TZRelation = record
+    id: string;       //rID
+    ftype: TRelationType;   //тип ссылки
+    target: string;   //ссылка на файла
+    fileid: integer;  //ссылка на запись
+    name: string;     //имя листа
+    state: byte;      //состояние
+    sheetid: integer; //номер листа
+  end;
+
   TZXLSXFileItem = record
     name: string;     //путь к файлу
     nameArx: string;
@@ -210,10 +227,93 @@ type
     property isHaveDrawings: boolean read FisHaveDrawings write FisHaveDrawings; //Is need create drawings*.xml?
   end;
 
-  TZEXMLSSHelper = class helper for TZWorkBook
-    private
-    {}
+  TExcel4DelphiReader = class(TObject)
+  private
+    // todo: FRawStyleList: TRawStyleList;
+    FSharedStrings: TDictionary<integer, TRichText>;
+    FFileList: TList<TZFileItem>;
+    FRelationList: TList<TZRelation>;
+    FThemaColorList: TList<TColor>;
+    FWorkBook: TZWorkBook;
 
+  public
+    constructor Create(AWorkBook: TZWorkBook);
+    destructor Destroy(); override;
+
+    procedure ReadTheme(AStream: TStream); overload;
+    procedure ReadTheme(AFileName: string); overload;
+
+    procedure ReadContentTypes(AStream: TStream); overload;
+    procedure ReadContentTypes(AFileName: string); overload;
+
+    procedure ReadSharedStrings(AStream: TStream); overload;
+    procedure ReadSharedStrings(AFileName: string); overload;
+
+    procedure ReadStyles(AStream: TStream); overload;
+    procedure ReadStyles(AFileName: string); overload;
+
+    procedure ReadRelationships(AStream: TStream); overload;
+    procedure ReadRelationships(AFileName: string); overload;
+
+    procedure ReadWorkBook(AStream: TStream); overload;
+    procedure ReadWorkBook(AFileName: string); overload;
+
+    procedure ReadWorkSheet(AStream: TStream; ASheetIndex: integer); overload;
+    procedure ReadWorkSheet(AFileName: string; ASheetIndex: integer); overload;
+
+    procedure LoadFromStream(AStream: TStream);
+    procedure LoadFromDir(ADirName: string);
+    procedure LoadFromFile(AFileName: string);
+  end;
+
+  TExcel4DelphiWriter = class
+  private
+    FSharedStrings: TDictionary<TRichText, integer>;
+    FFileList: TList<TZXLSXFileItem>;
+    FWorkBook: TZWorkBook;
+  public
+    constructor Create(AWorkBook: TZWorkBook);
+    destructor Destroy(); override;
+
+    procedure WriteTheme(AStream: TStream); overload;
+    procedure WriteTheme(AFileName: string); overload;
+
+    procedure WriteContentTypes(AStream: TStream); overload;
+    procedure WriteContentTypes(AFileName: string); overload;
+
+    procedure WriteSharedStrings(AStream: TStream); overload;
+    procedure WriteSharedStrings(AFileName: string); overload;
+
+    procedure WriteStyles(AStream: TStream); overload;
+    procedure WriteStyles(AFileName: string); overload;
+
+    procedure WriteRelationships(AStream: TStream); overload;
+    procedure WriteRelationships(AFileName: string); overload;
+
+    procedure WriteDrawings(AStream: TStream); overload;
+    procedure WriteDrawings(AFileName: string); overload;
+
+    procedure WriteDrawingRels(AStream: TStream); overload;
+    procedure WriteDrawingRels(AFileName: string); overload;
+
+    procedure WriteWorkBook(AStream: TStream); overload;
+    procedure WriteWorkBook(AFileName: string); overload;
+
+    procedure WriteDocPropsApp(AStream: TStream); overload;
+    procedure WriteDocPropsApp(AFileName: string); overload;
+
+    procedure WriteDocPropsCore(AStream: TStream); overload;
+    procedure WriteDocPropsCore(AFileName: string); overload;
+
+    procedure WriteWorkSheet(AStream: TStream; ASheetIndex: integer); overload;
+    procedure WriteWorkSheet(AFileName: string; ASheetIndex: integer); overload;
+
+    procedure SaveToStream(AStream: TStream);
+    procedure SaveToDir(ADirName: string);
+    procedure SaveToFile(AFileName: string);
+  end;
+
+  TZEXMLSSHelper = class helper for TZWorkBook
     public
     procedure LoadFromStream(stream: TStream);
     procedure LoadFromFile(fileName: string);
@@ -243,25 +343,13 @@ function SaveXmlssToXLSXPath(var XMLSS: TZWorkBook; PathName: string): integer; 
 function SaveXmlssToXLSX(var XMLSS: TZWorkBook; zipStream: TStream; const SheetsNumbers: array of integer; const SheetsNames: array of string; TextConverter: TAnsiToCPConverter; CodePageName: string; BOM: ansistring = ''): integer;
 
 //Дополнительные функции, на случай чтения отдельного файла
-function ZEXSLXReadTheme(var Stream: TStream;
-    var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
-function ZEXSLXReadContentTypes(var Stream: TStream;
-    var FileArray: TArray<TZXLSXFileItem>; var FilesCount: integer): boolean;
-function ZEXSLXReadSharedStrings(var Stream: TStream;
-    out StrArray: TStringDynArray; out StrCount: integer): boolean;
-function ZEXSLXReadStyles(var XMLSS: TZWorkBook; var Stream: TStream;
-    var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer;
-    var MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;
-function ZE_XSLXReadRelationships(var Stream: TStream;
-    var Relations: TZXLSXRelationsArray; var RelationsCount: integer;
-    var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
-function ZEXSLXReadWorkBook(var XMLSS: TZWorkBook; var Stream: TStream;
-    var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
-function ZEXSLXReadSheet(var XMLSS: TZWorkBook; var Stream: TStream;
-    const SheetName: string; var StrArray: TStringDynArray; StrCount: integer;
-    var Relations: TZXLSXRelationsArray; RelationsCount: integer;
-    MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;
-function ZEXSLXReadComments(var XMLSS: TZWorkBook; var Stream: TStream): boolean;
+function ZEXSLXReadTheme(var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer): boolean;
+function ZEXSLXReadContentTypes(var Stream: TStream; var FileArray: TArray<TZXLSXFileItem>; var FilesCount: integer): boolean;
+function ZEXSLXReadSharedStrings(var Stream: TStream; out StrArray: TStringDynArray; out StrCount: integer): boolean;
+function ZEXSLXReadStyles(var XMLSS: TZWorkBook; var Stream: TStream; var ThemaFillsColors: TIntegerDynArray; var ThemaColorCount: integer; var MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;
+function ZE_XSLXReadRelationships(var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer; var isWorkSheet: boolean; needReplaceDelimiter: boolean): boolean;
+function ZEXSLXReadWorkBook(var XMLSS: TZWorkBook; var Stream: TStream; var Relations: TZXLSXRelationsArray; var RelationsCount: integer): boolean;
+function ZEXSLXReadSheet(var XMLSS: TZWorkBook; var Stream: TStream; const SheetName: string; var StrArray: TStringDynArray; StrCount: integer; var Relations: TZXLSXRelationsArray; RelationsCount: integer; MaximumDigitWidth: double; ReadHelper: TZEXLSXReadHelper): boolean;function ZEXSLXReadComments(var XMLSS: TZWorkBook; var Stream: TStream): boolean;
 
 implementation
 
@@ -647,7 +735,8 @@ begin
   FFormats[48] := '##0.0E+0';
   FFormats[49] := '@';
 
-  FFormats[30] := 'm/d/yy';
+
+
 
   FFormats[59] := 't0';
   FFormats[60] := 't0.00';
@@ -1093,9 +1182,12 @@ var
   xml: TZsspXMLReaderH;
   s: string;
   k: integer;
+  rt: TRichText;
+  rs: TRichString;
 begin
   result := false;
   xml := TZsspXMLReaderH.Create();
+
   try
     xml.AttributesMatch := false;
     if (xml.BeginReadStream(Stream) <> 0) then
@@ -1104,19 +1196,56 @@ begin
 
     while not xml.Eof() do begin
       xml.ReadTag();
+      if xml.IsTagStartByName('sst') then begin
+         StrCount := StrToIntDef(xml.Attributes['count'], 0);
+         SetLength(StrArray, StrCount + 1);
+         StrCount := 0;
+      end;
+
       if xml.IsTagStartByName('si') then begin
         s := '';
         k := 0;
         while xml.ReadToEndTagByName('si') do begin
+          rt := TRichText.Create();
+
+          rs := TRichString.Create();
+          if xml.IsTagStartByName('rPr') then begin
+            rs.font := TZFont.Create();
+
+
+            while xml.ReadToEndTagByName('rPr') do begin
+              if xml.IsTagClosedByName('b') then
+                rs.font.Style := rs.font.Style + [fsBold]
+              else if xml.IsTagClosedByName('u') then
+                rs.font.Style := rs.font.Style + [fsUnderline]
+              else if xml.IsTagClosedByName('i') then
+                rs.font.Style := rs.font.Style + [fsItalic]
+              else if xml.IsTagClosedByName('sz') then
+                rs.font.Size := StrToFloatDef(xml.Attributes['val'], 11, TFormatSettings.Invariant)
+              else if xml.IsTagClosedByName('color ') then begin
+                // theme or grb
+              end
+              else if xml.IsTagClosedByName('rFont') then
+                 rs.font.Name := trim(xml.Attributes['val'])
+              else if xml.IsTagClosedByName('charset') then
+                 rs.font.Charset := StrToIntDef(xml.Attributes['val'], 0);
+            end;
+          end;
+
+
+
+
           if xml.IsTagEndByName('t') then begin
             if (k > 1) then
               s := s + sLineBreak;
+
             s := s + xml.TextBeforeTag;
           end;
+
           if xml.IsTagEndByName('r') then
             inc(k);
         end; //while
-        SetLength(StrArray, StrCount + 1);
+        //SetLength(StrArray, StrCount + 1);
         StrArray[StrCount] := s;
         inc(StrCount);
       end; //if
@@ -6882,6 +7011,1387 @@ end;
 procedure TZEXMLSSHelper.SaveToStream(stream: TStream);
 begin
     SaveXmlssToXLSX(self, stream, [], [], nil, 'UTF-8');
+end;
+
+{ TExcel4DelphiWriter }
+
+constructor TExcel4DelphiWriter.Create(AWorkBook: TZWorkBook);
+begin
+
+end;
+
+destructor TExcel4DelphiWriter.Destroy;
+begin
+
+  inherited;
+end;
+
+procedure TExcel4DelphiWriter.SaveToDir(ADirName: string);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.SaveToFile(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    SaveToStream(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.SaveToStream(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteContentTypes(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteContentTypes(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteContentTypes(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteDocPropsApp(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteDocPropsApp(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteDocPropsApp(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteDocPropsCore(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteDocPropsCore(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteDocPropsCore(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteDrawingRels(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteDrawingRels(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteDrawingRels(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteDrawings(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteRelationships(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteRelationships(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteRelationships(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteSharedStrings(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteSharedStrings(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteSharedStrings(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteStyles(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteStyles(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteStyles(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteTheme(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteTheme(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteTheme(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteDrawings(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteDrawings(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteWorkBook(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteWorkBook(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteWorkBook(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiWriter.WriteWorkSheet(AStream: TStream; ASheetIndex: integer);
+begin
+
+end;
+
+procedure TExcel4DelphiWriter.WriteWorkSheet(AFileName: string; ASheetIndex: integer);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate);
+  try
+    WriteWorkSheet(stream, ASheetIndex);
+  finally
+    stream.Free();
+  end;
+end;
+
+{ TExcel4DelphiReader }
+
+constructor TExcel4DelphiReader.Create(AWorkBook: TZWorkBook);
+begin
+
+end;
+
+destructor TExcel4DelphiReader.Destroy;
+begin
+
+  inherited;
+end;
+
+procedure TExcel4DelphiReader.LoadFromDir(ADirName: string);
+begin
+
+end;
+
+procedure TExcel4DelphiReader.LoadFromFile(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    LoadFromStream(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.LoadFromStream(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiReader.ReadContentTypes(AStream: TStream);
+var
+  xml: TZsspXMLReaderH;
+  contType: string;
+  rec: TContentTypeRec;
+  fileItem: TZFileItem;
+begin
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if xml.BeginReadStream(AStream) <> 0 then
+      exit;
+    while not xml.Eof() do begin
+      xml.ReadTag();
+      if xml.IsTagClosedByName('Override') then begin
+        contType := xml.Attributes.ItemsByName['ContentType'];
+        for rec in CONTENT_TYPES do begin
+          if contType = rec.name then begin
+            fileItem.name     := xml.Attributes.ItemsByName['PartName'];
+            fileItem.original := xml.Attributes.ItemsByName['PartName'];
+            fileItem.ftype    := rec.ftype;
+            FFileList.Add(fileItem);
+            break;
+          end;
+        end;
+      end;
+    end;
+  finally
+    xml.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadContentTypes(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadContentTypes(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadRelationships(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadRelationships(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadRelationships(AStream: TStream);
+var xml: TZsspXMLReaderH; relation: TZRelation;
+begin
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(AStream) <> 0) then
+      exit;
+
+    while xml.ReadToEndTagByName('Relationships') do begin
+      if xml.IsTagClosedByName('Relationship') then begin
+        relation.id := xml.Attributes.ItemsByName['Id'];
+        relation.fileid := -1;
+        relation.state := 0;
+        relation.sheetid := 0;
+        relation.name := '';
+        relation.ftype := ZEXLSXGetRelationNumber(xml.Attributes.ItemsByName['Type']);
+        relation.target := xml.Attributes.ItemsByName['Target'];
+        FRelationList.Add(relation);
+      end;
+    end;
+  finally
+    xml.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadSharedStrings(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiReader.ReadSharedStrings(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadSharedStrings(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadStyles(AStream: TStream);
+begin
+
+end;
+
+procedure TExcel4DelphiReader.ReadStyles(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadStyles(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadTheme(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadTheme(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadTheme(AStream: TStream);
+var xml: TZsspXMLReaderH; value: string;
+begin
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if xml.BeginReadStream(AStream) <> 0 then
+      exit;
+
+    while xml.ReadToEndTagByName('clrScheme') do begin
+      if xml.IsTagClosedByName('a:sysClr') then begin
+        value := xml.Attributes.ItemsByName['lastClr'];
+        FThemaColorList.Add(HTMLHexToColor(value))
+      end
+      else if xml.IsTagClosedByName('a:srgbClr') then begin
+        value := xml.Attributes.ItemsByName['val'];
+        FThemaColorList.Add(HTMLHexToColor(value));
+      end;
+    end;
+  finally
+    xml.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadWorkBook(AStream: TStream);
+var
+  xml: TZsspXMLReaderH;
+  //s: string;
+  {i, t,} dn: integer;
+begin
+  xml := TZsspXMLReaderH.Create();
+  try
+    if (xml.BeginReadStream(AStream) <> 0) then
+      exit;
+
+    dn := 0;
+    while xml.ReadToEndTagByName('workbook') do begin
+      if xml.IsTagStartByName('definedName') then begin
+         xml.ReadTag();
+         SetLength(FWorkBook.FDefinedNames, dn + 1);
+         FWorkBook.FDefinedNames[dn].LocalSheetId := StrToIntDef(xml.Attributes.ItemsByName['localSheetId'], 0);
+         FWorkBook.FDefinedNames[dn].Name := xml.Attributes.ItemsByName['name'];
+         FWorkBook.FDefinedNames[dn].Body := xml.TagValue;
+         inc(dn);
+//      end else
+//      if xml.IsTagClosedByName('sheet') then begin
+//        s := xml.Attributes.ItemsByName['r:id'];
+//        for i := 0 to RelationsCount - 1 do
+//          if (Relations[i].id = s) then begin
+//            Relations[i].name := ZEReplaceEntity(xml.Attributes.ItemsByName['name']);
+//            s := xml.Attributes.ItemsByName['sheetId'];
+//            relations[i].sheetid := -1;
+//            if (TryStrToInt(s, t)) then
+//              relations[i].sheetid := t;
+//            s := xml.Attributes.ItemsByName['state'];
+//            break;
+//          end;
+//      end else
+//      if xml.IsTagClosedByName('workbookView') then begin
+//        s := xml.Attributes.ItemsByName['activeTab'];
+//        s := xml.Attributes.ItemsByName['firstSheet'];
+//        s := xml.Attributes.ItemsByName['showHorizontalScroll'];
+//        s := xml.Attributes.ItemsByName['showSheetTabs'];
+//        s := xml.Attributes.ItemsByName['showVerticalScroll'];
+//        s := xml.Attributes.ItemsByName['tabRatio'];
+//        s := xml.Attributes.ItemsByName['windowHeight'];
+//        s := xml.Attributes.ItemsByName['windowWidth'];
+//        s := xml.Attributes.ItemsByName['xWindow'];
+//        s := xml.Attributes.ItemsByName['yWindow'];
+      end;
+    end;
+  finally
+    xml.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadWorkBook(AFileName: string);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadWorkBook(stream);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadWorkSheet(AFileName: string; ASheetIndex: integer);
+var stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmOpenRead, fmShareDenyRead);
+  try
+    ReadWorkSheet(stream, ASheetIndex);
+  finally
+    stream.Free();
+  end;
+end;
+
+procedure TExcel4DelphiReader.ReadWorkSheet(AStream: TStream; ASheetIndex: integer);
+  const MaximumDigitWidth: real = 5.0;
+var
+  xml: TZsspXMLReaderH;
+  currentPage: integer;
+  currentRow: integer;
+  currentCol: integer;
+  currentSheet: TZSheet;
+  currentCell: TZCell;
+  str: string;
+  tempReal: real;
+  tempInt: integer;
+  tempDate: TDateTime;
+  tempFloat: Double;
+
+  procedure CheckRow(const RowCount: integer);
+  begin
+    if (currentSheet.RowCount < RowCount) then
+      currentSheet.RowCount := RowCount;
+  end;
+
+  procedure CheckCol(const ColCount: integer);
+  begin
+    if (currentSheet.ColCount < ColCount) then
+      currentSheet.ColCount := ColCount
+  end;
+
+  procedure _ReadSheetData();
+  var
+    t: integer;
+    v: string;
+    _num: integer;
+    _type: string;
+    _cr, _cc: integer;
+    maxCol: integer;
+  begin
+    _cr := 0;
+    _cc := 0;
+    maxCol := 0;
+    CheckRow(1);
+    CheckCol(1);
+    while xml.ReadToEndTagByName('sheetData') do begin
+      //ячейка
+      if (xml.TagName = 'c') then begin
+        str := xml.Attributes.ItemsByName['r']; //номер
+        if (str > '') then
+          if (ZEGetCellCoords(str, _cc, _cr)) then begin
+            currentCol := _cc;
+            CheckCol(_cc + 1);
+          end;
+
+        _type := xml.Attributes.ItemsByName['t']; //тип
+
+        //s := xml.Attributes.ItemsByName['cm'];
+        //s := xml.Attributes.ItemsByName['ph'];
+        //s := xml.Attributes.ItemsByName['vm'];
+        v := '';
+        _num := 0;
+        currentCell := currentSheet.Cell[currentCol, currentRow];
+        str := xml.Attributes.ItemsByName['s']; //стиль
+        if (str > '') then
+          if (tryStrToInt(str, t)) then
+            currentCell.CellStyle := t;
+        if (xml.IsTagStart) then
+        while xml.ReadToEndTagByName('c') do begin
+          //is пока игнорируем
+          if xml.IsTagEndByName('v') or xml.IsTagEndByName('t') then begin
+            if (_num > 0) then
+              v := v + sLineBreak;
+            v := v + xml.TextBeforeTag;
+            inc(_num);
+          end else if xml.IsTagEndByName('f') then
+            currentCell.Formula := ZEReplaceEntity(xml.TextBeforeTag);
+
+        end; //while
+
+        //Возможные типы:
+        //  s - sharedstring
+        //  b - boolean
+        //  n - number
+        //  e - error
+        //  str - string
+        //  inlineStr - inline string ??
+        //  d - date
+        //  тип может отсутствовать. Интерпретируем в таком случае как ZEGeneral
+        if (_type = '') then
+          currentCell.CellType := ZEGeneral
+        else if (_type = 'n') then begin
+          currentCell.CellType := ZENumber;
+          //Trouble: if cell style is number, and number format is date, then
+          // cell style is date. F****** m$!
+//          if (ReadHelper.NumberFormats.IsDateFormat(currentCell.CellStyle)) then
+//            if (ZEIsTryStrToFloat(v, tempFloat)) then begin
+//              currentCell.CellType := ZEDateTime;
+//              v := ZEDateTimeToStr(tempFloat);
+//            end;
+        end else if (_type = 's') then begin
+          currentCell.CellType := ZEString;
+          if (TryStrToInt(v, t)) then
+            if ((t >= 0) and (t < FSharedStrings.Count)) then
+              v := FSharedStrings[t].ToString();
+        end else if (_type = 'd') then begin
+          currentCell.CellType := ZEDateTime;
+          if (TryZEStrToDateTime(v, tempDate)) then
+            v := ZEDateTimeToStr(tempDate)
+          else
+          if (ZEIsTryStrToFloat(v, tempFloat)) then
+            v := ZEDateTimeToStr(tempFloat)
+          else
+            currentCell.CellType := ZEString;
+        end;
+
+        currentCell.Data := ZEReplaceEntity(v);
+        inc(currentCol);
+        CheckCol(currentCol + 1);
+        if currentCol > maxCol then
+           maxCol := currentCol;
+      end else
+      //строка
+      if xml.IsTagStartOrClosedByName('row') then begin
+        currentCol := 0;
+        str := xml.Attributes.ItemsByName['r']; //индекс строки
+        if (str > '') then
+          if (TryStrToInt(str, t)) then begin
+            currentRow := t - 1;
+            CheckRow(t);
+          end;
+        //s := xml.Attributes.ItemsByName['collapsed'];
+        //s := xml.Attributes.ItemsByName['customFormat'];
+        //s := xml.Attributes.ItemsByName['customHeight'];
+        currentSheet.Rows[currentRow].Hidden := ZETryStrToBoolean(xml.Attributes.ItemsByName['hidden'], false);
+
+        str := xml.Attributes.ItemsByName['ht']; //в поинтах
+        if (str > '') then begin
+          tempReal := ZETryStrToFloat(str, 10);
+          currentSheet.Rows[currentRow].Height := tempReal;
+          //tempReal := tempReal / 2.835; //???
+          //currentSheet.Rows[currentRow].HeightMM := tempReal;
+        end
+        else
+          currentSheet.Rows[currentRow].Height := currentSheet.DefaultRowHeight;
+
+        str := xml.Attributes.ItemsByName['outlineLevel'];
+        currentSheet.Rows[currentRow].OutlineLevel := StrToIntDef(str, 0);
+
+        //s := xml.Attributes.ItemsByName['ph'];
+
+        str := xml.Attributes.ItemsByName['s']; //номер стиля
+        if (str > '') then
+          if (TryStrToInt(str, t)) then begin
+            //нужно подставить нужный стиль
+          end;
+        //s := xml.Attributes.ItemsByName['spans'];
+        //s := xml.Attributes.ItemsByName['thickBot'];
+        //s := xml.Attributes.ItemsByName['thickTop'];
+
+        if xml.IsTagClosed then begin
+          inc(currentRow);
+          CheckRow(currentRow + 1);
+        end;
+      end else
+      //конец строки
+      if xml.IsTagEndByName('row') then begin
+        inc(currentRow);
+        CheckRow(currentRow + 1);
+      end;
+    end; //while
+    currentSheet.ColCount := maxCol;
+  end; //_ReadSheetData
+
+  procedure _ReadAutoFilter();
+  begin
+    currentSheet.AutoFilter := xml.Attributes.ItemsByName['ref'];
+  end;
+
+  procedure _ReadMerge();
+  var
+    i, t, num: integer;
+    x1, x2, y1, y2: integer;
+    s1, s2: string;
+    b: boolean;
+    function _GetCoords(var x, y: integer): boolean;
+    begin
+      result := true;
+      x := ZEGetColByA1(s1);
+      if (x < 0) then
+        result := false;
+      if (not TryStrToInt(s2, y)) then
+        result := false
+      else
+        dec(y);
+      b := result;
+    end; //_GetCoords
+
+  begin
+    x1 := 0;
+    y1 := 0;
+    x2 := 0;
+    y2 := 0;
+    while xml.ReadToEndTagByName('mergeCells') do begin
+      if xml.IsTagStartOrClosedByName('mergeCell') then begin
+        str := xml.Attributes.ItemsByName['ref'];
+        t := length(str);
+        if (t > 0) then begin
+          str := str + ':';
+          s1 := '';
+          s2 := '';
+          b := true;
+          num := 0;
+          for i := 1 to t + 1 do
+          case str[i] of
+            'A'..'Z', 'a'..'z': s1 := s1 + str[i];
+            '0'..'9': s2 := s2 + str[i];
+            ':':
+              begin
+                inc(num);
+                if (num > 2) then begin
+                  b := false;
+                  break;
+                end;
+                if (num = 1) then begin
+                  if (not _GetCoords(x1, y1)) then
+                    break;
+                end else begin
+                  if (not _GetCoords(x2, y2)) then
+                    break;
+                end;
+                s1 := '';
+                s2 := '';
+              end;
+            else begin
+              b := false;
+              break;
+            end;
+          end; //case
+
+          if (b) then begin
+            CheckRow(y1 + 1);
+            CheckRow(y2 + 1);
+            CheckCol(x1 + 1);
+            CheckCol(x2 + 1);
+            currentSheet.MergeCells.AddRectXY(x1, y1, x2, y2);
+          end;
+        end; //if
+      end; //if
+    end; //while
+  end; //_ReadMerge
+
+  procedure _ReadCols();
+  type
+    TZColInf = record
+      min,max: integer;
+      bestFit,hidden: boolean;
+      outlineLevel: integer;
+      width: integer;
+    end;
+  var
+    i, j: integer; t: real;
+    colInf: TArray<TZColInf>;
+  const MAX_COL_DIFF = 500;
+  begin
+    i := 0;
+    while xml.ReadToEndTagByName('cols') do begin
+      if (xml.TagName = 'col') and xml.IsTagStartOrClosed then begin
+        SetLength(colInf, i + 1);
+
+        colInf[i].min := StrToIntDef(xml.Attributes.ItemsByName['min'], 0);
+        colInf[i].max := StrToIntDef(xml.Attributes.ItemsByName['max'], 0);
+        // защита от сплошного диапазона
+        // когда значение _мах = 16384
+        // но чтобы уж наверняка, проверим на MAX_COL_DIFF колонок подряд.
+        if (colInf[i].max - colInf[i].min) > MAX_COL_DIFF then
+            colInf[i].max := colInf[i].min + MAX_COL_DIFF;
+
+        colInf[i].outlineLevel := StrToIntDef(xml.Attributes.ItemsByName['outlineLevel'], 0);
+        str := xml.Attributes.ItemsByName['hidden'];
+        if (str > '') then colInf[i].hidden := ZETryStrToBoolean(str);
+        str := xml.Attributes.ItemsByName['bestFit'];
+        if (str > '') then colInf[i].bestFit := ZETryStrToBoolean(str);
+
+        str := xml.Attributes.ItemsByName['width'];
+        if (str > '') then begin
+          t := ZETryStrToFloat(str, 5.14509803921569);
+          //t := 10 * t / 5.14509803921569;
+          //А.А.Валуев. Формулы расёта ширины взяты здесь - https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_col_topic_ID0ELFQ4.html
+          t := Trunc(((256 * t + Trunc(128 / MaximumDigitWidth)) / 256) * MaximumDigitWidth);
+          colInf[i].width := Trunc(t);
+        end;
+
+        inc(i);
+      end; //if
+    end; //while
+
+    for I := Low(colInf) to High(colInf) do begin
+      for j := colInf[i].min to colInf[i].max do begin
+        CheckCol(j);
+        currentSheet.Columns[j-1].AutoFitWidth := colInf[i].bestFit;
+        currentSheet.Columns[j-1].Hidden := colInf[i].hidden;
+        currentSheet.Columns[j-1].WidthPix := colInf[i].width;
+      end;
+    end;
+  end; //_ReadCols
+
+  function _StrToMM(const st: string; var retFloat: real): boolean;
+  begin
+    result := false;
+    if (str > '') then begin
+      retFloat := ZETryStrToFloat(st, -1);
+      if (retFloat > -1) then begin
+        result := true;
+        retFloat := retFloat * ZE_MMinInch;
+      end;
+    end;
+  end; //_StrToMM
+
+  procedure _GetDimension();
+  var st, s: string;
+    i, l, _maxC, _maxR, c, r: integer;
+  begin
+    c := 0;
+    r := 0;
+    st := xml.Attributes.ItemsByName['ref'];
+    l := Length(st);
+    if (l > 0) then begin
+      st := st + ':';
+      inc(l);
+      s := '';
+      _maxC := -1;
+      _maxR := -1;
+      for i := 1 to l do
+      if (st[i] = ':') then begin
+        if (ZEGetCellCoords(s, c, r, true)) then begin;
+          if (c > _maxC) then
+            _maxC := c;
+          if (r > _maxR) then
+            _maxR := r;
+        end else
+          break;
+        s := '';
+      end else
+        s := s + st[i];
+      if (_maxC > 0) then
+        CheckCol(_maxC);
+      if (_maxR > 0) then
+        CheckRow(_maxR);
+    end;
+  end; //_GetDimension()
+
+  procedure _ReadHyperLinks();
+  var _c, _r, i: integer;
+  begin
+    _c := 0;
+    _r := 0;
+    while xml.ReadToEndTagByName('hyperlinks') do begin
+      if xml.IsTagClosedByName('hyperlink') then begin
+        str := xml.Attributes.ItemsByName['ref'];
+        if (str > '') then
+          if (ZEGetCellCoords(str, _c, _r, true)) then begin
+            CheckRow(_r);
+            CheckCol(_c);
+            currentSheet.Cell[_c, _r].HRefScreenTip := xml.Attributes.ItemsByName['tooltip'];
+            str := xml.Attributes.ItemsByName['r:id'];
+            //по r:id подставить ссылку
+            for i := 0 to FRelationList.Count - 1 do
+              if ((FRelationList[i].id = str)
+              and (FRelationList[i].ftype = TRelationType.rtHyperlink)) then begin
+                currentSheet.Cell[_c, _r].Href := FRelationList[i].target;
+                break;
+              end;
+          end;
+        //доп. атрибуты:
+        //  display - ??
+        //  id - id <> r:id??
+        //  location - ??
+      end;
+    end; //while
+  end; //_ReadHyperLinks();
+
+  procedure _ReadSheetPr();
+  begin
+    while xml.ReadToEndTagByName('sheetPr') do begin
+      if xml.TagName = 'tabColor' then
+        currentSheet.TabColor := ARGBToColor(xml.Attributes.ItemsByName['rgb']);
+
+      if xml.TagName = 'pageSetUpPr' then
+        currentSheet.FitToPage := ZEStrToBoolean(xml.Attributes.ItemsByName['fitToPage']);
+
+      if xml.TagName = 'outlinePr' then begin
+        currentSheet.ApplyStyles := ZEStrToBoolean(xml.Attributes.ItemsByName['applyStyles']);
+        currentSheet.SummaryBelow := xml.Attributes.ItemsByName['summaryBelow'] <> '0';
+        currentSheet.SummaryRight := xml.Attributes.ItemsByName['summaryRight'] <> '0';
+      end;
+    end;
+  end; //_ReadSheetPr();
+
+  procedure _ReadRowBreaks();
+  begin
+    currentSheet.RowBreaks := [];
+    while xml.ReadToEndTagByName('rowBreaks') do begin
+      if xml.TagName = 'brk' then
+        currentSheet.RowBreaks := currentSheet.RowBreaks
+            + [ StrToIntDef(xml.Attributes.ItemsByName['id'], 0) ];
+    end;
+  end;
+
+  procedure _ReadColBreaks();
+  begin
+    currentSheet.ColBreaks := [];
+    while xml.ReadToEndTagByName('colBreaks') do begin
+      if xml.TagName = 'brk' then
+        currentSheet.ColBreaks := currentSheet.ColBreaks
+            + [ StrToIntDef(xml.Attributes.ItemsByName['id'], 0) ];
+    end;
+  end;
+
+  procedure _ReadSheetViews();
+  var
+    vValue, hValue: integer;
+    SplitMode: TZSplitMode;
+    s: string;
+  begin
+    while xml.ReadToEndTagByName('sheetViews') do begin
+      if xml.IsTagStartByName('sheetView') or xml.IsTagClosedByName('sheetView') then begin
+        s := xml.Attributes.ItemsByName['tabSelected'];
+        // тут кроется проблема с выделением нескольких листов
+        currentSheet.Selected := currentSheet.SheetIndex = 0;// s = '1';
+        currentSheet.ViewMode := zvmNormal;
+        if xml.Attributes.ItemsByName['view'] = 'pageBreakPreview' then
+            currentSheet.ViewMode := zvmPageBreakPreview;
+      end;
+
+      if xml.IsTagClosedByName('pane') then begin
+        SplitMode := ZSplitSplit;
+        s := xml.Attributes.ItemsByName['state'];
+        if (s = 'frozen') then
+          SplitMode := ZSplitFrozen;
+
+        s := xml.Attributes.ItemsByName['xSplit'];
+        if (not TryStrToInt(s, vValue)) then
+          vValue := 0;
+
+        s := xml.Attributes.ItemsByName['ySplit'];
+        if (not TryStrToInt(s, hValue)) then
+          hValue := 0;
+
+        currentSheet.SheetOptions.SplitVerticalValue := vValue;
+        currentSheet.SheetOptions.SplitHorizontalValue := hValue;
+
+        currentSheet.SheetOptions.SplitHorizontalMode := ZSplitNone;
+        currentSheet.SheetOptions.SplitVerticalMode := ZSplitNone;
+        if (hValue <> 0) then
+          currentSheet.SheetOptions.SplitHorizontalMode := SplitMode;
+        if (vValue <> 0) then
+          currentSheet.SheetOptions.SplitVerticalMode := SplitMode;
+
+        if (currentSheet.SheetOptions.SplitHorizontalMode = ZSplitSplit) then
+          currentSheet.SheetOptions.SplitHorizontalValue := PointToPixel(hValue/20);
+        if (currentSheet.SheetOptions.SplitVerticalMode = ZSplitSplit) then
+          currentSheet.SheetOptions.SplitVerticalValue := PointToPixel(vValue/20);
+
+      end; //if
+    end; //while
+  end; //_ReadSheetViews()
+
+  procedure _ReadConditionFormatting();
+  var
+    MaxFormulasCount: integer;
+    _formulas: array of string;
+    count: integer;
+    _sqref: string;
+    _type: string;
+    _operator: string;
+    _CFCondition: TZCondition;
+    _CFOperator: TZConditionalOperator;
+    _Style: string;
+    _text: string;
+    _isCFAdded: boolean;
+    _isOk: boolean;
+    //_priority: string;
+    _CF: TZConditionalStyle;
+    _tmpStyle: TZStyle;
+
+    function _AddCF(): boolean;
+    var
+      s, ss: string;
+      _len, i, kol: integer;
+      a: array of array[0..5] of integer;
+      _maxx: integer;
+      ch: char;
+      w, h: integer;
+
+      function _GetOneArea(st: string): boolean;
+      var
+        i, j: integer;
+        s: string;
+        ch: char;
+        _cnt: integer;
+        tmpArr: array [0..1, 0..1] of integer;
+        _isOk: boolean;
+        t: integer;
+        tmpB: boolean;
+
+      begin
+        result := false;
+        if (st <> '') then begin
+          st := st + ':';
+          s := '';
+          _cnt := 0;
+          _isOk := true;
+          for i := 1 to length(st) do begin
+            ch := st[i];
+            if (ch = ':') then begin
+              if (_cnt < 2) then begin
+                tmpB := ZEGetCellCoords(s, tmpArr[_cnt][0], tmpArr[_cnt][1]);
+                _isOk := _isOk and tmpB;
+              end;
+              s := '';
+              inc(_cnt);
+            end else
+              s := s + ch;
+          end; //for
+
+          if (_isOk) then
+            if (_cnt > 0) then begin
+              if (_cnt > 2) then
+                _cnt := 2;
+
+              a[kol][0] := _cnt;
+              t := 1;
+              for i := 0 to _cnt - 1 do
+                for j := 0 to 1 do begin
+                  a[kol][t] := tmpArr[i][j];
+                  inc(t);
+                end;
+              result := true;
+            end;
+        end; //if
+      end; //_GetOneArea
+
+    begin
+      result := false;
+      if (_sqref <> '') then
+      try
+        _maxx := 4;
+        SetLength(a, _maxx);
+        ss := _sqref + ' ';
+        _len := Length(ss);
+        kol := 0;
+        s := '';
+        for i := 1 to _len do begin
+          ch := ss[i];
+          if (ch = ' ') then begin
+            if (_GetOneArea(s)) then begin
+              inc(kol);
+              if (kol >= _maxx) then begin
+                inc(_maxx, 4);
+                SetLength(a, _maxx);
+              end;
+            end;
+            s := '';
+          end else
+            s := s + ch;
+        end; //for
+
+        if (kol > 0) then begin
+          currentSheet.ConditionalFormatting.Add();
+          _CF := currentSheet.ConditionalFormatting[currentSheet.ConditionalFormatting.Count - 1];
+          for i := 0 to kol - 1 do begin
+            w := 1;
+            h := 1;
+            if (a[i][0] >= 2) then begin
+              w := abs(a[i][3] - a[i][1]) + 1;
+              h := abs(a[i][4] - a[i][2]) + 1;
+            end;
+            _CF.Areas.Add(a[i][1], a[i][2], w, h);
+          end;
+          result := true;
+        end;
+      finally
+        SetLength(a, 0);
+      end;
+    end; //_AddCF
+
+    //Применяем условный стиль
+    procedure _TryApplyCF();
+    var  b: boolean;
+      num: integer;
+      _id: integer;
+      procedure _CheckTextCondition();
+      begin
+        if (count = 1) then
+          if (_formulas[0] <> '') then
+            _isOk := true;
+      end;
+
+      //Найти стиль
+      //  пока будем делать так: предполагаем, что все ячейки в текущей области
+      //  условного форматирования имеют один стиль. Берём стиль из левой верхней
+      //  ячейки, клонируем его, применяем дифф. стиль, добавляем в хранилище стилей
+      //  с учётом повторов.
+      //TODO: потом нужно будет переделать
+      //INPUT
+      //      dfNum: integer - номер дифференцированного форматирования
+      //RETURN
+      //      integer - номер применяемого стиля
+      function _getStyleIdxForDF(dfNum: integer): integer;
+      var
+        _df: TZXLSXDiffFormattingItem;
+        _r, _c: integer;
+        _t: integer;
+        i: TZBordersPos;
+      begin
+        //_currSheet
+        result := -1;
+        if ((dfNum >= 0)
+        //and (dfNum < ReadHelper.DiffFormatting.Count))
+         ) then begin
+          //_df := ReadHelper.DiffFormatting[dfNum];
+          _t := -1;
+
+          if (_cf.Areas.Count > 0) then begin
+            _r := _cf.Areas.Items[0].Row;
+            _c := _cf.Areas.Items[0].Column;
+            if ((_r >= 0) and (_r < currentSheet.RowCount)) then
+              if ((_c >= 0) and (_c < currentSheet.ColCount)) then
+                _t := currentSheet.Cell[_c, _r].CellStyle;
+          end;
+
+          _tmpStyle.Assign(FWorkBook.Styles[_t]);
+
+          if (_df.UseFont) then begin
+            if (_df.UseFontStyles) then
+              _tmpStyle.Font.Style := _df.FontStyles;
+            if (_df.UseFontColor) then
+              _tmpStyle.Font.Color := _df.FontColor;
+          end;
+          if (_df.UseFill) then begin
+            if (_df.UseCellPattern) then
+              _tmpStyle.CellPattern := _df.CellPattern;
+            if (_df.UseBGColor) then
+              _tmpStyle.BGColor := _df.BGColor;
+            if (_df.UsePatternColor) then
+              _tmpStyle.PatternColor := _df.PatternColor;
+          end;
+          if (_df.UseBorder) then
+            for i := bpLeft to bpDiagonalRight do begin
+              if (_df.Borders[i].UseStyle) then begin
+                _tmpStyle.Border[i].Weight := _df.Borders[i].Weight;
+                _tmpStyle.Border[i].LineStyle := _df.Borders[i].LineStyle;
+              end;
+              if (_df.Borders[i].UseColor) then
+                _tmpStyle.Border[i].Color := _df.Borders[i].Color;
+            end; //for
+
+          result := FWorkBook.Styles.Add(_tmpStyle, true);
+        end; //if
+      end; //_getStyleIdxForDF
+
+    begin
+      _isOk := false;
+      case (_CFCondition) of
+        ZCFIsTrueFormula:;
+        ZCFCellContentIsBetween,
+        ZCFCellContentIsNotBetween:
+          begin
+            //только числа
+            if (count = 2) then
+            begin
+              ZETryStrToFloat(_formulas[0], b);
+              if (b) then
+                ZETryStrToFloat(_formulas[1], _isOk);
+            end;
+          end;
+        ZCFCellContentOperator:
+          begin
+            //только числа
+            if (count = 1) then
+              ZETryStrToFloat(_formulas[0], _isOk);
+          end;
+        ZCFNumberValue:;
+        ZCFString:;
+        ZCFBoolTrue:;
+        ZCFBoolFalse:;
+        ZCFFormula:;
+        ZCFContainsText: _CheckTextCondition();
+        ZCFNotContainsText: _CheckTextCondition();
+        ZCFBeginsWithText: _CheckTextCondition();
+        ZCFEndsWithText: _CheckTextCondition();
+      end; //case
+
+      if (_isOk) then begin
+        if (not _isCFAdded) then
+          _isCFAdded := _AddCF();
+
+        if ((_isCFAdded) and (Assigned(_CF))) then begin
+          num := _CF.Count;
+          _CF.Add();
+          if (_Style <> '') then
+            if (TryStrToInt(_Style, _id)) then
+             _CF[num].ApplyStyleID := _getStyleIdxForDF(_id);
+          _CF[num].Condition := _CFCondition;
+          _CF[num].ConditionOperator := _CFOperator;
+
+          _cf[num].Value1 := _formulas[0];
+          if (count >= 2) then
+            _cf[num].Value2 := _formulas[1];
+        end;
+      end;
+    end; //_TryApplyCF
+
+  begin
+    try
+      _sqref := xml.Attributes['sqref'];
+      MaxFormulasCount := 2;
+      SetLength(_formulas, MaxFormulasCount);
+      _isCFAdded := false;
+      _CF := nil;
+      _tmpStyle := TZStyle.Create();
+      while xml.ReadToEndTagByName('conditionalFormatting') do begin
+        // cfRule = Conditional Formatting Rule
+        if xml.IsTagStartByName('cfRule') then begin
+          _type     := xml.Attributes['type'];
+          _operator := xml.Attributes['operator'];
+          _Style    := xml.Attributes['dxfId'];
+          _text     := ZEReplaceEntity(xml.Attributes['text']);
+          //_priority := xml.Attributes['priority'];
+
+          count := 0;
+          while xml.ReadToEndTagByName('cfRule')  do begin
+            if xml.IsTagEndByName('formula') then begin
+              if (count >= MaxFormulasCount) then begin
+                inc(MaxFormulasCount, 2);
+                SetLength(_formulas, MaxFormulasCount);
+              end;
+              _formulas[count] := ZEReplaceEntity(xml.TextBeforeTag);
+              inc(count);
+            end;
+          end; //while
+
+          if (ZEXLSX_getCFCondition(_type, _operator, _CFCondition, _CFOperator)) then
+            _TryApplyCF();
+        end; //if
+      end; //while
+    finally
+      SetLength(_formulas, 0);
+      FreeAndNil(_tmpStyle);
+    end;
+  end; //_ReadConditionFormatting
+
+  procedure _ReadHeaderFooter();
+  begin
+    currentSheet.SheetOptions.IsDifferentFirst   := ZEStrToBoolean(xml.Attributes['differentFirst']);
+    currentSheet.SheetOptions.IsDifferentOddEven := ZEStrToBoolean(xml.Attributes['differentOddEven']);
+    while xml.ReadToEndTagByName('headerFooter') do begin
+      if xml.IsTagEndByName('oddHeader') then
+        currentSheet.SheetOptions.Header := ClenuapXmlTagValue(xml.TextBeforeTag)
+      else if xml.IsTagEndByName('oddFooter') then
+        currentSheet.SheetOptions.Footer := ClenuapXmlTagValue(xml.TextBeforeTag)
+      else if xml.IsTagEndByName('evenHeader') then
+        currentSheet.SheetOptions.EvenHeader := ClenuapXmlTagValue(xml.TextBeforeTag)
+      else if xml.IsTagEndByName('evenFooter') then
+        currentSheet.SheetOptions.EvenFooter := ClenuapXmlTagValue(xml.TextBeforeTag)
+      else if xml.IsTagEndByName('firstHeader') then
+        currentSheet.SheetOptions.FirstPageHeader := ClenuapXmlTagValue(xml.TextBeforeTag)
+      else if xml.IsTagEndByName('firstFooter') then
+        currentSheet.SheetOptions.FirstPageFooter := ClenuapXmlTagValue(xml.TextBeforeTag);
+    end;
+  end;
+begin
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(AStream) <> 0) then
+      exit;
+
+    currentPage := FWorkBook.Sheets.Count;
+    FWorkBook.Sheets.Count := FWorkBook.Sheets.Count + 1;
+    currentRow := 0;
+    currentSheet := FWorkBook.Sheets[ASheetIndex];
+    //currentSheet.Title := SheetName;
+
+    while xml.ReadTag() do begin
+      if xml.IsTagStartByName('sheetData') then
+        _ReadSheetData()
+      else
+      if xml.IsTagClosedByName('autoFilter') then
+        _ReadAutoFilter()
+      else
+      if xml.IsTagStartByName('mergeCells') then
+        _ReadMerge()
+      else
+      if xml.IsTagStartByName('cols') then
+        _ReadCols()
+      else
+      if xml.IsTagClosedByName('drawing') then begin
+         currentSheet.DrawingRid := StrtoIntDef(xml.Attributes.ItemsByName['r:id'].Substring(3), 0);
+      end else
+      if xml.IsTagClosedByName('pageMargins') then begin
+        str := xml.Attributes.ItemsByName['bottom'];
+        if (_StrToMM(str, tempReal)) then
+          currentSheet.SheetOptions.MarginBottom := round(tempReal);
+        str := xml.Attributes.ItemsByName['footer'];
+        if (_StrToMM(str, tempReal)) then
+          currentSheet.SheetOptions.FooterMargins.Height := abs(round(tempReal));
+        str := xml.Attributes.ItemsByName['header'];
+        if (_StrToMM(str, tempReal)) then
+          currentSheet.SheetOptions.HeaderMargins.Height := abs(round(tempReal));
+        str := xml.Attributes.ItemsByName['left'];
+        if (_StrToMM(str, tempReal)) then
+          currentSheet.SheetOptions.MarginLeft := round(tempReal);
+        str := xml.Attributes.ItemsByName['right'];
+        if (_StrToMM(str, tempReal)) then
+          currentSheet.SheetOptions.MarginRight := round(tempReal);
+        str := xml.Attributes.ItemsByName['top'];
+        if (_StrToMM(str, tempReal)) then
+          currentSheet.SheetOptions.MarginTop := round(tempReal);
+      end else
+      //Настройки страницы
+      if xml.IsTagClosedByName('pageSetup') then begin
+        //str := xml.Attributes.ItemsByName['blackAndWhite'];
+        //str := xml.Attributes.ItemsByName['cellComments'];
+        //str := xml.Attributes.ItemsByName['copies'];
+        //str := xml.Attributes.ItemsByName['draft'];
+        //str := xml.Attributes.ItemsByName['errors'];
+        str := xml.Attributes.ItemsByName['firstPageNumber'];
+        if (str > '') then
+          if (TryStrToInt(str, tempInt)) then
+            currentSheet.SheetOptions.StartPageNumber := tempInt;
+
+        str := xml.Attributes.ItemsByName['fitToHeight'];
+        if (str > '') then
+          if (TryStrToInt(str, tempInt)) then
+            currentSheet.SheetOptions.FitToHeight := tempInt;
+
+        str := xml.Attributes.ItemsByName['fitToWidth'];
+        if (str > '') then
+          if (TryStrToInt(str, tempInt)) then
+            currentSheet.SheetOptions.FitToWidth := tempInt;
+
+        //str := xml.Attributes.ItemsByName['horizontalDpi'];
+        //str := xml.Attributes.ItemsByName['id'];
+        str := xml.Attributes.ItemsByName['orientation'];
+        if (str > '') then begin
+          currentSheet.SheetOptions.PortraitOrientation := false;
+          if (str = 'portrait') then
+            currentSheet.SheetOptions.PortraitOrientation := true;
+        end;
+
+        //str := xml.Attributes.ItemsByName['pageOrder'];
+
+        str := xml.Attributes.ItemsByName['paperSize'];
+        if (str > '') then
+          if (TryStrToInt(str, tempInt)) then
+            currentSheet.SheetOptions.PaperSize := tempInt;
+        //str := xml.Attributes.ItemsByName['paperHeight']; //если утановлены paperHeight и Width, то paperSize игнорируется
+        //str := xml.Attributes.ItemsByName['paperWidth'];
+
+        str := xml.Attributes.ItemsByName['scale'];
+        currentSheet.SheetOptions.ScaleToPercent := StrToIntDef(str, 100);
+        //str := xml.Attributes.ItemsByName['useFirstPageNumber'];
+        //str := xml.Attributes.ItemsByName['usePrinterDefaults'];
+        //str := xml.Attributes.ItemsByName['verticalDpi'];
+      end else
+      //настройки печати
+      if xml.IsTagClosedByName('printOptions') then begin
+        //str := xml.Attributes.ItemsByName['gridLines'];
+        //str := xml.Attributes.ItemsByName['gridLinesSet'];
+        //str := xml.Attributes.ItemsByName['headings'];
+        str := xml.Attributes.ItemsByName['horizontalCentered'];
+        if (str > '') then
+          currentSheet.SheetOptions.CenterHorizontal := ZEStrToBoolean(str);
+
+        str := xml.Attributes.ItemsByName['verticalCentered'];
+        if (str > '') then
+          currentSheet.SheetOptions.CenterVertical := ZEStrToBoolean(str);
+      end
+      else
+      if xml.IsTagClosedByName('sheetFormatPr') then
+      begin
+        str := xml.Attributes.ItemsByName['defaultColWidth'];
+        if (str > '') then
+          currentSheet.DefaultColWidth := ZETryStrToFloat(str, currentSheet.DefaultColWidth);
+        str := xml.Attributes.ItemsByName['defaultRowHeight'];
+        if (str > '') then
+          currentSheet.DefaultRowHeight := ZETryStrToFloat(str, currentSheet.DefaultRowHeight);
+      end
+      else
+      if xml.IsTagClosedByName('dimension') then
+        _GetDimension()
+      else
+      if xml.IsTagStartByName('hyperlinks') then
+        _ReadHyperLinks()
+      else
+      if xml.IsTagStartByName('sheetPr') then
+        _ReadSheetPr()
+      else
+      if xml.IsTagStartByName('rowBreaks')then
+        _ReadRowBreaks()
+      else
+      if xml.IsTagStartByName('colBreaks') then
+        _ReadColBreaks()
+      else
+      if xml.IsTagStartByName('sheetViews') then
+        _ReadSheetViews()
+      else
+      if xml.IsTagStartByName('conditionalFormatting') then
+        _ReadConditionFormatting()
+      else
+      if xml.IsTagStartByName('headerFooter') then
+        _ReadHeaderFooter();
+    end;
+  finally
+    xml.Free();
+  end;
 end;
 
 end.
