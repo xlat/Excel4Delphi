@@ -4,7 +4,7 @@ interface
 
 uses
   Classes, SysUtils, Graphics, UITypes, Math, Windows, RegularExpressions,
-  Generics.Collections, System.Contnrs, zsspxml;
+  Generics.Collections, Generics.Defaults, System.Contnrs, zsspxml;
 
 var ZE_XLSX_APPLICATION: string;
 
@@ -69,6 +69,16 @@ type
   TZStyle = class;
   TZFont = class;
 
+  TZExcelColor = record
+    RGB:     TColor; // rgb
+    Indexed: Byte;   // 0 - not exists (deprecated but used)
+    Theme:   Byte;   // 0 - not exists
+    Tint:    Double; // 0 - not exists
+    procedure Load(argb,aindexed,atheme,atint: string);
+    class operator Equal(const left, right: TZExcelColor): Boolean;
+    class operator NotEqual(const left, right: TZExcelColor): Boolean;
+  end;
+
   TRichString = class(TPersistent)
   private
     FText: string;
@@ -81,6 +91,7 @@ type
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
     function GetHashCode(): integer; override;
+    function Equals(Obj: TObject): Boolean; override;
   end;
 
   TRichText = class(TPersistent)
@@ -90,9 +101,17 @@ type
     constructor Create(); virtual;
     destructor Destroy(); override;
     procedure Assign(Source: TPersistent); override;
+    property List: TList<TRichString> read FList;
     function GetHashCode(): integer; override;
+    function Equals(Obj: TObject): Boolean; override;
     //function ToHtml(): string;
     //function ToString(): string; override;
+  end;
+
+  TRichTextComparer = class(TInterfacedObject, IEqualityComparer<TRichText>)
+  public
+    function Equals(const Left, Right: TRichText): Boolean; reintroduce;
+    function GetHashCode(const Value: TRichText): Integer; reintroduce;
   end;
 
   /// <summary>
@@ -286,10 +305,11 @@ type
   private
     FLineStyle: TZBorderType;
     FWeight: byte;
-    FColor: TColor;
+    FColor: TZExcelColor;
     procedure SetLineStyle(const Value: TZBorderType);
     procedure SetWeight(const Value: byte);
     procedure SetColor(const Value: TColor);
+    function GetColor: TColor;
   public
     constructor Create();virtual;
     procedure Assign(Source: TPersistent); override;
@@ -298,17 +318,21 @@ type
     /// </returns>
     function IsEqual(Source: TPersistent): boolean; virtual;
     /// <summary>
-    /// Line style. <br />ZENone by default.
+    /// Line style.
     /// </summary>
     property LineStyle: TZBorderType read FLineStyle write SetLineStyle default ZENone;
     /// <summary>
-    /// Specifies the thickness of this border (0-3). <br />0 by default.
+    /// Specifies the thickness of this border (0-3).
     /// </summary>
     property Weight: byte read FWeight write SetWeight default 0;
     /// <summary>
-    /// Specifies the color of this border. <br />ClBlack by default.
+    /// Specifies the color of this border.
     /// </summary>
-    property Color: TColor read FColor write SetColor default ClBlack;
+    property Color: TColor read GetColor write SetColor;
+    /// <summary>
+    /// Specifies the inner color strucure of this border.
+    /// </summary>
+    property ExcelColor: TZExcelColor read FColor write FColor;
   end;
 
   /// <summary>
@@ -367,10 +391,8 @@ type
     FIndent: integer;
     FRotate: TZCellTextRotate;
     FWrapText: boolean;
-    FShrinkToFit: boolean;              // true - уменьшает размер шрифта, чтобы текст поместился в ячейку,
-                                        // false - текст не уменьшается
-    FVerticalText: boolean;             // true  - текст по одной букве в строке вертикально
-                                        // false - по дефолту
+    FShrinkToFit: boolean;
+    FVerticalText: boolean;
     procedure SetHorizontal(const Value: TZHorizontalAlignment);
     procedure SetIndent(const Value: integer);
     procedure SetRotate(const Value: TZCellTextRotate);
@@ -386,31 +408,31 @@ type
     /// </returns>
     function IsEqual(Source: TPersistent): boolean; virtual;
     /// <summary>
-    /// Specifies how text is aligned by horizontally within the cell. <br />ZHAutomatic by default.
+    /// Specifies how text is aligned by horizontally within the cell.
     /// </summary>
     property Horizontal: TZHorizontalAlignment read FHorizontal write SetHorizontal default ZHAutomatic;
     /// <summary>
-    /// Specifies how far the cell's text is indented. <br />0 by default.
+    /// Specifies how far the cell's text is indented.
     /// </summary>
     property Indent: integer read FIndent write SetIndent default 0;
     /// <summary>
-    /// Specifies the rotation of the text within the cell (from -90 to 90). <br />0 by default.
+    /// Specifies the rotation of the text within the cell (from -90 to 90).
     /// </summary>
     property Rotate: TZCellTextRotate read FRotate write SetRotate;
     /// <summary>
-    /// If True then the text size will shrunk so to all of the text fits within the cell. <br />False by default.
+    /// If True then the text size will shrunk so to all of the text fits within the cell.
     /// </summary>
     property ShrinkToFit: boolean read FShrinkToFit write SetShrinkToFit default false;
     /// <summary>
-    /// Specifies how text is aligned by vertically within the cell. <br />ZVAutomatic by default.
+    /// Specifies how text is aligned by vertically within the cell.
     /// </summary>
     property Vertical: TZVerticalAlignment read FVertical write SetVertical default ZVAutomatic;
     /// <summary>
-    /// If True each letter is drawn horizontally, one above the other. <br />False by default.
+    /// If True each letter is drawn horizontally, one above the other.
     /// </summary>
     property VerticalText: boolean read FVerticalText write SetVerticalText default false;
     /// <summary>
-    /// Specifies whether the text in cell should wrap at the cell boundary. <br />False by default.
+    /// Specifies whether the text in cell should wrap at the cell boundary.
     /// </summary>
     property WrapText: boolean read FWrapText write SetWrapText default false;
   end;
@@ -420,22 +442,26 @@ type
   /// </summary>
   TZFont = class (TPersistent)
   private
-    FColor: TColor;
+    // todo: double underLine
+    FColor: TZExcelColor;
     FSize: double;
     FCharset: TFontCharset;
     FName: TFontName;
     FStyle: TFontStyles;
+    function GetColor: TColor;
+    procedure SetColor(const Value: TColor);
   public
     constructor Create;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
     procedure AssignTo(Dest: TPersistent); override;
     function GetHashCode(): integer; override;
-    property Color: TColor read FColor write FColor;
+    property Color: TColor read GetColor write SetColor;
     property Size: double read FSize write FSize;
     property Charset: TFontCharset read FCharset write FCharset;
     property Name: TFontName read FName write FName;
     property Style: TFontStyles read FStyle write FStyle;
+    property ExcelColor: TZExcelColor read FColor write FColor;
   end;
 
   /// <summary>
@@ -446,7 +472,7 @@ type
     FBorder: TZBorder;
     FAlignment: TZAlignment;
     FFont: TZFont;
-    FBGColor: TColor;
+    FBGColor: TZExcelColor;
     FPatternColor: TColor;
     FCellPattern: TZCellPattern;
     FNumberFormatId: Integer;
@@ -463,6 +489,7 @@ type
     procedure SetCellPattern(const Value: TZCellPattern);
     procedure SetSuperscript(const Value: boolean);
     procedure SetSubscript(const Value: boolean);
+    function GetBGColor: TColor;
   protected
     procedure SetNumberFormat(const Value: string); virtual;
   public
@@ -488,7 +515,11 @@ type
     /// <summary>
     /// Background color of the cell. <br />clWindow by default.
     /// </summary>
-    property BGColor: TColor read FBGColor write SetBGColor default clWindow;
+    property BGColor: TColor read GetBGColor write SetBGColor;
+    /// <summary>
+    /// Background color of the cell. <br />clWindow by default.
+    /// </summary>
+    property BGExcelColor: TZExcelColor read FBGColor write FBGColor;
     /// <summary>
     /// Color of fill pattern. <br />clWindow by default.
     /// </summary>
@@ -585,6 +616,11 @@ type
     property DefaultStyle: TZStyle read FDefaultStyle write SetDefaultStyle;
   end;
 
+  TZMergeArea = record
+    Left, Top, Right, Bottom: Integer;
+    constructor Create(ALeft, ATop, ARight, ABottom: integer);
+  end;
+
   /// <summary>
   /// Merged cells
   /// </summary>
@@ -592,20 +628,20 @@ type
   private
     FSheet: TZSheet;
     FCount: integer;
-    FMergeArea: Array of TRect;
-    function GetItem(Num: integer): TRect;
-    procedure SetItem(Num: integer; const rect: TRect);
+    FMergeArea: TArray<TZMergeArea>;
+    function GetItem(Num: integer): TZMergeArea;
+    procedure SetItem(Num: integer; const rect: TZMergeArea);
   public
     constructor Create(ASheet: TZSheet); virtual;
     destructor Destroy(); override;
     /// <summary>
     /// Adds a merged cell enclosed into rectangle.
     /// </summary>
-    function AddRect(Rct:TRect): byte;
+    function AddRect(Rct: TZMergeArea): byte;
     /// <summary>
     /// Adds a merged cell enclosed into rectangle
     /// </summary>
-    function AddRectXY(left,top,right,bottom: integer): byte;
+    function AddRectXY(left, top, right, bottom: integer): byte;
     /// <summary>
     /// Delete merged cell num. <br />Return True if the cell is successfully deleted.
     /// </summary>
@@ -643,7 +679,7 @@ type
     /// <summary>
     /// Current merged region.
     /// </summary>
-    property Items[Num: Integer]: TRect read GetItem write SetItem; default;
+    property Items[Num: Integer]: TZMergeArea read GetItem write SetItem; default;
   end;
 
   TZCellColumn = array of TZCell;
@@ -2445,7 +2481,10 @@ end;
 constructor TZBorderStyle.Create();
 begin
   FWeight := 0;
-  FColor := clBlack;
+  FColor.RGB := clBlack;
+  FColor.Indexed := 0;
+  FColor.Theme := 0;
+  FColor.Tint := 0;
   FLineStyle := ZENone;
 end;
 
@@ -2470,7 +2509,7 @@ begin
   if Self.LineStyle <> zSource.LineStyle then
     exit;
 
-  if Self.Color <> zSource.Color then
+  if (Self.FColor <> zSource.FColor) then
     exit;
 
   if Self.Weight <> zSource.Weight then
@@ -2489,9 +2528,19 @@ begin
   FWeight := min(3, Value);
 end;
 
+function TZBorderStyle.GetColor: TColor;
+begin
+  result := FColor.RGB;
+end;
+
 procedure TZBorderStyle.SetColor(const Value: TColor);
 begin
-  FColor := Value;
+  if FColor.RGB <> Value then begin
+    FColor.RGB := Value;
+    FColor.Indexed := 0;
+    FColor.Theme := 0;
+    FColor.Tint := 0;
+  end;
 end;
 
 ////::::::::::::: TZBorder :::::::::::::::::////
@@ -2642,7 +2691,10 @@ end;
 constructor TZFont.Create;
 begin
   inherited;
-  FColor   := clWindowText;
+  FColor.rgb   := clWindowText;
+  FColor.Indexed := 0;
+  FColor.Theme := 0;
+  FColor.Tint := 0;
   FSize    := 8;
   FCharset := DEFAULT_CHARSET;
   FName    := 'MS Sans Serif';
@@ -2652,6 +2704,21 @@ end;
 destructor TZFont.Destroy;
 begin
   inherited;
+end;
+
+function TZFont.GetColor: TColor;
+begin
+  result := FColor.RGB;
+end;
+
+procedure TZFont.SetColor(const Value: TColor);
+begin
+  if Value <> FColor.RGB then begin
+    FColor.RGB := Value;
+    FColor.Indexed := 0;
+    FColor.Theme := 0;
+    FColor.Tint := 0;
+  end;
 end;
 
 function TZFont.GetHashCode: integer;
@@ -2664,7 +2731,10 @@ begin
   if fsStrikeOut in FStyle then inc(st, 8);
 
   result := 17;
-  result := result * 23 + integer(FColor);
+  result := result * 23 + integer(FColor.RGB);
+  result := result * 23 + integer(FColor.Indexed);
+  result := result * 23 + integer(FColor.Theme);
+  result := result * 23 + trunc(FColor.Tint * 100000.0);
   result := result * 23 + trunc(FSize * 1000.0);
   result := result * 23 + integer(FCharset);
   result := result * 23 + string(FName).GetHashCode();
@@ -2676,14 +2746,17 @@ var zSource: TZFont; srcFont: TFont;
 begin
   if Source is TZFont then begin
     zSource  := Source as TZFont;
-    FColor   := zSource.Color;
+    FColor   := zSource.ExcelColor;
     FSize    := zSource.Size;
     FCharset := zSource.Charset;
     FName    := zSource.Name;
     FStyle   := zSource.Style;
   end else if Source is TFont then begin
     srcFont  := Source as TFont;
-    FColor   := srcFont.Color;
+    FColor.RGB   := srcFont.Color;
+    FColor.Indexed := 0;
+    FColor.Theme := 0;
+    FColor.Tint := 0;
     FSize    := srcFont.Size;
     FCharset := srcFont.Charset;
     FName    := srcFont.Name;
@@ -2702,7 +2775,7 @@ begin
     //А.А.Валуев Свойства, которых нет в TZFont сбрасываем на значения по умолчанию.
     dstFont.Pitch   := fpDefault;
     dstFont.Orientation := 0;
-    dstFont.Color   := FColor;
+    dstFont.Color   := FColor.rgb;
     dstFont.Size    := Round(FSize);
     dstFont.Charset := FCharset;
     dstFont.Name    := FName;
@@ -2722,7 +2795,7 @@ begin
   FFont.Color     := ClBlack;
   FBorder         := TZBorder.Create();
   FAlignment      := TZAlignment.Create();
-  FBGColor        := clWindow;
+  FBGColor.RGB    := clWindow;
   FPatternColor   := clWindow;
   FCellPattern    := ZPNone;
   FNumberFormat   := '';
@@ -2749,7 +2822,7 @@ begin
     FFont.Assign(zSource.Font);
     FBorder.Assign(zSource.Border);
     FAlignment.Assign(zSource.Alignment);
-    FBGColor        := zSource.BGColor;
+    FBGColor        := zSource.FBGColor;
     FPatternColor   := zSource.PatternColor;
     FCellPattern    := zSource.CellPattern;
     FNumberFormat   := zSource.NumberFormat;
@@ -2809,9 +2882,19 @@ begin
   FAlignment.Assign(Value);
 end;
 
+function TZStyle.GetBGColor: TColor;
+begin
+  result := FBGColor.RGB;
+end;
+
 procedure TZStyle.SetBGColor(const Value: TColor);
 begin
-  FBGColor := Value;
+  if FBGColor.RGB <> Value then begin
+    FBGColor.RGB := Value;
+    FBGColor.Indexed := 0;
+    FBGColor.Theme := 0;
+    FBGColor.Tint := 0;
+  end;
 end;
 
 procedure TZStyle.SetPatternColor(const Value: TColor);
@@ -3331,7 +3414,7 @@ begin
   FCount := 0;
 end;
 
-function TZMergeCells.GetItem(num: integer):TRect;
+function TZMergeCells.GetItem(num: integer): TZMergeArea;
 begin
   if (num >= 0) and (num < Count) then
     Result := FMergeArea[num]
@@ -3343,14 +3426,14 @@ begin
   end;
 end;
 
-procedure TZMergeCells.SetItem(Num: integer; const rect: TRect);
+procedure TZMergeCells.SetItem(Num: integer; const rect: TZMergeArea);
 begin
   FMergeArea[Num] := rect;
 end;
 
-function TZMergeCells.AddRect(Rct:TRect): byte;
+function TZMergeCells.AddRect(Rct: TZMergeArea): byte;
 var i: integer;
-function IsCross(rct1, rct2: TRect): boolean;
+function IsCross(rct1, rct2: TZMergeArea): boolean;
 begin
   result :=(((rct1.Left   >= rct2.Left) and (rct1.Left   <= rct2.Right))  or
             ((rct1.Right  >= rct2.Left) and (rct1.Right  <= rct2.Right))) and
@@ -3476,7 +3559,7 @@ begin
 end;
 
 function TZMergeCells.AddRectXY(left,top,right,bottom: integer): byte;
-var Rct: TRect;
+var Rct: TZMergeArea;
 begin
   Rct.left   := left;
   Rct.Top    := top;
@@ -3920,7 +4003,7 @@ begin
   // reloc merged areas
   for r := 0 to MergeCells.Count-1 do begin
     if MergeCells[r].Top >= ARow then begin
-      MergeCells.Items[r] := TRect.Create(
+      MergeCells.Items[r] := TZMergeArea.Create(
         MergeCells.Items[r].Left,
         MergeCells.Items[r].Top + ACount,
         MergeCells.Items[r].Right,
@@ -3963,7 +4046,7 @@ begin
   // reloc merged areas
   for r := 0 to MergeCells.Count-1 do begin
     if (MergeCells[r].Top >= ARowSrc) and (MergeCells[r].Bottom < ARowSrc + ACount) then begin
-      MergeCells.AddRect(TRect.Create(
+      MergeCells.AddRect(TZMergeArea.Create(
         MergeCells.Items[r].Left,
         MergeCells.Items[r].Top + delta,
         MergeCells.Items[r].Right,
@@ -6080,7 +6163,7 @@ end;
 
 { TZRange }
 procedure TZRange.Assign(Source: TZRange);
-var src: TZRange; r,c,id: Integer; style: TZStyle; rect: TRect;
+var src: TZRange; r,c,id: Integer; style: TZStyle; rect: TZMergeArea;
 begin
   inherited;
   if Source is TZRange then begin
@@ -6516,14 +6599,24 @@ end;
 destructor TRichText.Destroy();
 var i: Integer;
 begin
-
   for I := 0 to FList.Count-1 do
-
     FList[i].Free();
-
   FList.Clear();
-
   FList.Free();
+end;
+
+function TRichText.Equals(Obj: TObject): Boolean;
+var i: integer;
+begin
+  if Assigned(Obj) and (Obj is TRichText) then begin
+    if self.FList.Count <> ((Obj as TRichText).List.Count) then
+      exit(false);
+
+    for i := 0 to self.FList.Count - 1 do
+      if not self.FList[i].Equals((Obj as TRichText).FList[i]) then
+        exit(false);
+  end;
+  result := true;
 end;
 
 procedure TRichText.Assign(Source: TPersistent);
@@ -6550,9 +6643,20 @@ end;
 destructor TRichString.Destroy();
 begin
   if Assigned(FFont) then
-
     FFont.Free();
+end;
 
+function TRichString.Equals(Obj: TObject): Boolean;
+begin
+  if Assigned(Obj) and (Obj is TRichString) then begin
+    if self.FText <> (Obj as TRichString).FText then
+      exit(false);
+    if Assigned(self.FFont) <> Assigned((Obj as TRichString).FFont) then
+      exit(false);
+    if not ZEIsFontsEquals(self.FFont, (Obj as TRichString).FFont) then
+      exit(false)
+  end;
+  result := true;
 end;
 
 procedure TRichString.Assign(Source: TPersistent);
@@ -6570,6 +6674,57 @@ begin
   result := result * 23 + FText.GetHashCode();
   if Assigned(FFont) then
     result := result * 23 + FFont.GetHashCode();
+end;
+
+{ TRichTextComparer }
+
+function TRichTextComparer.Equals(const Left, Right: TRichText): Boolean;
+begin
+   result := assigned(left) and assigned(Right) and Left.Equals(Right);
+end;
+
+function TRichTextComparer.GetHashCode(const Value: TRichText): Integer;
+begin
+  result := Value.GetHashCode();
+end;
+
+{ TZExcelColor }
+
+class operator TZExcelColor.Equal(const left, right: TZExcelColor): Boolean;
+begin
+  result := (left.RGB = right.RGB)
+    and (left.Indexed = right.Indexed)
+    and (left.Theme = right.Theme)
+    and SameValue(left.Tint, right.Tint);
+end;
+
+procedure TZExcelColor.Load(argb, aindexed, atheme, atint: string);
+begin
+  Indexed := StrToIntDef(argb, 0);
+  Theme := StrToIntDef(atheme, 0);
+  Tint := StrToFloatDef(atint, 0, TFormatSettings.Invariant);
+  if argb.IsEmpty then
+    RGB := 0
+  else
+    RGB := ARGBToColor(argb);
+end;
+
+class operator TZExcelColor.NotEqual(const left, right: TZExcelColor): Boolean;
+begin
+  result := not ((left.RGB = right.RGB)
+    and (left.Indexed = right.Indexed)
+    and (left.Theme = right.Theme)
+    and SameValue(left.Tint, right.Tint));
+end;
+
+{ TZMegeCell }
+
+constructor TZMergeArea.Create(ALeft, ATop, ARight, ABottom: integer);
+begin
+  Top    := ATop;
+  Left   := ALeft;
+  Right  := ARight;
+  Bottom := ABottom;
 end;
 
 initialization
