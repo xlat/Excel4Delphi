@@ -1,4 +1,4 @@
-﻿unit zsspxml;
+﻿unit Excel4Delphi.Xml;
 
 interface
 

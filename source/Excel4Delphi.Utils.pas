@@ -1,10 +1,10 @@
-﻿unit zexmlssutils;
+﻿unit Excel4Delphi.Utils;
 
 interface
 
 uses
   Windows, SysUtils, UITypes, Types, Classes, Grids, Math, Graphics,
-  zexmlss, zsspxml, zesavecommon;
+  Excel4Delphi, Excel4Delphi.Xml, Excel4Delphi.Common;
 
 /// <summary>
 /// Сохраняет страницу TZWorkBook в поток в формате HTML
@@ -14,7 +14,7 @@ function SaveXmlssToHtml(sheet: TZSheet; CodePageName: string = 'UTF-8'): string
 implementation
 
 uses
-  zenumberformats, StrUtils, AnsiStrings;
+  Excel4Delphi.NumberFormats, StrUtils, AnsiStrings;
 
 function SaveXmlssToHtml(sheet: TZSheet; CodePageName: string = 'UTF-8'): string;
 var xml: TZsspXMLWriterH;

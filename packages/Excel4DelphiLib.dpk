@@ -1,0 +1,42 @@
+﻿package Excel4DelphiLib;
+
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST ON}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Excel4Delphi Component'}
+{$IMPLICITBUILD ON}
+
+requires
+  vcl;
+
+contains
+  Excel4Delphi in '..\source\Excel4Delphi.pas',
+  Excel4Delphi.Xml in '..\source\Excel4Delphi.Xml.pas',
+  Excel4Delphi.Common in '..\source\Excel4Delphi.Common.pas',
+  Excel4Delphi.Formula in '..\source\Excel4Delphi.Formula.pas',
+  Excel4Delphi.Utils in '..\source\Excel4Delphi.Utils.pas',
+  Excel4Delphi.Stream in '..\source\Excel4Delphi.Stream.pas',
+  Excel4Delphi.NumberFormats in '..\source\Excel4Delphi.NumberFormats.pas';
+
+end.
