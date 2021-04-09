@@ -90,8 +90,7 @@ type
   end;
 
   //Итем для дифференцированного форматирования
-  //TODO:
-  //      возможно, для excel xml тоже понадобится (перенести?)
+  //TODO: возможно, для excel xml тоже понадобится (перенести?)
   TZXLSXDiffFormattingItem = class(TPersistent)
   private
     FUseFont: boolean;              //заменять ли шрифт
@@ -230,12 +229,15 @@ type
   TExcel4DelphiReader = class(TObject)
   private
     // todo: FRawStyleList: TRawStyleList;
-    FSharedStrings: TDictionary<integer, TRichText>;
+    FSharedStrings: TObjectList<TRichText>;
     FFileList: TList<TZFileItem>;
     FRelationList: TList<TZRelation>;
     FThemaColorList: TList<TColor>;
     FWorkBook: TZWorkBook;
 
+    function ReadRunProperties(AXml: TZsspXMLReaderH; ATagName: string): TZFont;
+    procedure ReadComments(AStream: TStream; ASheetIndex: integer);
+    function GetXlsxColor(rgb: string; indexed, themed: integer; lum: double): TColor;
   public
     constructor Create(AWorkBook: TZWorkBook);
     destructor Destroy(); override;
@@ -268,9 +270,12 @@ type
 
   TExcel4DelphiWriter = class
   private
-    FSharedStrings: TDictionary<TRichText, integer>;
+    FSharedStrings: TObjectDictionary<TRichText, integer>;
     FFileList: TList<TZXLSXFileItem>;
+    FCommentList: TList<string>;
     FWorkBook: TZWorkBook;
+
+    procedure ReadRunProperties(AXml: TZsspXMLWriterH; ATagName: string; AFont: TZFont);
   public
     constructor Create(AWorkBook: TZWorkBook);
     destructor Destroy(); override;
@@ -355,6 +360,75 @@ implementation
 
 uses AnsiStrings, StrUtils, Math, zenumberformats, NetEncoding;
 
+const
+{$REGION 'Indexed Colors'}
+INDEXED_COLORS: array [0..63] of TColor = (
+  $00000000, // 0
+  $00FFFFFF, // 1
+  $00FF0000, // 2
+  $0000FF00, // 3
+  $000000FF, // 4
+  $00FFFF00, // 5
+  $00FF00FF, // 6
+  $0000FFFF, // 7
+  $00000000, // 8
+  $00FFFFFF, // 9
+  $00FF0000, // 10
+  $0000FF00, // 11
+  $000000FF, // 12
+  $00FFFF00, // 13
+  $00FF00FF, // 14
+  $0000FFFF, // 15
+  $00800000, // 16
+  $00008000, // 17
+  $00000080, // 18
+  $00808000, // 19
+  $00800080, // 20
+  $00008080, // 21
+  $00C0C0C0, // 22
+  $00808080, // 23
+  $009999FF, // 24
+  $00993366, // 25
+  $00FFFFCC, // 26
+  $00CCFFFF, // 27
+  $00660066, // 28
+  $00FF8080, // 29
+  $000066CC, // 30
+  $00CCCCFF, // 31
+  $00000080, // 32
+  $00FF00FF, // 33
+  $00FFFF00, // 34
+  $0000FFFF, // 35
+  $00800080, // 36
+  $00800000, // 37
+  $00008080, // 38
+  $000000FF, // 39
+  $0000CCFF, // 40
+  $00CCFFFF, // 41
+  $00CCFFCC, // 42
+  $00FFFF99, // 43
+  $0099CCFF, // 44
+  $00FF99CC, // 45
+  $00CC99FF, // 46
+  $00FFCC99, // 47
+  $003366FF, // 48
+  $0033CCCC, // 49
+  $0099CC00, // 50
+  $00FFCC00, // 51
+  $00FF9900, // 52
+  $00FF6600, // 53
+  $00666699, // 54
+  $00969696, // 55
+  $00003366, // 56
+  $00339966, // 57
+  $00003300, // 58
+  $00333300, // 59
+  $00993300, // 60
+  $00993366, // 61
+  $00333399, // 62
+  $00333333  // 63
+  );
+{$ENDREGION 'Indexed Colors'}
 
 const
   SCHEMA_DOC         = 'http://schemas.openxmlformats.org/officeDocument/2006';
@@ -381,7 +455,7 @@ type
 
   TZEXLSXFontArray = array of TZEXLSXFont;
 
-  TContentTypeRec=record
+  TContentTypeRec = record
     ftype: TRelationType;
     name : string;
     rel  : string;
@@ -484,18 +558,14 @@ begin
 end;
 
 procedure TZXLSXDiffFormatting.Assign(Source: TPersistent);
-var df: TZXLSXDiffFormatting; i: integer; b: boolean;
+var df: TZXLSXDiffFormatting; i: integer;
 begin
-  b := true;
-  if (Assigned(Source)) then
-    if (Source is TZXLSXDiffFormatting) then begin
-      b := false;
-      df := Source as TZXLSXDiffFormatting;
-      SetCount(df.Count);
-      for i := 0 to Count - 1 do
-        FItems[i].Assign(df[i]);
-    end;
-  if (b) then
+  if Assigned(Source) and (Source is TZXLSXDiffFormatting) then begin
+    df := Source as TZXLSXDiffFormatting;
+    SetCount(df.Count);
+    for i := 0 to Count - 1 do
+      FItems[i].Assign(df[i]);
+  end else
     inherited;
 end; //Assign
 
@@ -735,9 +805,6 @@ begin
   FFormats[48] := '##0.0E+0';
   FFormats[49] := '@';
 
-
-
-
   FFormats[59] := 't0';
   FFormats[60] := 't0.00';
   FFormats[61] := 't#,##0';
@@ -822,25 +889,15 @@ procedure TZEXLSXNumberFormats.ReadNumFmts(const xml: TZsspXMLReaderH);
 var temp: integer;
 begin
   with THTMLEncoding.Create do
-
     try
-
       while xml.ReadToEndTagByName('numFmts') do begin
-
         if (xml.TagName = 'numFmt') then
-
           if (TryStrToInt(xml.Attributes['numFmtId'], temp)) then
-
             Format[temp] := Decode(xml.Attributes['formatCode']);
-
       end;
-
     finally
-
       Free;
-
     end;
-
 end;
 
 procedure TZEXLSXNumberFormats.SetStyleFMTID(num: integer; const value: integer);
@@ -1182,7 +1239,6 @@ var
   xml: TZsspXMLReaderH;
   s: string;
   k: integer;
-  rt: TRichText;
   rs: TRichString;
 begin
   result := false;
@@ -1206,8 +1262,6 @@ begin
         s := '';
         k := 0;
         while xml.ReadToEndTagByName('si') do begin
-          rt := TRichText.Create();
-
           rs := TRichString.Create();
           if xml.IsTagStartByName('rPr') then begin
             rs.font := TZFont.Create();
@@ -2689,7 +2743,6 @@ var
   procedure ZXLSXGetColor(var retColor: TColor; var retColorType: byte; var retLumfactor: double);
   var t: integer;
   begin
-    //I hate this f****** format! m$ office >= 2007 is big piece of shit! Arrgh!
     s := xml.Attributes.ItemsByName['rgb'];
     if (length(s) > 2) then
     begin
@@ -2944,10 +2997,10 @@ var
               BorderArray[_currBorder][_currBorderItem].isColor := true;
             end;
           end;
-        end; //if
-      end; //else
-    end; //while
-  end; //_ReadBorders
+        end;
+      end;
+    end;
+  end;
 
   procedure _ReadFills();
   var _currFill: integer;
@@ -3066,11 +3119,8 @@ var
         {
           <xfId> (Format Id)
           For <xf> records contained in <cellXfs> this is the zero-based index of an <xf> record contained in <cellStyleXfs> corresponding to the cell style applied to the cell.
-
           Not present for <xf> records contained in <cellStyleXfs>.
-
           The possible values for this attribute are defined by the ST_CellStyleXfId simple type (§3.18.11).
-
           https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_xf_topic_ID0E13S6.html
 
         }
@@ -3141,7 +3191,7 @@ var
           s := xml.Attributes.ItemsByName['wrapText'];
           if (s > '') then
             CSA[_currCell].alignment.wrapText := ZEStrToBoolean(s);
-        end; //if
+        end;
       end else if xml.IsTagClosedByName('protection') then begin
         if (_currCell >= 0) then begin
           s := xml.Attributes.ItemsByName['hidden'];
@@ -3153,8 +3203,8 @@ var
             CSA[_currCell].locked := ZEStrToBoolean(s);
         end;
       end;
-    end; //while
-  end; //_ReadCellCommonStyles
+    end;
+  end;
 
   //Сами стили ?? (или для чего они вообще?)
   procedure _ReadCellStyles();
@@ -3187,8 +3237,8 @@ var
         if (b) then
           inc(StyleCount);
       end;
-    end; //while
-  end; //_ReadCellStyles
+    end;
+  end;
 
   procedure _ReadColors();
   begin
@@ -3206,8 +3256,8 @@ var
           indexedColor[indexedColorCount - 1] := HTMLHexToColor(s);
         end;
       end;
-    end; //while
-  end; //_ReadColors
+    end;
+  end;
 
   //Конвертирует RGB в HSL
   //http://en.wikipedia.org/wiki/HSL_color_space
@@ -5257,7 +5307,7 @@ var xml: TZsspXMLWriterH;    //писатель
   var i, j, n: integer;
     b: boolean;
     s: string;
-    _r: TRect;
+    _r: TZMergeArea;
     strIndex: integer;
   begin
     xml.Attributes.Clear();
@@ -7017,13 +7067,18 @@ end;
 
 constructor TExcel4DelphiWriter.Create(AWorkBook: TZWorkBook);
 begin
-
+  FSharedStrings := TObjectDictionary<TRichText, integer>.Create([doOwnsKeys], TRichTextComparer.Create);
 end;
 
 destructor TExcel4DelphiWriter.Destroy;
 begin
-
+  FSharedStrings.Free();
   inherited;
+end;
+
+procedure TExcel4DelphiWriter.ReadRunProperties(AXml: TZsspXMLWriterH; ATagName: string; AFont: TZFont);
+begin
+//
 end;
 
 procedure TExcel4DelphiWriter.SaveToDir(ADirName: string);
@@ -7059,13 +7114,112 @@ begin
 end;
 
 procedure TExcel4DelphiWriter.WriteContentTypes(AStream: TStream);
-begin
+var xml: TZsspXMLWriterH; s: string; i: integer;
+  procedure _WriteOverride(const PartName: string; ct: integer);
+  begin
+    xml.Attributes.Clear();
+    xml.Attributes.Add('PartName', PartName);
+    case ct of
+      0: s := 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml';
+      1: s := 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml';
+      2: s := 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml';
+      3: s := 'application/vnd.openxmlformats-package.relationships+xml';
+      4: s := 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml';
+      5: s := 'application/vnd.openxmlformats-package.core-properties+xml';
+      6: s := 'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml';
+      7: s := 'application/vnd.openxmlformats-officedocument.vmlDrawing';
+      8: s := 'application/vnd.openxmlformats-officedocument.extended-properties+xml';
+      9: s := 'application/vnd.openxmlformats-officedocument.drawing+xml';
+    end;
+    xml.Attributes.Add('ContentType', s, false);
+    xml.WriteEmptyTag('Override', true);
+  end;
 
+  procedure _WriteTypeDefault(extension, contentType: string);
+  begin
+    xml.Attributes.Clear();
+    xml.Attributes.Add('Extension', extension);
+    xml.Attributes.Add('ContentType', contentType, false);
+    xml.WriteEmptyTag('Default', true);
+  end;
+begin
+  xml := TZsspXMLWriterH.Create(AStream);
+  try
+    xml.TabLength := 1;
+    xml.TabSymbol := ' ';
+    xml.WriteHeader('utf-8', '');
+    xml.Attributes.Clear();
+    xml.Attributes.Add('xmlns', SCHEMA_PACKAGE + '/content-types');
+    xml.WriteTagNode('Types', true, true, true);
+
+    _WriteTypeDefault('rels', 'application/vnd.openxmlformats-package.relationships+xml');
+    _WriteTypeDefault('xml',  'application/xml');
+    _WriteTypeDefault('png',  'image/png');
+    _WriteTypeDefault('jpeg', 'image/jpeg');
+    _WriteTypeDefault('wmf',  'image/x-wmf');
+
+    //Страницы
+    //_WriteOverride('/_rels/.rels', 3);
+    //_WriteOverride('/xl/_rels/workbook.xml.rels', 3);
+    for i := 0 to FWorkBook.Sheets.Count - 1 do begin
+      _WriteOverride('/xl/worksheets/sheet' + IntToStr(i + 1) + '.xml', 0);
+      //if (WriteHelper.IsSheetHaveHyperlinks(i)) then
+      //  _WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(i + 1) + '.xml.rels', 3);
+    end;
+
+    //комментарии
+    for i := 0 to FCommentList.Count - 1 do begin
+      //_WriteOverride('/xl/worksheets/_rels/sheet' + IntToStr(PagesComments[i] + 1) + '.xml.rels', 3);
+      //_WriteOverride('/xl/comments' + IntToStr(PagesComments[i] + 1) + '.xml', 6);
+    end;
+
+    for i := 0 to FWorkBook.Sheets.Count - 1 do begin
+      if Assigned(FWorkBook.Sheets[i].Drawing) and (FWorkBook.Sheets[i].Drawing.Count > 0) then begin
+        _WriteOverride('/xl/drawings/drawing' + IntToStr(i+1) + '.xml', 9);
+        //_WriteOverride('/xl/drawings/_rels/drawing' + IntToStr(i+1) + '.xml.rels', 3);
+//        for ii := 0 to _drawing.PictureStore.Count - 1 do begin
+//          _picture := _drawing.PictureStore.Items[ii];
+//          // image/ override
+//          xml.Attributes.Clear();
+//          xml.Attributes.Add('PartName', '/xl/media/' + _picture.Name);
+//          xml.Attributes.Add('ContentType', 'image/' + Copy(ExtractFileExt(_picture.Name), 2, 99), false);
+//          xml.WriteEmptyTag('Override', true);
+//        end;
+      end;
+    end;
+
+    _WriteOverride('/xl/workbook.xml', 2);
+    _WriteOverride('/xl/styles.xml', 1);
+    _WriteOverride('/xl/sharedStrings.xml', 4);
+    _WriteOverride('/docProps/app.xml', 8);
+    _WriteOverride('/docProps/core.xml', 5);
+
+    xml.WriteEndTagNode(); //Types
+  finally
+    xml.Free();
+  end;
 end;
 
 procedure TExcel4DelphiWriter.WriteDocPropsApp(AStream: TStream);
+var xml: TZsspXMLWriterH;
 begin
+  xml := TZsspXMLWriterH.Create(AStream);
+  try
+    xml.TabLength := 1;
+    xml.TabSymbol := ' ';
+    xml.WriteHeader('utf-8', '');
+    xml.Attributes.Clear();
+    xml.Attributes.Add('xmlns',    SCHEMA_DOC + '/extended-properties');
+    xml.Attributes.Add('xmlns:vt', SCHEMA_DOC + '/docPropsVTypes', false);
+    xml.WriteTagNode('Properties', true, true, false);
 
+    xml.Attributes.Clear();
+    xml.WriteTag('TotalTime', '0', true, false, false);
+    xml.WriteTag('Application', ZE_XLSX_APPLICATION, true, false, true);
+    xml.WriteEndTagNode();
+  finally
+    xml.Free();
+  end;
 end;
 
 procedure TExcel4DelphiWriter.WriteDocPropsApp(AFileName: string);
@@ -7091,8 +7245,34 @@ begin
 end;
 
 procedure TExcel4DelphiWriter.WriteDocPropsCore(AStream: TStream);
+var xml: TZsspXMLWriterH; creationDate: string;
 begin
+  xml := TZsspXMLWriterH.Create(AStream);
+  try
+    xml.TabLength := 1;
+    xml.TabSymbol := ' ';
+    xml.WriteHeader('utf-8', '');
+    xml.Attributes.Clear();
+    xml.Attributes.Add('xmlns:cp', SCHEMA_PACKAGE + '/metadata/core-properties');
+    xml.Attributes.Add('xmlns:dc', 'http://purl.org/dc/elements/1.1/', false);
+    xml.Attributes.Add('xmlns:dcmitype', 'http://purl.org/dc/dcmitype/', false);
+    xml.Attributes.Add('xmlns:dcterms', 'http://purl.org/dc/terms/', false);
+    xml.Attributes.Add('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance', false);
+    xml.WriteTagNode('cp:coreProperties', true, true, false);
 
+    xml.Attributes.Clear();
+    xml.Attributes.Add('xsi:type', 'dcterms:W3CDTF');
+    creationDate := ZEDateTimeToStr(FWorkBook.DocumentProperties.Created) + 'Z';
+    xml.WriteTag('dcterms:created', creationDate, true, false, false);
+    xml.WriteTag('dcterms:modified', creationDate, true, false, false);
+
+    xml.Attributes.Clear();
+    xml.WriteTag('cp:revision', '1', true, false, false);
+
+    xml.WriteEndTagNode();
+  finally
+    xml.Free();
+  end;
 end;
 
 procedure TExcel4DelphiWriter.WriteDrawingRels(AStream: TStream);
@@ -7144,8 +7324,26 @@ begin
 end;
 
 procedure TExcel4DelphiWriter.WriteSharedStrings(AStream: TStream);
+var xml: TZsspXMLWriterH;
 begin
+  xml := TZsspXMLWriterH.Create(AStream);
+  try
+    xml.TabLength := 1;
+    xml.TabSymbol := ' ';
+    xml.WriteHeader('utf-8', '');
+    xml.Attributes.Clear();
 
+    xml.Attributes.Add('count', IntToStr(FSharedStrings.Count), false);
+    xml.Attributes.Add('uniqueCount', IntToStr(FSharedStrings.Count), false);
+    xml.Attributes.Add('xmlns', SCHEMA_SHEET_MAIN, false);
+    xml.WriteTagNode('sst', true, true, false);
+
+    // todo: write
+
+    xml.WriteEndTagNode();
+  finally
+    xml.Free();
+  end;
 end;
 
 procedure TExcel4DelphiWriter.WriteStyles(AFileName: string);
@@ -7227,13 +7425,146 @@ end;
 
 constructor TExcel4DelphiReader.Create(AWorkBook: TZWorkBook);
 begin
-
+  FSharedStrings := TObjectList<TRichText>.Create(true);
 end;
 
 destructor TExcel4DelphiReader.Destroy;
 begin
-
+  FSharedStrings.Free();
   inherited;
+end;
+
+function TExcel4DelphiReader.GetXlsxColor(rgb: string; indexed, themed: integer; lum: double): TColor;
+var h1, s1, l1: double;
+  procedure ZRGBToHSL(r, g, b: byte; out h, s, l: double);
+  var
+    _max, _min: double;
+    intMax, intMin: integer;
+    _r, _g, _b: double;
+    _delta: double;
+    _idx: integer;
+  begin
+    _r := r / 255;
+    _g := g / 255;
+    _b := b / 255;
+
+    intMax := Max(r, Max(g, b));
+    intMin := Min(r, Min(g, b));
+
+    _max := Max(_r, Max(_g, _b));
+    _min := Min(_r, Min(_g, _b));
+
+    h := (_max + _min) * 0.5;
+    s := h;
+    l := h;
+    if (intMax = intMin) then begin
+      h := 0;
+      s := 0;
+    end else begin
+      _delta := _max - _min;
+      if (l > 0.5) then
+        s := _delta / (2 - _max - _min)
+      else
+        s := _delta / (_max + _min);
+
+        if (intMax = r) then
+          _idx := 1
+        else
+        if (intMax = g) then
+          _idx := 2
+        else
+          _idx := 3;
+
+        case (_idx) of
+          1:begin
+              h := (_g - _b) / _delta;
+              if (g < b) then
+                h := h + 6;
+            end;
+          2: h := (_b - _r) / _delta + 2;
+          3: h := (_r - _g) / _delta + 4;
+        end;
+        h := h / 6;
+    end;
+  end;
+
+  procedure ZColorToHSL(Color: TColor; out h, s, l: double);
+  var _RGB: integer;
+  begin
+    _RGB := ColorToRGB(Color);
+    ZRGBToHSL(byte(_RGB), byte(_RGB shr 8), byte(_RGB shr 16), h, s, l);
+  end;
+
+  procedure ZHSLToRGB(h, s, l: double; out r, g, b: byte);
+  var _r, _g, _b, q, p: double;
+    function HueToRgb(p, q, t: double): double;
+    begin
+      result := p;
+      if (t < 0) then
+        t := t + 1;
+      if (t > 1) then
+        t := t - 1;
+      if (t < 1/6) then
+        result := p + (q - p) * 6 * t
+      else
+      if (t < 0.5) then
+        result := q
+      else
+      if (t < 2/3) then
+        result := p + (q - p) * (2/3 - t) * 6;
+    end;
+  begin
+    if (s = 0) then begin
+      _r := l;
+      _g := l;
+      _b := l;
+    end else begin
+      if (l < 0.5) then
+        q := l * (1 + s)
+      else
+        q := l + s - l * s;
+      p := 2 * l - q;
+      _r := HueToRgb(p, q, h + 1/3);
+      _g := HueToRgb(p, q, h);
+      _b := HueToRgb(p, q, h - 1/3);
+    end;
+    r := byte(round(_r * 255));
+    g := byte(round(_g * 255));
+    b := byte(round(_b * 255));
+  end;
+
+  function ZHSLToColor(h, s, l: double): TColor;
+  var r, g, b: byte;
+  begin
+    ZHSLToRGB(h, s, l, r, g, b);
+    result := (b shl 16) or (g shl 8) or r;
+  end;
+begin
+  result := 0;
+
+  if length(rgb) > 2 then begin
+    delete(rgb, 1, 2);
+    if not rgb.IsEmpty then
+      exit(HTMLHexToColor(rgb));
+  end;
+
+  if (themed > 0) and (themed < FThemaColorList.Count) then
+    exit(FThemaColorList[themed-1]);
+
+  if (indexed > -1) and (indexed < Length(INDEXED_COLORS))  then
+     result := INDEXED_COLORS[indexed];
+
+  if lum <> 0.0 then begin
+    ZColorToHSL(result, h1, s1, l1);
+    lum := 1 - lum;
+
+    if l1 = 1 then
+      l1 := l1 * (1 - lum)
+    else
+      l1 := l1 * lum + (1 - lum);
+
+    result := ZHSLtoColor(h1, s1, l1);
+  end;
 end;
 
 procedure TExcel4DelphiReader.LoadFromDir(ADirName: string);
@@ -7253,8 +7584,83 @@ begin
 end;
 
 procedure TExcel4DelphiReader.LoadFromStream(AStream: TStream);
+var
+  stream: TStream;
+  path: string;
+  zip: TZipFile;
+  encoding: TEncoding;
+  zipHdr: TZipHeader;
+  index: integer;
+  fileRec: TZFileItem;
 begin
+  zip := TZipFile.Create();
+  encoding := TEncoding.GetEncoding(437);
+{$IFDEF VER330}
+  zip.Encoding := encoding;
+{$ENDIF}
 
+  FWorkBook.Styles.Clear();
+  FWorkBook.Sheets.Count := 0;
+  try
+    zip.Open(AStream, zmRead);
+
+
+    zip.Read('[Content_Types].xml', stream, zipHdr);
+    try
+      ReadContentTypes(stream)
+    finally
+      stream.Free();
+    end;
+
+    path := '/_rels/.rels';
+    if zip.IndexOf(path.Substring(1)) > -1 then begin
+      fileRec.original := path;
+      fileRec.name := path;
+      fileRec.ftype := TRelationType.rtDoc;
+      FFileList.Add(fileRec);
+    end;
+
+    path := '/xl/_rels/workbook.xml.rels';
+    if zip.IndexOf(path.Substring(1)) > -1 then begin
+      fileRec.original := path;
+      fileRec.name := path;
+      fileRec.ftype := TRelationType.rtDoc;
+      FFileList.Add(fileRec);
+    end;
+
+      //FFileList.Sort(prority)
+
+    index:=0;
+    for fileRec in FFileList do begin
+      zip.Read(fileRec.original.Substring(1), stream, zipHdr);
+      try
+        if fileRec.ftype = TRelationType.rtDoc then
+          ReadRelationships(stream)
+        else
+        if fileRec.ftype = TRelationType.rtCoreProp then
+          ReadSharedStrings(stream)
+        else
+        if fileRec.ftype = TRelationType.rtVmlDrawing then
+          ReadTheme(stream)
+        else
+        if fileRec.ftype = TRelationType.rtStyles then
+          ReadStyles(stream)
+        else
+        if fileRec.ftype = TRelationType.rtComments then
+          ReadComments(stream,0)
+        else
+        if fileRec.ftype = TRelationType.rtWorkSheet then begin
+          ReadWorkSheet(stream, index);
+          inc(index);
+         end ;
+      finally
+        stream.Free();
+      end;
+    end;
+  finally
+    zip.Free();
+    encoding.Free;
+  end;
 end;
 
 procedure TExcel4DelphiReader.ReadContentTypes(AStream: TStream);
@@ -7269,8 +7675,7 @@ begin
     xml.AttributesMatch := false;
     if xml.BeginReadStream(AStream) <> 0 then
       exit;
-    while not xml.Eof() do begin
-      xml.ReadTag();
+    while xml.ReadToEndTagByName('Types') do begin
       if xml.IsTagClosedByName('Override') then begin
         contType := xml.Attributes.ItemsByName['ContentType'];
         for rec in CONTENT_TYPES do begin
@@ -7282,11 +7687,19 @@ begin
             break;
           end;
         end;
+      end
+      else if xml.IsTagClosedByName('Default') then begin
+        // ignore
       end;
     end;
   finally
     xml.Free();
   end;
+end;
+
+procedure TExcel4DelphiReader.ReadComments(AStream: TStream; ASheetIndex: integer);
+begin
+
 end;
 
 procedure TExcel4DelphiReader.ReadContentTypes(AFileName: string);
@@ -7297,6 +7710,40 @@ begin
     ReadContentTypes(stream);
   finally
     stream.Free();
+  end;
+end;
+
+function TExcel4DelphiReader.ReadRunProperties(AXml: TZsspXMLReaderH; ATagName: string): TZFont;
+begin
+  // Temporary we are using TZFont
+  // todo: full implement Run Properties
+  // https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_rPr_topic_ID0ENXS5.html
+  result := TZFont.Create();
+  while AXml.ReadToEndTagByName(ATagName) do begin
+    if AXml.IsTagClosedByName('b') then
+      result.Style := result.Style + [fsBold]
+    else
+    if AXml.IsTagClosedByName('u') then
+      result.Style := result.Style + [fsUnderline]
+    else
+    if AXml.IsTagClosedByName('i') then
+      result.Style := result.Style + [fsItalic]
+    else
+    if AXml.IsTagClosedByName('sz') then
+      result.Size := StrToFloatDef(AXml.Attributes['val'], {todo: default}11, TFormatSettings.Invariant)
+    else
+    if AXml.IsTagClosedByName('rFont') then
+      result.Name := trim(AXml.Attributes['val'])
+    else
+    if AXml.IsTagClosedByName('charset') then
+      result.Charset := StrToIntDef(AXml.Attributes['val'], 0)
+    else
+    if AXml.IsTagClosedByName('color ') then
+      result.ExcelColor.Load(
+        AXml.Attributes['rgb'],
+        AXml.Attributes['indexed'],
+        AXml.Attributes['theme'],
+        AXml.Attributes['tint']);
   end;
 end;
 
@@ -7338,8 +7785,46 @@ begin
 end;
 
 procedure TExcel4DelphiReader.ReadSharedStrings(AStream: TStream);
+var
+  xml: TZsspXMLReaderH;
+  richText: TRichText;
+  richString: TRichString;
 begin
+  xml := TZsspXMLReaderH.Create();
+  try
+    xml.AttributesMatch := false;
+    if (xml.BeginReadStream(AStream) <> 0) then
+      exit;
 
+    while xml.ReadToEndTagByName('sst') do begin
+      if xml.IsTagStartByName('sst') then
+        FSharedStrings.Capacity := StrToIntDef(xml.Attributes['count'], 0);
+
+      if xml.IsTagStartByName('si') then begin
+        richText := TRichText.Create();
+        while xml.ReadToEndTagByName('si') do begin
+          // Rich string with formatting
+          if xml.IsTagStartByName('r') then begin
+            richString := TRichString.Create();
+            while xml.ReadToEndTagByName('r') do begin
+              if xml.IsTagStartByName('rPr') then
+                richString.Font := ReadRunProperties(xml, 'rPr');
+              richText.List.Add(richString);
+            end;
+          end
+          // Simple or multyline strings without formatting
+          else if xml.IsTagEndByName('t') then begin
+            richString := TRichString.Create();
+            richString.Text := xml.TextBeforeTag;
+            richText.List.Add(richString);
+          end;
+        end;
+        FSharedStrings.Add(richText);
+      end;
+    end;
+  finally
+    xml.Free();
+  end;
 end;
 
 procedure TExcel4DelphiReader.ReadSharedStrings(AFileName: string);
@@ -7482,7 +7967,7 @@ procedure TExcel4DelphiReader.ReadWorkSheet(AStream: TStream; ASheetIndex: integ
   const MaximumDigitWidth: real = 5.0;
 var
   xml: TZsspXMLReaderH;
-  currentPage: integer;
+  //currentPage: integer;
   currentRow: integer;
   currentCol: integer;
   currentSheet: TZSheet;
@@ -8186,8 +8671,7 @@ var
             _cf[num].Value2 := _formulas[1];
         end;
       end;
-    end; //_TryApplyCF
-
+    end;
   begin
     try
       _sqref := xml.Attributes['sqref'];
@@ -8215,17 +8699,17 @@ var
               _formulas[count] := ZEReplaceEntity(xml.TextBeforeTag);
               inc(count);
             end;
-          end; //while
+          end;
 
           if (ZEXLSX_getCFCondition(_type, _operator, _CFCondition, _CFOperator)) then
             _TryApplyCF();
-        end; //if
-      end; //while
+        end;
+      end;
     finally
       SetLength(_formulas, 0);
       FreeAndNil(_tmpStyle);
     end;
-  end; //_ReadConditionFormatting
+  end;
 
   procedure _ReadHeaderFooter();
   begin
@@ -8253,7 +8737,7 @@ begin
     if (xml.BeginReadStream(AStream) <> 0) then
       exit;
 
-    currentPage := FWorkBook.Sheets.Count;
+    //currentPage := FWorkBook.Sheets.Count;
     FWorkBook.Sheets.Count := FWorkBook.Sheets.Count + 1;
     currentRow := 0;
     currentSheet := FWorkBook.Sheets[ASheetIndex];
