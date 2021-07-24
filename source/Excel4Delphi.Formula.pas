@@ -3,7 +3,7 @@
 interface
 
 uses
-  SysUtils;
+  SysUtils, Types;
 
 const
   //ZE_RTA = ZE R1C1 to A1
@@ -23,6 +23,8 @@ function ZEGetCellCoords(const cell: string; out column, row: integer; StartZero
 
 implementation
 
+uses RegularExpressions;
+
 const
   ZE_STR_ARRAY: array [0..25] of char = ('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
 
@@ -40,14 +42,13 @@ var
   s1, s2: string;
   _isOk: boolean;
   b: boolean;
-
 begin
   _isOk := true;
   s1 := '';
   s2 := '';
   b := false;
   for i := 1 to length(cell) do
-  case cell[i] of
+    case cell[i] of
     'A'..'Z', 'a'..'z':
       begin
         s1 := s1 + cell[i];
@@ -67,13 +68,12 @@ begin
         _isOk := false;
         break;
       end;
-  end;
-  if (_isOk) then
-  begin
-    if (not TryStrToInt(s2, row)) then
+    end;
+
+  if _isOk then begin
+    if not TryStrToInt(s2, row) then
       _isOk := false
-    else
-    begin
+    else begin
       if (StartZero) then
         dec(row);
       column := ZEGetColByA1(s1, StartZero);
@@ -82,7 +82,7 @@ begin
     end;
   end;
   result := _isOk;
-end; //ZEGetCellCoords
+end;
 
 //Попытка преобразовать номер ячейки из R1C1 в A1 стиль
 //если не удалось распознать номер ячейки, то возвратит обратно тот же текст
@@ -735,12 +735,11 @@ end; //ZEA1ToR1C1
 function ZERangeToRow(range: string): integer;
 var i: integer;
 begin
-    for I := 1 to Length(range)-1 do begin
-        if CharInSet(range.Chars[i], ['0'..'9']) then begin
-            exit(StrToInt(range.Substring(i)));
-        end;
-    end;
-    raise Exception.Create('Не удалось вычислить номер строки из формулы: ' + range);
+  for i := 1 to Length(range) - 1 do
+    if CharInSet(range.Chars[i], ['0'..'9']) then
+      exit(StrToInt(range.Substring(i)));
+
+  raise Exception.Create('Не удалось вычислить номер строки из формулы: ' + range);
 end;
 
 //Возвращает номер столбца по буквенному обозначению
@@ -786,11 +785,9 @@ begin
   while t >= 0 do begin
     n := t mod 26;
     t := (t div 26) - 1;
-    //ХЗ как там с кодировками будет
     s := s + ZE_STR_ARRAY[n];
   end;
   for t := length(s) downto 1 do
     result := result + s[t];
-end; //ZEGetAAbyCol
-
+end;
 end.

@@ -1,10 +1,12 @@
-﻿unit Excel4Delphi.Utils;
+﻿unit Excel4Delphi.Export;
+
+{.$DEFINE USE_SYNPDF}
 
 interface
 
 uses
   Windows, SysUtils, UITypes, Types, Classes, Grids, Math, Graphics,
-  Excel4Delphi, Excel4Delphi.Xml, Excel4Delphi.Common;
+  Excel4Delphi;
 
 /// <summary>
 /// Сохраняет страницу TZWorkBook в поток в формате HTML
@@ -14,7 +16,8 @@ function SaveXmlssToHtml(sheet: TZSheet; CodePageName: string = 'UTF-8'): string
 implementation
 
 uses
-  Excel4Delphi.NumberFormats, StrUtils, AnsiStrings;
+  StrUtils, AnsiStrings,
+  Excel4Delphi.NumberFormats, Excel4Delphi.Xml, Excel4Delphi.Common;
 
 function SaveXmlssToHtml(sheet: TZSheet; CodePageName: string = 'UTF-8'): string;
 var xml: TZsspXMLWriterH;

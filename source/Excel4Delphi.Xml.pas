@@ -3,7 +3,7 @@
 interface
 
 uses
-  SysUtils, classes;
+  SysUtils, Classes;
 
 const
   BOMUTF8    = #239#187#191; // EF BB BF
@@ -162,7 +162,7 @@ type
     function ToString(): ansistring; reintroduce; overload; virtual;
     function IsContainsAttribute(const AttrName: string; CaseSensitivity: boolean = true): boolean;
     /// <summary>
-    /// Number of attributes. (RO)
+    /// Number of attributes.
     /// </summary>
     property Count: integer read FCount;
     /// <summary>
@@ -719,7 +719,7 @@ type
   end;
 
   TZAttrArrayH = array [0..1] of string;
-  //Класс-обёртка-костыль для атрибутов над TZAttributes
+
   TZAttributesH = class(TPersistent)
   private
     FAttributes: TZAttributes;
@@ -753,7 +753,6 @@ type
     property ItemsByNum[num: integer]: string read GetAttrI write SetAttrI;
   end;
 
-  //пишет XML
   TZsspXMLWriterH = class
   private
     FAttributes: TZAttributesH;
@@ -777,7 +776,6 @@ type
     procedure SetTextConverter(Value: TAnsiToCPConverter);
     procedure SetUnixNLSeparator(Value: boolean);
     procedure SetAttributes(Value: TZAttributesH);
-  protected
   public
     constructor Create(Stream: TStream);
     destructor Destroy(); override;
@@ -829,10 +827,9 @@ type
     property UnixNLSeparator: boolean read GetUnixNLSeparator write SetUnixNLSeparator;
   end;
 
-  //читает XML
   TZsspXMLReaderH = class
   private
-    FAttributes: TZAttributesH;      //Атрибуты
+    FAttributes: TZAttributesH;
     FXMLReader: TZsspXMLReader;
     function GetAttributes(): TZAttributesH;
     function GetInProcess(): boolean;
@@ -858,7 +855,6 @@ type
     function GetAttributesMatch(): boolean;
     function GetIsTagStartOrClosed: boolean;
     function GetIsTagOfData: boolean;
-  protected
   public
     constructor Create(); virtual;
     destructor Destroy(); override;
@@ -892,16 +888,11 @@ type
     function ReadToEndTagByName(tagName: string): boolean;
   end;
 
-//конец для Delphi >=2009
-
-//Читатали
 procedure ReadCharUTF8(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharUTF16LE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharUTF16BE(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharUTF32(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
-
-//////////// Конвертеры
 function conv_UTF8ToLocal(const Text: ansistring): ansistring;
 function conv_UTF16LEToLocal(const Text: ansistring): ansistring;
 function conv_UTF16BEToLocal(const Text: ansistring): ansistring;
@@ -909,34 +900,18 @@ function conv_UTF32LEToLocal(const Text: ansistring): ansistring;
 function conv_UTF32BEToLocal(const Text: ansistring): ansistring;
 function conv_WIN1251ToLocal(const Text: ansistring): ansistring;
 function conv_CP866ToLocal(const Text: ansistring): ansistring;
-
-//заменяет в строке спецсимволы
 function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistring; overload;
 function CheckStrEntity(const st: string; checkamp: boolean = true): string; overload;
 function ClenuapXmlTagValue(const str: string): string;
-
-//проверяем на корректность сущность (не факт, что валидную), в случае
-//чего заменяем '&' на '&amp;'
 procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring); overload;
 procedure Correct_Entity(const _St: string; num: integer; var _result: string); overload;
-
-//Добавляет аттрибут
 function ToAttribute(const AttrName: ansistring; const Value: ansistring): TZAttrArray; overload;
 function ToAttribute(const AttrName: string; const Value: string): TZAttrArrayH; overload;
-
-
-//Распознаёт кодировку XML и HTML текста
 function RecognizeEncodingXML(startpos: integer; var txt: ansistring; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
-
-//Распознаёт BOM (Byte Order Mark) текста
 function RecognizeBOM(var txt: ansistring): integer;
-
-//Распознаёт кодировку XML и HTML текста вместе с BOM
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 
 implementation
-
-//// читатели
 
 function DUAnsiPos(const Substr: ansistring; const S: ansistring): integer;
 var
@@ -973,21 +948,17 @@ var
   s: ansistring;
   t, i: integer;
   kol: integer;
-
 begin
   _eof := false;
   text := '';
   s := '';
-  if Assigned(ReadCPChar) then
-  begin
+  if Assigned(ReadCPChar) then begin
     ReadCPChar(s, _eof);
     text := text + s;
     if _eof then exit;
-    if length(s) > 0 then
-    begin
+    if length(s) > 0 then begin
       t := ord(s[1]);
-      if t > 127 then
-      begin
+      if t > 127 then begin
         {
         //вроде как возможны 5-ти байтные, но в стандарте нету
         if t and 248 = 248 then
@@ -999,14 +970,13 @@ begin
           kol := 2 else
         if t and 192 = 192 then
           kol := 1;
-        for i := 1 to kol do
-        begin
+        for i := 1 to kol do begin
           //все последующие симовлы должны быть вида 10xxxxxx {tut}
           ReadCPChar(s, _eof);
           text := text + s;
           if _eof then exit;
         end;
-      end; //if
+      end;
     end;
   end else
     _eof := true;
@@ -1093,7 +1063,6 @@ begin
     _eof := true;
 end;
 
-//для однобайтных кодировок
 procedure ReadCharOneByte(const ReadCPChar: TReadCPCharObj; var text: ansistring; var _eof: boolean);
 begin
   _eof := false;
@@ -1103,8 +1072,6 @@ begin
   else
     _eof := true;
 end;
-
-//////////// Конвертеры
 
 function CP866ToWin1251(const cp866: ansistring): ansistring;
 var i, n: integer; ch: byte;
@@ -1187,9 +1154,7 @@ function conv_CP866ToLocal(const Text: ansistring): ansistring;
 begin
   result := CP866ToWin1251(Text);
 end;
-///////////////////////////
 
-//Добавляет аттрибут
 function ToAttribute(const AttrName: ansistring; const Value: ansistring): TZAttrArray;
 begin
   result[0] := AttrName;
@@ -1202,25 +1167,23 @@ begin
   result[1] := Value;
 end;
 
-//проверяем на корректность сущность (не факт, что валидную), в случае
-//чего заменяем '&' на '&amp;'
 procedure Correct_Entity(const _St: ansistring; num: integer; var _result: ansistring);
 var
   b: boolean;
   i, l: integer;
-
 begin
   b := true;
   l := length(_St);
   for i := num + 1 to length(_St) do
-  case _st[i] of
-    ' ', #13, #10, #9, '<', '>', '''', '"', '&':
-    begin
-      b := false;
-      break;
+    case _St[i] of
+      ' ', #13, #10, #9, '<', '>', '''', '"', '&':
+        begin
+          b := false;
+          break;
+        end;
+      ';':
+        break;
     end;
-    ';': break;
-  end;
   if num >= l then
     b := false;
   if b then
@@ -1233,19 +1196,19 @@ procedure Correct_Entity(const _St: string; num: integer; var _result: string);
 var
   b: boolean;
   i, l: integer;
-
 begin
   b := true;
   l := length(_St);
   for i := num + 1 to length(_St) do
-  case _st[i] of
-    ' ', #13, #10, #9, '<', '>', '''', '"', '&':
-    begin
-      b := false;
-      break;
+    case _St[i] of
+      ' ', #13, #10, #9, '<', '>', '''', '"', '&':
+        begin
+          b := false;
+          break;
+        end;
+      ';':
+        break;
     end;
-    ';': break;
-  end;
   if num >= l then
     b := false;
   if b then
@@ -1254,13 +1217,6 @@ begin
     _result := _result + '&amp;';
 end;
 
-//заменяет в строке спецсимволы
-//INPUT
-//      St: ansistring - исходная строка
-//      checkamp: boolean - true - заменять & сразу на &amp;
-//                          false - если сущность - оставлять
-//RETURN
-//      ansistring - Обработанная строка
 function CheckStrEntity(const st: ansistring; checkamp: boolean = true): ansistring;
 var
   i, kol: integer;
@@ -1268,8 +1224,7 @@ var
 begin
   result := '';
   kol := length(st);
-  for i := 1 to kol do
-  begin
+  for i := 1 to kol do begin
     case st[i] of
       '<': result := result + '&lt;';
       '&':
@@ -1298,17 +1253,8 @@ begin
     ;
 end;
 
-//заменяет в строке спецсимволы
-//INPUT
-//      St: string - исходная строка
-//      checkamp: boolean - true - заменять & сразу на &amp;
-//                          false - если сущность - оставлять
-//RETURN
-//      ansistring - Обработанная строка
 function CheckStrEntity(const st: string; checkamp: boolean = true): string;
-var
-  i, kol: integer;
-
+var i, kol: integer;
 begin
   result := '';
   kol := length(st);
@@ -1329,12 +1275,8 @@ begin
       else result := result + st[i];
     end;
   end;
-end; //CheckStrEntity
+end;
 
-//Возвращает номер кодировки по его названию (UPCASE не забываем!)
-//INPUT
-//    txt: ansistring - имя кодировки в ВЕРХНЕМ РЕГИСТРЕ
-//RETURN: integer - номер кодировки
 function CPFromName(txt: ansistring): integer;
 begin
   result := 0;
@@ -1348,28 +1290,6 @@ begin
   if txt = 'CP866' then result := 7;
 end;
 
-//Распознаёт кодировку XML и HTML текста
-//(во всяком случае попытается)
-//INPUT
-//    startpos: integer   - стартовая позиция
-//    txt: ansistring         - текст для распознания
-//OUTPUT
-//    cpfromtext: integer - номер расспознаной кодировки из текста
-//                            0 - неопределена
-//                            1 - UTF-8
-//                            2 - UTF-16BE
-//                            3 - UTF-16LE
-//                            4 - UTF-32BE
-//                            5 - UTF-32LE
-//                            6 - Windows-1251
-//                            7 - CP866
-//    cpname: ansistring      - название кодировки из текста
-//    ftype: integer      - тип файла:
-//                            0 - непонятно
-//                            1 - xml
-//                            2 - html
-//RETURN: boolean         - true - кодировка скорее всего точно опознана
-//                          false - есть сомнение насчёт правильности распознания
 function RecognizeEncodingXML(startpos: integer; var txt: ansistring; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
 var
   i, ll: integer;
@@ -1382,9 +1302,7 @@ var
   _l, _f: integer;
 
   function checkCPFromText(_name: ansistring; _b: boolean): boolean;
-  var
-    n: integer;
-
+  var n: integer;
   begin
     result := _b;
     n := CPFromName(_name);
@@ -1404,10 +1322,7 @@ begin
   ftype := 0;
   ll := length(txt);
   if (ll <= 0) then
-  begin
-    result := false;
-    exit;
-  end;
+    exit(false);
   result := true;
   kol16BE := 0;
   kol16LE := 0;
@@ -1548,21 +1463,8 @@ begin
   end;
 end;
 
-//Распознаёт BOM (Byte Order Mark) текста
-//Предполагаем, что в самом начале текста стоит BOM,
-//тогда это будет уникод:
-//    UTF-8:    EF BB BF
-//    UTF-16BE: FE FF     (00 SS)
-//    UTF-16LE: FF FE     (SS 00) - windows
-//    UTF-32BE: 00 00 FE FF
-//    UTF-32LE: FF FE 00 00
-//INPUT
-//      var txt: ansistring - текст для распознания BOM-а
-//RETURN: integer       - номер распознанной кодировки по BOMу
 function RecognizeBOM(var txt: ansistring): integer;
-var
-  ltxt: integer;
-
+var ltxt: integer;
 begin
   result := 0;
   //    BOM:
@@ -1611,32 +1513,8 @@ begin
   end;
 end;
 
-//Распознаёт кодировку XML и HTML текста вместе с BOM
-//(во всяком случае попытается)
-//INPUT
-//    txt: ansistring         - текст для распознания
-//OUTPUT
-//    BOM: integer        - номер распознаной кодировки из BOM  
-//    cpfromtext: integer - номер расспознаной кодировки из текста
-//                            0 - неопределена
-//                            1 - UTF-8
-//                            2 - UTF-16BE
-//                            3 - UTF-16LE
-//                            4 - UTF-32BE
-//                            5 - UTF-32LE
-//                            6 - Windows-1251
-//                            7 - CP866
-//    cpname: ansistring      - название кодировки из текста
-//    ftype: integer      - тип файла:
-//                            0 - непонятно
-//                            1 - xml
-//                            2 - html
-//RETURN: boolean         - true - кодировка скорее всего точно опознана
-//                          false - есть сомнение насчёт правильности распознания
 function RecognizeEncodingXML(var txt: ansistring; out BOM: integer; out cpfromtext: integer; out cpname: ansistring; out ftype: integer): boolean; overload;
-var
-  t: integer;
-  
+var t: integer;
 begin
   BOM := RecognizeBOM(txt);
   t := 1;
@@ -1665,12 +1543,9 @@ begin
 end;
 
 procedure TZAttributes.ResizeItemsArray(NewSize: integer);
-var
-  delta: integer;
-  
+var delta: integer;
 begin
-  if (NewSize >= FMaxCount) then
-  begin
+  if (NewSize >= FMaxCount) then begin
     delta := NewSize;
     if (NewSize < 50) then
       delta := delta * 4
@@ -1680,11 +1555,8 @@ begin
     else
       delta := delta + 20;
     SetLength(FItems, delta);
-  end else
-  if (NewSize > 50) then
-  begin
-    if (FMaxCount - NewSize > 200) then
-    begin
+  end else if (NewSize > 50) then begin
+    if (FMaxCount - NewSize > 200) then begin
       delta := NewSize + 100;
       SetLength(FItems, delta);
     end;
@@ -1698,17 +1570,14 @@ begin
 end;
 
 function TZAttributes.GetAttrS(const Att: ansistring): ansistring;
-var
-  i: integer;
-
+var i: integer;
 begin
   result := '';
   for i := 0 to FCount - 1 do
-  if FItems[i][0] = Att then
-  begin
-    result := FItems[i][1];
-    break;
-  end;
+    if FItems[i][0] = Att then begin
+      result := FItems[i][1];
+      break;
+    end;
 end;
 
 procedure TZAttributes.SetAttrS(const Att: ansistring; const Value: ansistring);
@@ -1744,12 +1613,9 @@ begin
 end;
 
 procedure TZAttributes.DeleteItem(Index: integer);
-var
-  i: integer;
-
+var i: integer;
 begin
-  if (Index >= 0) and (Index < Count) then
-  begin
+  if (Index >= 0) and (Index < Count) then begin
     for i := Index to Count - 2 do
       FItems[i] := FItems[i+1];
     dec(FCount);
@@ -1758,29 +1624,24 @@ begin
 end;
 
 procedure TZAttributes.Insert(Index: integer; const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true);
-var
-  i: integer;
-
+var i: integer;
 begin
-  if TestMatch then
-  begin
+  if TestMatch then begin
     for i := 0 to FCount - 1 do
-    if FItems[i][0] = AttrName then
-    begin
+    if FItems[i][0] = AttrName then begin
       FItems[i][1] := Value;
       exit;
     end;
   end;
-  if (Index >= 0) and (Index < Count) then
-  begin
+
+  if (Index >= 0) and (Index < Count) then begin
     inc(FCount);
     ResizeItemsArray(FCount);
     for i := FCount - 2 downto Index do
       FItems[i + 1] := FItems[i];
     FItems[Index][0] := AttrName;
     FItems[Index][1] := Value;
-  end else
-  if Count = 0 then
+  end else if Count = 0 then
     Add(AttrName, Value, TestMatch);
 end;
 
@@ -1790,16 +1651,13 @@ begin
 end;
 
 procedure TZAttributes.Add(const AttrName: ansistring; const Value: ansistring; TestMatch: boolean = true);
-var
-  i: integer;
-  
+var i: integer;
 begin
-  if length(AttrName) = 0 then exit;
-  if TestMatch then
-  begin
+  if length(AttrName) = 0 then
+    exit;
+  if TestMatch then begin
     for i := 0 to FCount - 1 do
-    if FItems[i][0] = AttrName then
-    begin
+    if FItems[i][0] = AttrName then begin
       FItems[i][1] := Value;
       exit;
     end;
@@ -1828,14 +1686,12 @@ begin
   if (quote <> '"') and (quote <> '''') then
     quote := '"';
   result := '';
-  if CheckEntity then
-  begin
+  if CheckEntity then begin
     //название атрибута, надеюсь, будет без спецсимволов ^__^
     for i := 0 to Count - 1 do
       if (length(FItems[i][1]) > 0) or (addempty) then
         result := result + ' ' + FItems[i][0] + '=' + quote + CheckStrEntity(FItems[i][1]) + quote;
-  end else
-  begin
+  end else begin
     for i := 0 to Count - 1 do
       if (length(FItems[i][1]) > 0) or (addempty) then
         result := result + ' ' + FItems[i][0] + '=' + quote + FItems[i][1] + quote;
@@ -1871,18 +1727,14 @@ begin
   else
     s := AttrName;
 
-  for i := 0 to FCount - 1 do
-  begin
-    if (CaseSensitivity) then
-    begin
+  for i := 0 to FCount - 1 do begin
+    if CaseSensitivity then begin
       if (string(FItems[i][1]) = s) then
         Result := true;
-    end
-    else
-      if (UpperCase(string(FItems[i][1])) = s) then
-        Result := true;
+    end else if (UpperCase(string(FItems[i][1])) = s) then
+      Result := true;
 
-    if (Result) then
+    if Result then
       break;
   end;
 end;
@@ -1901,7 +1753,7 @@ begin
     inherited Assign(Source);
 end;
 
-////::::::::::::: TZsspXMLWriter :::::::::::::::::////
+{TZsspXMLWriter}
 
 constructor TZsspXMLWriter.Create(Stream: TStream);
 begin
@@ -1927,7 +1779,6 @@ end;
 
 destructor TZsspXMLWriter.Destroy();
 begin
-  //если забыли завершить запись:
   if InProcess then
     EndSaveTo();
   setlength(FTags, 0) ;
@@ -1936,15 +1787,11 @@ begin
   inherited;
 end;
 
-//Изменяет размер массива с тэгами
-//INPUT
-//      NewSize: integer - новый размер
 procedure TZsspXMLWriter.ResizeTagArray(NewSize: integer);
 var delta: integer;
 begin
   delta := 0;
-  if (NewSize >= FMaxTagCount) then
-  begin
+  if (NewSize >= FMaxTagCount) then begin
     delta := NewSize;
     if (NewSize < 50) then
       delta := delta * 4
@@ -1954,8 +1801,7 @@ begin
     else
       delta := delta + 20;  
   end else
-  if (NewSize > 50) then
-  begin
+  if (NewSize > 50) then begin
     if (FMaxTagCount - NewSize > 200) then
       delta := NewSize + 100;
   end;
@@ -1986,22 +1832,20 @@ end;
 //Устанавливает максимальную длинну буфера
 procedure TZsspXMLWriter.SetMaxBufferLength(Value: integer);
 begin
-  if Value > 0 then
-    if not InProcess then FMaxBufferLength := Value;
+  if (Value > 0) and not InProcess then
+    FMaxBufferLength := Value;
 end;
 
 //Устанавливает длину табуляции
 procedure TZsspXMLWriter.SetTabLength(Value: integer);
 var i: integer;
 begin
-  if Value > 0 then
-    if not InProcess then
-    begin
-      FTabLength := Value;
-      FTab := '';
-      for i := 1 to FTabLength do
-        FTab := FTab + FTabSymbol;
-    end;
+  if (Value > 0) and not InProcess then begin
+    FTabLength := Value;
+    FTab := '';
+    for i := 1 to FTabLength do
+      FTab := FTab + FTabSymbol;
+  end;
 end;
 
 procedure TZsspXMLWriter.SetNewLine(Value: boolean);
@@ -2011,8 +1855,7 @@ end;
 
 procedure TZsspXMLWriter.SetUnixNLSeparator(Value: boolean);
 begin
-  if not InProcess then
-  begin
+  if not InProcess then begin
     FUnixNLSeparator := Value;
     if value then
       FNLSeparator := #10
@@ -2036,8 +1879,7 @@ begin
   if CorrectCDATA then
   begin
     p := DUAnsiPos(']]>', CDATA);
-    while p <> 0 do
-    begin
+    while p <> 0 do begin
       delete(CDATA, p, 3);
       insert(']]&gt;', CDATA, p);
       p := DUAnsiPos(']]>', CDATA);
@@ -2063,18 +1905,15 @@ begin
   AddText(Text, UseConverter);   
 end;
 
-//Закончить запись
 procedure TZsspXMLWriter.EndSaveTo();
 begin
   while TagCount > 0 do WriteEndTagNode();
   if NewLine then AddText(FNLSeparator, true);
   FlushBuffer();
-  //FStream.Free();
   FStream := nil;
   FInProcess := false;
 end;
 
-//записываем буфер в поток и очищаем буфер
 procedure TZsspXMLWriter.FlushBuffer();
 begin
   if not FInProcess then exit;
@@ -2083,8 +1922,6 @@ begin
   FBuffer := '';
 end;
 
-//Установить конвертер текста
-// Если началась запись - конвертер менять нельзя
 procedure TZsspXMLWriter.SetTextConverter(Value: TAnsiToCPConverter);
 begin
   if not InProcess then
@@ -2106,7 +1943,8 @@ end;
 procedure TZsspXMLWriter.WriteTag(const TagName: ansistring; const Text: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 var s: ansistring;
 begin
-  if not FInProcess then exit;
+  if not FInProcess then
+    exit;
   WriteTagNode(TagName, SAttributes, StartNewLine, CloseTagNewLine, CheckEntity);
   s := Text;
   if CheckEntity then
@@ -2165,7 +2003,8 @@ end;
 procedure TZsspXMLWriter.WriteTagNode(const TagName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CloseTagNewLine: boolean; CheckEntity: boolean = true);
 var s: ansistring;
 begin
-  if not FInProcess then exit;
+  if not FInProcess then
+    exit;
   s :=  '';
   if FNewLine and StartNewLine then
   begin
@@ -2195,7 +2034,8 @@ end;
 
 procedure TZsspXMLWriter.WriteEndTagNode();
 begin
-  if not FInProcess then exit;
+  if not FInProcess then
+    exit;
   if TagCount > 0 then begin
     _AddTag('</', FTags[TagCount - 1].Name, '>', FTags[TagCount - 1].CloseTagNewLine, -1);
     Dec(FTagCount);
@@ -2207,8 +2047,7 @@ procedure TZsspXMLWriter.WriteEndTagNode(isForce: boolean; CloseTagNewLine: bool
 var b: boolean;
 begin
   if not FInProcess then exit;
-  if TagCount > 0 then
-  begin
+  if TagCount > 0 then begin
     b := FTags[TagCount - 1].CloseTagNewLine;
     if (isForce) then
       b := CloseTagNewLine;
@@ -2278,10 +2117,6 @@ begin
     result := result + FTab;
 end;
 
-//Добавляет в "Стек тэгов" новый тэг
-//  Input:
-//           Tag: ansistring                - тэг
-//           CloseTagNewLine: boolean   - Начинать ли закрывающий тэг с новой строки
 procedure TZsspXMLWriter.AddNode(const TagName: ansistring; CloseTagNewLine: boolean);
 begin
   ResizeTagArray(FTagCount + 1);
@@ -2297,15 +2132,12 @@ begin
     result := FTabSymbol[1];
 end;
 
-//Устанавливает символ табуляции (только #32 и #9 - пробел и таб)
 procedure TZsspXMLWriter.SetTabSymbol(Value: ansichar);
 begin
-  if not InProcess then
-    if (Value = #9) or (Value = #32) then
-    begin
-      FTabSymbol := Value;
-      SetTabLength(TabLength);
-    end;
+  if not InProcess and (Value = #9) or (Value = #32) then begin
+    FTabSymbol := Value;
+    SetTabLength(TabLength);
+  end;
 end;
 
 procedure TZsspXMLWriter.WriteInstruction(const InstructionName: ansistring; SAttributes: TZAttributes; StartNewLine: boolean; CheckEntity: boolean = true);
@@ -2345,7 +2177,7 @@ begin
   WriteInstruction(InstructionName, Attributes, true, true);
 end;
 
-////::::::::::::: TZsspXMLReader :::::::::::::::::////
+{TZsspXMLReader}
 
 constructor TZsspXMLReader.Create();
 begin
@@ -2370,15 +2202,11 @@ begin
   inherited Destroy();
 end;
 
-//Изменяет размер массива с тэгами
-//INPUT
-//      NewSize: integer - новый размер
 procedure TZsspXMLReader.ResizeTagArray(NewSize: integer);
 var delta: integer;
 begin
   delta := 0;
-  if (NewSize >= FMaxTagCount) then
-  begin
+  if (NewSize >= FMaxTagCount) then begin
     delta := NewSize;
     if (NewSize < 50) then
       delta := delta * 4
@@ -2388,28 +2216,25 @@ begin
     else
       delta := delta + 20;  
   end else
-  if (NewSize > 50) then
-  begin
+  if (NewSize > 50) then begin
     if (FMaxTagCount - NewSize > 200) then
       delta := NewSize + 100;
   end;
   if (delta > 0) then
     SetLength(FTags, delta);
-end; //ResizeTagArray
+end;
 
 procedure TZsspXMLReader.SetAttributesMatch(Value: boolean);
 begin
-  if (not FInProcess) then
+  if not FInProcess then
     FAttributesMatch := Value;
 end;
 
 function TZsspXMLReader.Eof(): boolean;
 begin
   result := false;
-  if InProcess then
-  begin
-    if FPFirst > FPLast then
-    begin
+  if InProcess then begin
+    if FPFirst > FPLast then begin
       ReadBuffer();
       if FPFirst > FPLast then
         result := true;
@@ -2438,18 +2263,12 @@ begin
     result := '';
 end;
 
-//Устанавливает максимальную длинну буфера
 procedure TZsspXMLReader.SetMaxBufferLength(Value: integer);
 begin
-  if Value > 513 then
-    if not InProcess then
-    begin
-      FMaxBufferLength := Value;
-      SetString(FBuffer, nil, FMaxBufferLength);
-      //SetLength(FBuffer, FMaxBufferLength);
-      //FPFirst := 0;
-      //FPlast := 0;
-    end;
+  if (Value > 513) and not InProcess then begin
+    FMaxBufferLength := Value;
+    SetString(FBuffer, nil, FMaxBufferLength);
+  end;
 end;
 
 function TZsspXMLReader.BeginReadStream(Stream: TStream): integer;
@@ -2457,8 +2276,7 @@ var s: ansistring;
 begin
   if InProcess then
     result := 1
-  else
-  begin
+  else begin
     result := 0;
     try
       FStream := Stream;
@@ -2467,8 +2285,7 @@ begin
     end;
     if FStream = nil then
       result := 3;
-    if result = 0 then
-    begin
+    if result = 0 then begin
       FInProcess := true;
       if FSourceType = 111 then
         FSourceType := 1
@@ -2476,27 +2293,21 @@ begin
         FSourceType := 2;
       ClearAll();
       ReadBuffer();
-      //выбор энкодера для чтения
       s := copy(FBuffer, 1, FPlast);
       RecognizeEncoding(s);
     end;
   end;
 end;
 
-//закончить чтение
 procedure TZsspXMLReader.EndRead();
 begin
-  if InProcess then
-  begin
+  if InProcess then begin
     FInProcess := false;
-    //if FSourceType = 1 then
-    //FStream := nil;
     if FSourceType = 1 then
       FreeAndNil(FStream);
   end;
 end;
 
-//Очистка (кроме кол-ва тэгов и стека)
 procedure TZsspXMLReader.Clear();
 begin
   FTextBeforeTag := '';
@@ -2508,18 +2319,15 @@ begin
   FAttributes.Clear();
 end;
 
-//Очистка всего
 procedure TZsspXMLReader.ClearAll();
 var t: integer;
 begin
   Clear();
   if FSourceType <> 3 then
     SetString(FBuffer, nil, MaxBufferLength)
-  else
-  begin
+  else begin
     t := Length(FBuffer);
-    if t > 0 then
-    begin
+    if t > 0 then begin
       MaxBufferLength := t;
       FPFirst := 1;
       FPLast := t;
@@ -2530,7 +2338,6 @@ begin
   FStreamEnd := false;
 end;
 
-//Читает 1 символ из буфера
 procedure TZsspXMLReader.GetOneChar(var OneChar: ansistring; var err: boolean);
 begin
   err := false;
@@ -2551,37 +2358,27 @@ begin
   end;
 end;
 
-//Читает буфер из потока
 procedure TZsspXMLReader.ReadBuffer();
 var t: integer;
 begin
   if InProcess then
-  if (FSourceType = 1) or (FSourceType = 2) then // только для файла/потока
-  begin
+  if (FSourceType = 1) or (FSourceType = 2) then begin
     t := 0;
-    //SetString(FBuffer, nil, MaxBufferLength);
-    if Assigned(FStream) and (not FStreamEnd) then
-    begin
+    if Assigned(FStream) and (not FStreamEnd) then begin
       t := FStream.Read(Pointer(FBuffer)^, MaxBufferLength);
       if t < MaxBufferLength then
         FStreamEnd := true;
     end;
-    if t >= 1 then
-    begin
+    if t >= 1 then begin
       FPFirst := 1;
       FPLast := t;
-    end else
-    begin
+    end else begin
       FPFirst := 1;
       FPLast := 0;
     end;
   end;
 end;
 
-//Попытка распознания кодировки
-// Берём текст из буфера и пытаемся распознать кодировку
-//INPUT:
-//      var txt: ansistring - анализируемый текст
 procedure TZsspXMLReader.RecognizeEncoding(var txt: ansistring);
 var
   BOM: integer;
@@ -2690,10 +2487,11 @@ var
   procedure _get_char();
   begin
     if assigned(FCharReader) then
-      FCharReader(GetOneChar, Ch,  err)
+      FCharReader(GetOneChar, Ch, err)
     else
       GetOneChar(Ch, err);
-    if err then exit;
+    if err then
+      exit;
     if Assigned(FCharConverter) then
       ss := FCharConverter(Ch)
     else
@@ -2702,7 +2500,7 @@ var
 
   procedure RawTag();
   begin
-    RawTextTagNonDecoded := RawTextTagNonDecoded + ch;
+    RawTextTagNonDecoded := RawTextTagNonDecoded + Ch;
     if ss[1] <> #0 then  //todo: что делать, если в тексте действительно будет #0?
       FRawTextTag := FRawTextTag + ss;
   end;
@@ -2712,35 +2510,30 @@ var
   var
     count_quote: byte;
     _openquote: ansistring;
-
   begin
     count_quote := 0;
     result := '';
-    while true do
-    begin
+    while true do begin
       _get_char();
-      if err then break;
-      if length(ss) >= 1 then
-      begin
+      if err then
+        break;
+      if length(ss) >= 1 then begin
         RawTag();
         case ss[1] of
           ' ', #13, #10, #9:
             begin
               if count_quote = 1 then
                 result := result + ss[1]
-              else
-                if length(result) > 0 then
-                begin
-                  FErrorCode := FErrorCode or 1;
-                  break;
-                end
+              else if length(result) > 0 then begin
+                FErrorCode := FErrorCode or 1;
+                break;
+              end
             end;
           '>':
             begin
               if count_quote = 1 then
                 result := result + ss[1]  //tut
-              else
-              begin
+              else begin
                 if length(result) > 0 then
                   FErrorCode := FErrorCode or 1
                 else
@@ -2753,21 +2546,19 @@ var
             begin
               if count_quote = 1 then
                 result := result + ss[1]
-              else
-              begin
+              else begin
                 if length(result) > 0 then
                   FErrorCode := FErrorCode or 4
                 else
                   FErrorCode := FErrorCode or 2;
-                break;  
+                break;
               end;
             end;
           '?':
             begin
               if count_quote = 1 then
                 result := result + ss[1]
-              else
-              begin
+              else begin
                 if length(result) > 0 then
                   _isInstruction := true
                 else
@@ -2779,8 +2570,7 @@ var
             begin
               if count_quote = 1 then
                 result := result + ss[1]
-              else
-              begin
+              else begin
                 if length(result) > 0 then
                   _isClosedTag := true
                 else
@@ -2796,36 +2586,36 @@ var
                 //будем игнорировать
                 FErrorCode := FErrorCode or 32;
             end;
-          '"','''':
+          '"', '''':
             begin
-              if count_quote = 0 then
-              begin
+              if count_quote = 0 then begin
                 if length(result) > 0 then // <tag ... param = value"...>
                 begin
                   FErrorCode := FErrorCode or 16;
                   break;
-                end else
-                begin
+                end
+                else begin
                   _openquote := ss[1];
                   inc(count_quote);
-                end;   
-              end else
-              begin
+                end;
+              end
+              else begin
                 if (QuotesEqual or (ss[1] = _openquote)) then
                   break
                 else
-                  result := result + ss;  
-              end;  
+                  result := result + ss;
+              end;
             end;
-          else
-            result := result + ss;
+        else
+          result := result + ss;
         end;
       end; //if
     end;  //while
   end;
 
   procedure Delete2end(var svalue: ansistring);
-  var t: integer;
+  var
+    t: integer;
   begin
     t := length(svalue);
     if t >= 2 then
@@ -2839,7 +2629,6 @@ var
     _tmp: integer;
     _last2: ansistring;
     s, sl: ansistring;
-
   begin
     setlength(_last2, 2);
     _last2[1] := #0;
@@ -2847,13 +2636,13 @@ var
     _type_comment := 0;
     s := '';
     sl := '';
-    while true do
-    begin
-      if end_tag then break;
+    while true do begin
+      if end_tag then
+        break;
       _get_char();
-      if err then break;
-      if length(ss) >= 1 then
-      begin
+      if err then
+        break;
+      if length(ss) >= 1 then begin
         RawTag();
         case ss[1] of
           '>':
@@ -2872,78 +2661,71 @@ var
                   end;
                 1:   // <!--...-->
                   begin
-                    if _last2 = '--' then
-                    begin
+                    if _last2 = '--' then begin
                       delete2end(FValue);
                       end_tag := true;
                       break;
-                    end else
+                    end
+                    else
                       FValue := FValue + ss;
                   end;
                 2:   // <![CDATA[...]]>
                   begin
-                    if _last2 = ']]' then
-                    begin
+                    if _last2 = ']]' then begin
                       delete2end(FValue);
                       end_tag := true;
                       break;
-                    end else
+                    end
+                    else
                       FValue := FValue + ss;
                   end;
               end;
             end;
-          else
-            begin
-              if _type_comment <> 0 then
-                FValue := FValue + ss
-              else
-              begin
-                _tmp := length(s);
-                if _tmp = 2 then
-                begin
-                  if s = '--' then
-                  begin
-                    _type_comment := 1;
-                    FValue := FValue + ss;
-                  end else
-                    s := s + UTF8Encode(UpperCase(UTF8ToString(AnsiString(ss[1]))));
-                end else
-                if _tmp = 7 then
-                begin
-                  if s = '[CDATA[' then
-                  begin
-                    _type_comment := 2;
-                    FValue := FValue + ss;
-                  end else
-                  begin
-                    FErrorCode := FErrorCode or 128;
-                    _type_comment := -1;
-                    FValue := sl + ss;
-                  end;
-                  //FValue := FValue + ss;
-                end else
-                begin
+        else
+          begin
+            if _type_comment <> 0 then
+              FValue := FValue + ss
+            else begin
+              _tmp := length(s);
+              if _tmp = 2 then begin
+                if s = '--' then begin
+                  _type_comment := 1;
+                  FValue := FValue + ss;
+                end
+                else
                   s := s + UTF8Encode(UpperCase(UTF8ToString(AnsiString(ss[1]))));
-                  sl := sl + ss[1];
+              end
+              else if _tmp = 7 then begin
+                if s = '[CDATA[' then begin
+                  _type_comment := 2;
+                  FValue := FValue + ss;
+                end
+                else begin
+                  FErrorCode := FErrorCode or 128;
+                  _type_comment := -1;
+                  FValue := sl + ss;
                 end;
+                  //FValue := FValue + ss;
+              end
+              else begin
+                s := s + UTF8Encode(UpperCase(UTF8ToString(AnsiString(ss[1]))));
+                sl := sl + ss[1];
               end;
-            end; //else
+            end;
+          end; //else
         end;    //case
-
         //'-->' ']]>'
         _last2[2] := _last2[1];
         _last2[1] := ss[1];
       end;
     end;
-    result := _type_comment; 
+    result := _type_comment;
   end;
 
   procedure CheckClose(var some_par: boolean; err_code: integer);
   begin
-    if some_par then
-    begin
-      if not (ss[1] in [' ', #0, #9, #10, #13, '>']) then
-      begin
+    if some_par then begin
+      if not (ss[1] in [' ', #0, #9, #10, #13, '>']) then begin
         some_par := false;
         FErrorCode := FErrorCode or err_code;
       end;
@@ -2956,19 +2738,18 @@ var
     _isParam: boolean;
     s: ansistring;
     _tmp: integer;
-
   begin
     _isTagName := 0;
     _isInstruction := false;
     _isParam := false;
     s := '';
-    while true do
-    begin
-      if end_tag then break;
+    while true do begin
+      if end_tag then
+        break;
       _get_char();
-      if err then break;
-      if length(ss) >= 1 then
-      begin
+      if err then
+        break;
+      if length(ss) >= 1 then begin
         RawTag();
         CheckClose(_isClosedTag, 64);
         CheckClose(_isInstruction, 1024);
@@ -2976,46 +2757,41 @@ var
         case ss[1] of
           '>':
             begin
-              if _isTagName = 0 then
-              begin
-                if length(s) > 0 then
-                begin
+              if _isTagName = 0 then begin
+                if length(s) > 0 then begin
                   FTagName := s;
                   s := '';
-                end else
+                end
+                else
                   FErrorCode := FErrorCode or 256;
               end;
               //
-              if _isClosedTag then
-              begin
+              if _isClosedTag then begin
                 if (FTagType <> TXmlTagType.xttDeclare) and (FTagType <> TXmlTagType.xttEnd) then
                   FTagType := TXmlTagType.xttClosed
                 else
                   FErrorCode := FErrorCode or 8192;
-              end else
-              if _isInstruction then
-              begin
+              end
+              else if _isInstruction then begin
                 if FTagType <> TXmlTagType.xttDeclare then
                   FErrorCode := FErrorCode or 16384;
               end;
               end_tag := true;
             end;
-          '<': FErrorCode := FErrorCode or 32768;         //warning/error/ignore? {tut}
+          '<':
+            FErrorCode := FErrorCode or 32768;         //warning/error/ignore? {tut}
           '=':
             begin
               _isParam := false;
-              if _isTagName > 0 then
-              begin
-                if length(s) > 0 then
-                begin
+              if _isTagName > 0 then begin
+                if length(s) > 0 then begin
                   Attributes.Add(s, GetParamValue(), FAttributesMatch);
                   s := '';
                 end;
-              end else
-              begin
+              end
+              else begin
                 //< =...>
-                if length(s) > 0 then
-                begin
+                if length(s) > 0 then begin
                   FTagName := s;
                   s := '';
                   GetParamValue(); //может, забыли имя параметра ввести? {tut}
@@ -3026,17 +2802,18 @@ var
             end;
           '!':  //комментарий / CDATA
             begin
-              if (_isTagName = 0) and (length(s) = 0) then
-              begin
+              if (_isTagName = 0) and (length(s) = 0) then begin
                 _tmp := GetCommentCDATA();
                 if end_tag then
                   case _tmp of
-                    1: FTagType := TXmlTagType.xttComment;
-                    2: FTagType := TXmlTagType.xttCData;
+                    1:
+                      FTagType := TXmlTagType.xttComment;
+                    2:
+                      FTagType := TXmlTagType.xttCData;
                   end;
                 break;
-              end else
-              begin
+              end
+              else begin
                 // <TAG!>
                 FErrorCode := FErrorCode or 512;
               end;
@@ -3053,46 +2830,44 @@ var
               // сделать проверку, если текст тэга не пустой
               if (_isTagName = 0) and (length(s) = 0) then
                 FTagType := TXmlTagType.xttEnd
-              else
-              begin
+              else begin
                 if _isTagName = 0 then
-                    FTagName := s;
+                  FTagName := s;
                 _isClosedTag := true;
               end;
             end;
-          '"','''': FErrorCode := FErrorCode or 65536;
+          '"', '''':
+            FErrorCode := FErrorCode or 65536;
           ' ', #13, #10, #9:
             begin
-              if (_isTagName = 0) then
-              begin
-                if length(s) > 0 then
-                begin
+              if (_isTagName = 0) then begin
+                if length(s) > 0 then begin
                   FTagName := s;
                   _isTagName := 1;
                   s := '';
-                end else
+                end
+                else
                   FErrorCode := FErrorCode or 2048;
-              end else
-              begin
+              end
+              else begin
                 if length(s) > 0 then
                   _isParam := true;
               end;
             end;
-          #0:; //и что с ним делать? {tut}
-          else
-            begin
-              if _isParam then
-              begin
-                if length(s) > 0 then
-                begin
-                  _isParam := false;
-                  s := '';
-                  FErrorCode := FErrorCode or 4096;
-                end;
+          #0:
+            ; //и что с ним делать? {tut}
+        else
+          begin
+            if _isParam then begin
+              if length(s) > 0 then begin
+                _isParam := false;
+                s := '';
+                FErrorCode := FErrorCode or 4096;
               end;
-              s := s + ss;
             end;
-        end;//case
+            s := s + ss;
+          end;
+        end; //case
       end; //if
     end;  //while
   end;
@@ -3104,41 +2879,38 @@ begin
   RawEncodingBeforeTag := '';
   err := false;
   Clear();
-  while true do
-  begin
+  while true do begin
     _get_char();
-    if err then break;
+    if err then
+      break;
 
-    if length(ss) >= 1 then
-    begin
+    if length(ss) >= 1 then begin
       case ss[1] of
         '<':
           begin
             FRawTextTag := ss;
-            RawTextTagNonDecoded := ch;
+            RawTextTagNonDecoded := Ch;
             ProcessTag();
 
             if err then
               FErrorCode := FErrorCode or 131072
-            else
-              if end_tag then
-                if (FTagType = TXmlTagType.xttUnknown) and (length(FTagName) > 0) then
-                  FTagType := TXmlTagType.xttStart;
+            else if end_tag then
+              if (FTagType = TXmlTagType.xttUnknown) and (length(FTagName) > 0) then
+                FTagType := TXmlTagType.xttStart;
 
             Break;
           end;
-        else
-          begin
-            FTextBeforeTag := FTextBeforeTag + ss;
-            RawEncodingBeforeTag := RawEncodingBeforeTag + Ch;
-          end;
-      end;//case
+      else
+        begin
+          FTextBeforeTag := FTextBeforeTag + ss;
+          RawEncodingBeforeTag := RawEncodingBeforeTag + Ch;
+        end;
+      end; //case
     end; //if
   end;  //while
   if FTagType = TXmlTagType.xttStart then
     AddTag(FTagName)
-  else
-  if FTagType = TXmlTagType.xttEnd then
+  else if FTagType = TXmlTagType.xttEnd then
     DeleteClosedTag();
   if eof() then
     if TagCount > 0 then
@@ -3161,8 +2933,7 @@ end;
 
 procedure TZsspXMLReader.DeleteTag();
 begin
-  if TagCount > 0 then
-  begin
+  if TagCount > 0 then begin
     dec(FTagCount);
     ResizeTagArray(FTagCount);
   end;
@@ -3177,12 +2948,10 @@ begin
     FErrorCode := FErrorCode or 262144;
     exit;
   end;
-  if IgnoreCase then
-  begin
+  if IgnoreCase then begin
     if (AnsiUpperCase(UTF8ToString(TagName)) = AnsiUpperCase(UTF8ToString(Tags[TagCount - 1]))) then
       b := true;
-  end else
-  begin
+  end else begin
     if TagName = Tags[TagCount - 1] then
       b := true;
   end;
@@ -3218,31 +2987,26 @@ begin
   result := FAttributes.Count;
 end;
 
-//Получает значение атрибута по его названию
 function TZAttributesH.GetAttrS(Att: string): string;
 begin
   result := UTF8ToString(FAttributes.ItemsByName[UTF8Encode(Att)]);
 end;
 
-//Устанавливает значение атрибута по названию
 procedure TZAttributesH.SetAttrS(Att: string; const Value: string);
 begin
   FAttributes.ItemsByName[UTF8Encode(Att)] := UTF8Encode(Value);
 end;
 
-//Получает знаечние атрибута по номеру
 function TZAttributesH.GetAttrI(num: integer): string;
 begin
   result := UTF8ToString(FAttributes.ItemsByNum[num]);
 end;
 
-//Устанавливает значение атрибута по номеру
 procedure TZAttributesH.SetAttrI(num: integer; const Value: string);
 begin
   FAttributes.ItemsByNum[num] := UTF8Encode(Value);
 end;
 
-//Получает значение атрибут-значение по номеру
 function TZAttributesH.GetAttr(num: integer): TZAttrArrayH;
 var
   t: TZAttrArrayH;
@@ -3255,7 +3019,6 @@ begin
   result := t;
 end;
 
-//Устанавливает атрибут-значение по номеру
 procedure TZAttributesH.SetAttr(num: integer; const Value: TZAttrArrayH);
 var
   t: TZAttrArrayH;
@@ -3334,9 +3097,7 @@ begin
   Result := FAttributes.IsContainsAttribute(AttrName, CaseSensitivity);
 end;
 
-////////////////////////////////////////////////////////////////////////////////
-//// TZsspXMLWriterH 
-////////////////////////////////////////////////////////////////////////////////
+{TZsspXMLWriterH}
 
 constructor TZsspXMLWriterH.Create(Stream: TStream);
 begin
@@ -3444,7 +3205,7 @@ end;
 
 procedure TZsspXMLWriterH.SetAttributes(Value: TZAttributesH);
 begin
-  if (Value <> nil) then
+  if Assigned(Value) then
     FAttributes.Assign(Value);
 end;
 
@@ -3489,8 +3250,7 @@ begin
   try
     SetLength(a, kol - _start + 1);
     num := 0;
-    for i := _start to kol do
-    begin
+    for i := _start to kol do begin
       a[num][0] := UTF8Encode(AttrArray[i][0]);
       a[num][1] := UTF8Encode(AttrArray[i][1]);
     end;
@@ -3560,8 +3320,7 @@ begin
   try
     SetLength(a, kol - _start + 1);
     num := 0;
-    for i := _start to kol do
-    begin
+    for i := _start to kol do begin
       a[num][0] := UTF8Encode(AttrArray[i][0]);
       a[num][1] := UTF8Encode(AttrArray[i][1]);
     end;
@@ -3618,8 +3377,7 @@ begin
   try
     SetLength(a, kol - _start + 1);
     num := 0;
-    for i := _start to kol do
-    begin
+    for i := _start to kol do begin
       a[num][0] := UTF8Encode(AttrArray[i][0]);
       a[num][1] := UTF8Encode(AttrArray[i][1]);
     end;
@@ -3666,8 +3424,7 @@ begin
   try
     SetLength(a, kol - _start + 1);
     num := 0;
-    for i := _start to kol do
-    begin
+    for i := _start to kol do begin
       a[num][0] := UTF8Encode(AttrArray[i][0]);
       a[num][1] := UTF8Encode(AttrArray[i][1]);
     end;
@@ -3698,9 +3455,7 @@ begin
   WriteTagNode(TagName, FAttributes, true, false, true);
 end;
 
-////////////////////////////////////////////////////////////////////////////////
-//// TZsspXMLReaderH
-////////////////////////////////////////////////////////////////////////////////
+{TZsspXMLReaderH}
 
 constructor TZsspXMLReaderH.Create();
 begin
@@ -3743,35 +3498,35 @@ end;
 
 function TZsspXMLReaderH.GetInProcess(): boolean;
 begin
-  result := FXMLReader.InProcess;
+result := FXMLReader.InProcess;
 end;
 
 function TZsspXMLReaderH.GetIsTagClosed(): boolean;
 begin
-    result := (TagType = TXmlTagType.xttClosed);
+  result := (TagType = TXmlTagType.xttClosed);
 end;
 
 function TZsspXMLReaderH.GetIsTagEnd(): boolean;
 begin
-    result := (TagType = TXmlTagType.xttEnd);
+  result := (TagType = TXmlTagType.xttEnd);
 end;
 
 function TZsspXMLReaderH.GetIsTagOfData: boolean;
 begin
-    result := (TagType = TXmlTagType.xttStart)
-           or (TagType = TXmlTagType.xttClosed)
-           or (TagType = TXmlTagType.xttEnd);
+  result := (TagType = TXmlTagType.xttStart)
+         or (TagType = TXmlTagType.xttClosed)
+         or (TagType = TXmlTagType.xttEnd);
 end;
 
 function TZsspXMLReaderH.GetIsTagStart(): boolean;
 begin
-    result := (TagType = TXmlTagType.xttStart);
+  result := (TagType = TXmlTagType.xttStart);
 end;
 
 function TZsspXMLReaderH.GetIsTagStartOrClosed: boolean;
 begin
-    result := (TagType = TXmlTagType.xttStart)
-           or (TagType = TXmlTagType.xttClosed);
+  result := (TagType = TXmlTagType.xttStart)
+         or (TagType = TXmlTagType.xttClosed);
 end;
 
 function TZsspXMLReaderH.GetRawTextTag(): string;
@@ -3796,27 +3551,27 @@ end;
 
 function TZsspXMLReaderH.IsTagClosedByName(tagName: string): boolean;
 begin
-    result := (string(FXMLReader.TagName) = tagName)
-          and (FXMLReader.TagType = TXmlTagType.xttClosed);
+  result := (string(FXMLReader.TagName) = tagName)
+                and (FXMLReader.TagType = TXmlTagType.xttClosed);
 end;
 
 function TZsspXMLReaderH.IsTagEndByName(tagName: string): boolean;
 begin
-    result := (string(FXMLReader.TagName) = tagName)
-          and (FXMLReader.TagType = TXmlTagType.xttEnd);
+  result := (string(FXMLReader.TagName) = tagName)
+                and (FXMLReader.TagType = TXmlTagType.xttEnd);
 end;
 
 function TZsspXMLReaderH.IsTagStartByName(tagName: string): boolean;
 begin
-    result := (string(FXMLReader.TagName) = tagName)
-          and (FXMLReader.TagType = TXmlTagType.xttStart);
+  result := (string(FXMLReader.TagName) = tagName)
+                and (FXMLReader.TagType = TXmlTagType.xttStart);
 end;
 
 function TZsspXMLReaderH.IsTagStartOrClosedByName(tagName: string): boolean;
 begin
-    result := (string(FXMLReader.TagName) = tagName)
-          and ((FXMLReader.TagType = TXmlTagType.xttStart)
-            or (FXMLReader.TagType = TXmlTagType.xttClosed));
+  result := (string(FXMLReader.TagName) = tagName)
+    and ((FXMLReader.TagType = TXmlTagType.xttStart)
+    or (FXMLReader.TagType = TXmlTagType.xttClosed));
 end;
 
 function TZsspXMLReaderH.GetTagType(): TXmlTagType;
@@ -3836,7 +3591,7 @@ end;
 
 function TZsspXMLReaderH.GetTagName(): string;
 begin
-  result :=  UTF8ToString(FXMLReader.TagName);
+  result := UTF8ToString(FXMLReader.TagName);
 end;
 
 function TZsspXMLReaderH.GetTag(num: integer): string;
@@ -3856,7 +3611,7 @@ end;
 
 procedure TZsspXMLReaderH.SetAttributes(Value: TZAttributesH);
 begin
-  if (Value <> nil) then
+  if Assigned(Value) then
     FAttributes.Assign(Value);
 end;
 

@@ -13,8 +13,7 @@ var workBook: TZWorkBook;
 workBook := TZWorkBook.Create();
 try
   workBook.Sheets.Add('My sheet');
-  workBook.Sheets[0].ColCount := 10;
-  workBook.Sheets[0].RowCount := 10;
+  workBook.Sheets[0].SetDimensions(10, 20);
   workBook.Sheets[0].CellRef['A', 0].AsString := 'Hello';
   workBook.Sheets[0].RangeRef['A', 0, 'B', 2].Merge();
   workBook.SaveToFile('file.xlsx');
@@ -37,3 +36,8 @@ finally
   workBook.Free();
 end
 ```
+
+## TODO
+* TZMergeCells = class -> TZMergedCells = class(TObjectList<TZMergeArea>)
+* TZSheets = class -> TZSheets = class(TObjectList<TZSheet>)
+* TZStyles = class -> TZStyles = class(TObjectList<TZStyle>)
