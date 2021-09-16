@@ -4264,7 +4264,7 @@ end;
 function TZSheets.Add(title: string): TZSheet;
 begin
   result := TZSheet.Create(FStore);
-  SetLength(FSheets, Length(FSheets) + 1);
+  SetSheetCount(Length(FSheets) + 1);
   FSheets[High(FSheets)] := result;
 end;
 
