@@ -1730,6 +1730,7 @@ var
             CheckRow(_r);
             CheckCol(_c);
             currentSheet.Cell[_c, _r].HRefScreenTip := xml.Attributes.ItemsByName['tooltip'];
+            //FIXME: may not have r:id attribute but a 'location' attribute when linked to internal part
             str := xml.Attributes.ItemsByName['r:id'];
             //по r:id подставить ссылку
             for i := 0 to RelationsCount - 1 do

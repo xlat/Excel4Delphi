@@ -3991,7 +3991,7 @@ begin
   regEx := TRegEx.Create('[\\/\*\[\]\?:]');
   newTitle := regEx.Replace(newTitle, ' ');
   if newTitle.Trim.IsEmpty then
-    newTitle := 'Лист1';
+    newTitle := 'Sheet'; //'Лист1';
 
   if assigned(workbook) then begin
     sheetNames := TDictionary<string, string>.Create;
@@ -4264,6 +4264,7 @@ end;
 function TZSheets.Add(title: string): TZSheet;
 begin
   result := TZSheet.Create(FStore);
+  result.SetCorrectTitle(title);
   SetSheetCount(Length(FSheets) + 1);
   FSheets[High(FSheets)] := result;
 end;
